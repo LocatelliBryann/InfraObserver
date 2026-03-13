@@ -1,0 +1,20 @@
+version: "3.9"
+
+services:
+
+  postgres:
+    image: timescale/timescaledb:latest
+    environment:
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis
+
+  api:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
