@@ -1,0 +1,23 @@
+# Sistema operacional
+.DS_Store
+Thumbs.db
+
+# VS Code
+.vscode/*
+!.vscode/settings.json
+
+# Logs
+*.log
+
+# Ambientes
+.env
+venv/
+.venv/
+
+# Python
+__pycache__/
+*.pyc
+
+# Node
+node_modules/
+dist/
