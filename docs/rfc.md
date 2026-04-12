@@ -5,7 +5,7 @@
 | **RFC**           | RFC-001                                                            |
 | **Status**        | Rascunho                                                           |
 | **Versão**        | 0.1.0                                                              |
-| **Data**          | Abril / 2025                                                       |
+| **Data**          | Abril / 2026                                                       |
 | **Autor**         | Bryann Lucas Locatelli                                             |
 | **Curso**         | Engenharia de Software                                             |
 | **Disciplina**    | PAC VII                                                            |
