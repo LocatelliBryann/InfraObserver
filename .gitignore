@@ -11,13 +11,18 @@ Thumbs.db
 
 # Ambientes
 .env
-venv/
-.venv/
+.env.*
+!.env.example
 
 # Python
+venv/
+.venv/
 __pycache__/
 *.pyc
 
-# Node
+# Node.js
 node_modules/
 dist/
+
+# Prisma
+backend/generated/
