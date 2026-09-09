@@ -2,6 +2,8 @@ import cors from "cors";
 import express from "express";
 import helmet from "helmet";
 
+import endpointRouter from "./routes/endpoint.routes";
+
 const app = express();
 
 app.use(helmet());
@@ -13,5 +15,7 @@ app.get("/health", (_req, res) => {
     status: "ok",
   });
 });
+
+app.use("/api/v1/endpoints", endpointRouter);
 
 export default app;
