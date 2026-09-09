@@ -3,6 +3,7 @@ import express from "express";
 import helmet from "helmet";
 
 import endpointRouter from "./routes/endpoint.routes";
+import metricRouter from "./routes/metric.routes";
 
 const app = express();
 
@@ -17,5 +18,6 @@ app.get("/health", (_req, res) => {
 });
 
 app.use("/api/v1/endpoints", endpointRouter);
+app.use("/api/v1/metrics", metricRouter);
 
 export default app;
