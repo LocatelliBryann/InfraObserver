@@ -1,0 +1,15 @@
+name: CD
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deployment-placeholder:
+    name: Deployment Placeholder
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deployment not configured
+        run: |
+          echo "Deployment is not configured yet."
+          echo "Production infrastructure will be configured separately."
