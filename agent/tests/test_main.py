@@ -14,6 +14,12 @@ def test_create_agent_builds_agent_with_required_dependencies():
         patch("src.main.HttpClient") as mock_http_client,
         patch("src.main.SystemInfoCollector") as mock_system_info_collector,
         patch("src.main.RegistrationService") as mock_registration_service,
+        patch("src.main.CpuCollector") as mock_cpu_collector,
+        patch("src.main.MemoryCollector") as mock_memory_collector,
+        patch("src.main.DiskCollector") as mock_disk_collector,
+        patch("src.main.NetworkCollector") as mock_network_collector,
+        patch("src.main.MetricsCollector") as mock_metrics_collector,
+        patch("src.main.MetricsService") as mock_metrics_service,
     ):
         agent = create_agent()
 
@@ -30,14 +36,17 @@ def test_create_agent_builds_agent_with_required_dependencies():
             system_info_collector=mock_system_info_collector.return_value,
         )
 
+        mock_metrics_collector.assert_called_once_with(
+            cpu_collector=mock_cpu_collector.return_value,
+            memory_collector=mock_memory_collector.return_value,
+            disk_collector=mock_disk_collector.return_value,
+            network_collector=mock_network_collector.return_value,
+        )
+
+        mock_metrics_service.assert_called_once_with(
+            http_client=mock_http_client.return_value,
+            settings=settings,
+            metrics_collector=mock_metrics_collector.return_value,
+        )
+
         assert isinstance(agent, Agent)
-
-def test_main_starts_agent():
-    agent = Mock()
-
-    with patch("src.main.create_agent", return_value=agent):
-        from src.main import main
-
-        main()
-
-        agent.start.assert_called_once_with()

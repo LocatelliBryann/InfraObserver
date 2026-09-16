@@ -1,7 +1,13 @@
+from src.collectors.cpu import CpuCollector
+from src.collectors.disk import DiskCollector
+from src.collectors.memory import MemoryCollector
+from src.collectors.metrics import MetricsCollector
+from src.collectors.network import NetworkCollector
 from src.collectors.system_info import SystemInfoCollector
 from src.config.settings import AgentSettings
 from src.core.agent import Agent
 from src.services.http_client import HttpClient
+from src.services.metrics_service import MetricsService
 from src.services.registration_service import RegistrationService
 
 
@@ -21,8 +27,28 @@ def create_agent() -> Agent:
         system_info_collector=system_info_collector,
     )
 
+    cpu_collector = CpuCollector()
+    memory_collector = MemoryCollector()
+    disk_collector = DiskCollector()
+    network_collector = NetworkCollector()
+
+    metrics_collector = MetricsCollector(
+        cpu_collector=cpu_collector,
+        memory_collector=memory_collector,
+        disk_collector=disk_collector,
+        network_collector=network_collector,
+    )
+
+    metrics_service = MetricsService(
+        http_client=http_client,
+        settings=settings,
+        metrics_collector=metrics_collector,
+    )
+
     return Agent(
         registration_service=registration_service,
+        metrics_service=metrics_service,
+        settings=settings,
     )
 
 
