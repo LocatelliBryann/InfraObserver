@@ -9,6 +9,23 @@ from src.core.agent import Agent
 from src.services.http_client import HttpClient
 from src.services.metrics_service import MetricsService
 from src.services.registration_service import RegistrationService
+from src.watchers.file_observer_factory import create_file_observer
+
+
+def create_file_observers(
+    settings: AgentSettings,
+    event_handler,
+):
+    observers = []
+
+    for directory in settings.monitored_directories:
+        observer = create_file_observer(
+            directory=directory,
+            event_handler=event_handler,
+        )
+        observers.append(observer)
+
+    return observers
 
 
 def create_agent() -> Agent:

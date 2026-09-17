@@ -1,5 +1,5 @@
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from uuid import UUID
 
 
@@ -9,6 +9,7 @@ class AgentSettings:
     agent_token: str
     agent_id: UUID
     collection_interval: int = 60
+    monitored_directories: list[str] = field(default_factory=list)
 
     @classmethod
     def from_environment(cls) -> "AgentSettings":
@@ -25,8 +26,20 @@ class AgentSettings:
         if not agent_id:
             raise ValueError("INFRAOBSERVER_AGENT_ID is not configured")
 
+        directories_value = os.getenv(
+            "INFRAOBSERVER_MONITORED_DIRECTORIES",
+            "",
+        )
+
+        monitored_directories = [
+            directory.strip()
+            for directory in directories_value.split(",")
+            if directory.strip()
+        ]
+
         return cls(
             server_url=server_url,
             agent_token=agent_token,
             agent_id=UUID(agent_id),
+            monitored_directories=monitored_directories,
         )
