@@ -1,7 +1,7 @@
 from unittest.mock import Mock, patch
 
 from src.core.agent import Agent
-from src.main import create_agent
+from src.main import create_agent, create_file_observers
 
 
 def test_create_agent_builds_agent_with_required_dependencies():
@@ -10,7 +10,10 @@ def test_create_agent_builds_agent_with_required_dependencies():
     settings.agent_token = "test-token"
 
     with (
-        patch("src.main.AgentSettings.from_environment", return_value=settings),
+        patch(
+            "src.main.AgentSettings.from_environment",
+            return_value=settings,
+        ),
         patch("src.main.HttpClient") as mock_http_client,
         patch("src.main.SystemInfoCollector") as mock_system_info_collector,
         patch("src.main.RegistrationService") as mock_registration_service,
@@ -50,3 +53,33 @@ def test_create_agent_builds_agent_with_required_dependencies():
         )
 
         assert isinstance(agent, Agent)
+
+
+def test_create_file_observers_for_configured_directories():
+    settings = Mock()
+    settings.monitored_directories = [
+        "C:/Users/test/Documents",
+        "C:/Users/test/Desktop",
+    ]
+
+    event_handler = Mock()
+
+    with patch("src.main.create_file_observer") as mock_factory:
+        observers = create_file_observers(
+            settings=settings,
+            event_handler=event_handler,
+        )
+
+    assert mock_factory.call_count == 2
+
+    mock_factory.assert_any_call(
+        directory="C:/Users/test/Documents",
+        event_handler=event_handler,
+    )
+
+    mock_factory.assert_any_call(
+        directory="C:/Users/test/Desktop",
+        event_handler=event_handler,
+    )
+
+    assert len(observers) == 2
