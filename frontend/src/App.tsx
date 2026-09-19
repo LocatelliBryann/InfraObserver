@@ -1,4 +1,6 @@
 
+import { useState } from "react";
+
 import {
   Activity,
   AlertTriangle,
@@ -19,14 +21,22 @@ import { useMetrics } from "./hooks/useMetrics";
 function App() {
   const { endpoints, loading, error } = useEndpoints();
 
- const selectedEndpointId =
-  endpoints.length > 0 ? Number(endpoints[0].id) : null;
+  const [selectedEndpointId, setSelectedEndpointId] = useState<number | null>(
+    null,
+  );
+
+  const activeEndpointId =
+    selectedEndpointId ?? (endpoints[0] ? Number(endpoints[0].id) : null);
+
+  const selectedEndpoint = endpoints.find(
+    (endpoint) => Number(endpoint.id) === activeEndpointId,
+  );
 
   const {
     metrics,
     loading: metricsLoading,
     error: metricsError,
-  } = useMetrics(selectedEndpointId);
+  } = useMetrics(activeEndpointId);
 
   const onlineEndpoints = endpoints.filter(
     (endpoint) => endpoint.status === "ONLINE",
@@ -51,6 +61,8 @@ function App() {
     : error
       ? "Não foi possível carregar os endpoints"
       : "Monitoramento operacional";
+
+  const selectedEndpointOnline = selectedEndpoint?.status === "ONLINE";
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
@@ -88,9 +100,7 @@ function App() {
               </span>
             </div>
 
-            <p className="text-sm text-slate-300">
-              {platformStatus}
-            </p>
+            <p className="text-sm text-slate-300">{platformStatus}</p>
 
             <p className="mt-1 text-xs text-slate-500">
               {platformDescription}
@@ -196,7 +206,7 @@ function App() {
             </section>
 
             <section aria-labelledby="metrics-heading">
-              <div className="mb-4 flex items-center justify-between">
+              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <h3
                   id="metrics-heading"
                   className="text-lg font-semibold text-slate-100"
@@ -204,23 +214,53 @@ function App() {
                   Histórico de métricas
                 </h3>
 
-                <span className="rounded-full border border-slate-700 px-3 py-1 text-xs text-slate-400">
-                  Últimas 20 medições
-                </span>
+                <div className="flex items-center gap-3">
+                  <label
+                    htmlFor="endpoint-select"
+                    className="text-xs text-slate-400"
+                  >
+                    Endpoint
+                  </label>
+
+                  <select
+                    id="endpoint-select"
+                    value={activeEndpointId ?? ""}
+                    onChange={(event) =>
+                      setSelectedEndpointId(
+                        event.target.value
+                          ? Number(event.target.value)
+                          : null,
+                      )
+                    }
+                    disabled={loading || endpoints.length === 0}
+                    className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-slate-200 outline-none focus:border-cyan-500"
+                  >
+                    {endpoints.length === 0 ? (
+                      <option value="">Nenhum endpoint</option>
+                    ) : (
+                      endpoints.map((endpoint) => (
+                        <option
+                          key={endpoint.id}
+                          value={Number(endpoint.id)}
+                        >
+                          {endpoint.hostname}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                </div>
               </div>
 
               {metricsLoading ? (
-                <div className="flex min-h-64 items-center justify-center rounded-2xl border border-slate-800 bg-slate-900 p-6 text-sm text-slate-400">
-                  Carregando métricas...
-                </div>
+                <StatusMessage>Carregando métricas...</StatusMessage>
               ) : metricsError ? (
-                <div className="flex min-h-64 items-center justify-center rounded-2xl border border-red-900/50 bg-slate-900 p-6 text-sm text-red-400">
+                <StatusMessage error>
                   Não foi possível carregar as métricas.
-                </div>
-              ) : selectedEndpointId === null ? (
-                <div className="flex min-h-64 items-center justify-center rounded-2xl border border-slate-800 bg-slate-900 p-6 text-sm text-slate-400">
+                </StatusMessage>
+              ) : activeEndpointId === null ? (
+                <StatusMessage>
                   Nenhum endpoint disponível para exibir métricas.
-                </div>
+                </StatusMessage>
               ) : (
                 <MetricsChart metrics={metrics} />
               )}
@@ -236,7 +276,7 @@ function App() {
                 </h3>
 
                 <span className="rounded-full border border-slate-700 px-3 py-1 text-xs text-slate-400">
-                  Tempo real
+                  Endpoint selecionado
                 </span>
               </div>
 
@@ -292,37 +332,88 @@ function App() {
                     </div>
 
                     <div>
-                      <h4 className="font-semibold">
-                        Status da saúde
-                      </h4>
+                      <h4 className="font-semibold">Status da saúde</h4>
 
                       <p className="text-sm text-slate-400">
-                        Resumo da infraestrutura
+                        Resumo do endpoint
                       </p>
                     </div>
                   </div>
 
-                  <div className="rounded-xl border border-dashed border-slate-700 bg-slate-950/50 p-5 text-center">
-                    <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-slate-800 text-slate-500">
-                      <Monitor size={22} />
+                  {selectedEndpoint ? (
+                    <div className="space-y-4">
+                      <div className="rounded-xl border border-slate-700 bg-slate-950/50 p-4">
+                        <div className="mb-3 flex items-center justify-between gap-3">
+                          <span className="text-sm font-medium text-slate-200">
+                            {selectedEndpoint.hostname}
+                          </span>
+
+                          <span
+                            className={`rounded-full px-2 py-1 text-xs font-medium ${
+                              selectedEndpointOnline
+                                ? "bg-emerald-500/10 text-emerald-400"
+                                : "bg-red-500/10 text-red-400"
+                            }`}
+                          >
+                            {selectedEndpoint.status}
+                          </span>
+                        </div>
+
+                        <div className="space-y-2 text-xs text-slate-400">
+                          <div className="flex justify-between gap-3">
+                            <span>Identificador</span>
+                            <span className="text-slate-300">
+                              {selectedEndpoint.id}
+                            </span>
+                          </div>
+
+                          <div className="flex justify-between gap-3">
+                            <span>Saúde</span>
+                            <span
+                              className={
+                                selectedEndpointOnline
+                                  ? "text-emerald-400"
+                                  : "text-red-400"
+                              }
+                            >
+                              {selectedEndpointOnline
+                                ? "Endpoint operacional"
+                                : "Endpoint indisponível"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 text-xs text-slate-500">
+                        <span
+                          className={`h-2 w-2 rounded-full ${
+                            selectedEndpointOnline
+                              ? "bg-emerald-400"
+                              : "bg-red-400"
+                          }`}
+                        />
+
+                        {selectedEndpointOnline
+                          ? "O endpoint está online."
+                          : "O endpoint não está online."}
+                      </div>
                     </div>
+                  ) : (
+                    <div className="rounded-xl border border-dashed border-slate-700 bg-slate-950/50 p-5 text-center">
+                      <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-slate-800 text-slate-500">
+                        <Monitor size={22} />
+                      </div>
 
-                    <p className="text-sm font-medium text-slate-300">
-                      {loading
-                        ? "Carregando endpoints..."
-                        : endpoints.length === 0
-                          ? "Nenhum endpoint conectado"
-                          : `${onlineEndpoints.length} endpoint(s) online`}
-                    </p>
+                      <p className="text-sm font-medium text-slate-300">
+                        Nenhum endpoint selecionado
+                      </p>
 
-                    <p className="mt-2 text-xs leading-5 text-slate-500">
-                      {error
-                        ? "Verifique a conexão com a API para atualizar os dados."
-                        : endpoints.length === 0
-                          ? "Instale e configure o agente para começar a receber métricas e eventos."
-                          : "Os endpoints registrados são exibidos conforme os dados recebidos da API."}
-                    </p>
-                  </div>
+                      <p className="mt-2 text-xs leading-5 text-slate-500">
+                        Instale e configure o agente para começar a receber
+                        métricas e eventos.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             </section>
@@ -356,6 +447,25 @@ function App() {
           </div>
         </main>
       </div>
+    </div>
+  );
+}
+
+type StatusMessageProps = {
+  children: React.ReactNode;
+  error?: boolean;
+};
+
+function StatusMessage({ children, error = false }: StatusMessageProps) {
+  return (
+    <div
+      className={`flex min-h-64 items-center justify-center rounded-2xl border bg-slate-900 p-6 text-sm ${
+        error
+          ? "border-red-900/50 text-red-400"
+          : "border-slate-800 text-slate-400"
+      }`}
+    >
+      {children}
     </div>
   );
 }
@@ -414,11 +524,7 @@ type ResourceRowProps = {
   icon: React.ReactNode;
 };
 
-function ResourceRow({
-  label,
-  value,
-  icon,
-}: ResourceRowProps) {
+function ResourceRow({ label, value, icon }: ResourceRowProps) {
   return (
     <div className="flex items-center justify-between border-b border-slate-800 pb-4 last:border-b-0 last:pb-0">
       <div className="flex items-center gap-3 text-slate-300">
