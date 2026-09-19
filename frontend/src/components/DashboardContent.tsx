@@ -1,8 +1,15 @@
+import {
+  Activity,
+  AlertTriangle,
+  CheckCircle2,
+  Monitor,
+} from "lucide-react";
 
-import { Activity, AlertTriangle, CheckCircle2, Monitor } from "lucide-react";
-
+import { AlertsSection } from "./AlertsSection";
 import { EndpointHealthSection } from "./EndpointHealthSection";
 import { MetricsChart } from "./MetricsChart";
+
+import type { Alert } from "../services/alertsService";
 import type { Endpoint } from "../services/endpointsService";
 import type { Metric } from "../services/metricsService";
 
@@ -24,6 +31,9 @@ interface DashboardContentProps {
   metricsLoading: boolean;
   metricsError: string | null;
   latestMetric: Metric | null;
+  alerts: Alert[];
+  alertsLoading: boolean;
+  alertsError: string | null;
 }
 
 export function DashboardContent({
@@ -42,6 +52,9 @@ export function DashboardContent({
   metricsLoading,
   metricsError,
   latestMetric,
+  alerts,
+  alertsLoading,
+  alertsError,
 }: DashboardContentProps) {
   const monitoredEndpointsValue = loading
     ? "—"
@@ -54,6 +67,10 @@ export function DashboardContent({
     loading || healthLoading || availability === null
       ? "—"
       : `${availability.toFixed(1)}%`;
+
+  const activeAlertsValue = alertsLoading
+    ? "—"
+    : String(alerts.length);
 
   return (
     <div className="mx-auto max-w-7xl space-y-8 p-6 md:p-10">
@@ -100,8 +117,16 @@ export function DashboardContent({
 
           <MetricCard
             title="Alertas ativos"
-            value="0"
-            description="Nenhum alerta registrado"
+            value={activeAlertsValue}
+            description={
+              alertsLoading
+                ? "Carregando alertas..."
+                : alertsError
+                  ? "Erro ao carregar alertas"
+                  : alerts.length === 0
+                    ? "Nenhum alerta registrado"
+                    : "Alertas que exigem atenção"
+            }
             icon={<AlertTriangle size={21} />}
             accent="amber"
           />
@@ -119,6 +144,13 @@ export function DashboardContent({
           />
         </div>
       </section>
+
+      <AlertsSection
+        alerts={alerts}
+        loading={alertsLoading}
+        error={alertsError}
+        endpoints={endpoints}
+      />
 
       <section aria-labelledby="metrics-heading">
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -246,7 +278,10 @@ type StatusMessageProps = {
   error?: boolean;
 };
 
-function StatusMessage({ children, error = false }: StatusMessageProps) {
+function StatusMessage({
+  children,
+  error = false,
+}: StatusMessageProps) {
   return (
     <div
       className={`flex min-h-64 items-center justify-center rounded-2xl border bg-slate-900 p-6 text-sm ${
@@ -293,7 +328,11 @@ function MetricCard({
         </div>
 
         <span className="text-xs text-slate-500">
-          {accent === "cyan" || accent === "emerald" ? "API" : "Demo"}
+          {accent === "cyan" || accent === "emerald"
+            ? "API"
+            : accent === "amber"
+              ? "API"
+              : "Demo"}
         </span>
       </div>
 
