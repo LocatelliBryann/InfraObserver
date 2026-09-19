@@ -20,7 +20,10 @@ class Agent:
         if self.file_observer_service is not None:
             self.file_observer_service.start()
 
-        self.run()
+        try:
+            self.run()
+        finally:
+            self.stop()
 
     def stop(self):
         if self.file_observer_service is not None:
