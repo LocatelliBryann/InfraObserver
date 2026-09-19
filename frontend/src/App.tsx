@@ -1,3 +1,4 @@
+
 import {
   Activity,
   AlertTriangle,
@@ -11,10 +12,21 @@ import {
   Wifi,
 } from "lucide-react";
 
+import { MetricsChart } from "./components/MetricsChart";
 import { useEndpoints } from "./hooks/useEndpoints";
+import { useMetrics } from "./hooks/useMetrics";
 
 function App() {
   const { endpoints, loading, error } = useEndpoints();
+
+ const selectedEndpointId =
+  endpoints.length > 0 ? Number(endpoints[0].id) : null;
+
+  const {
+    metrics,
+    loading: metricsLoading,
+    error: metricsError,
+  } = useMetrics(selectedEndpointId);
 
   const onlineEndpoints = endpoints.filter(
     (endpoint) => endpoint.status === "ONLINE",
@@ -183,6 +195,37 @@ function App() {
               </div>
             </section>
 
+            <section aria-labelledby="metrics-heading">
+              <div className="mb-4 flex items-center justify-between">
+                <h3
+                  id="metrics-heading"
+                  className="text-lg font-semibold text-slate-100"
+                >
+                  Histórico de métricas
+                </h3>
+
+                <span className="rounded-full border border-slate-700 px-3 py-1 text-xs text-slate-400">
+                  Últimas 20 medições
+                </span>
+              </div>
+
+              {metricsLoading ? (
+                <div className="flex min-h-64 items-center justify-center rounded-2xl border border-slate-800 bg-slate-900 p-6 text-sm text-slate-400">
+                  Carregando métricas...
+                </div>
+              ) : metricsError ? (
+                <div className="flex min-h-64 items-center justify-center rounded-2xl border border-red-900/50 bg-slate-900 p-6 text-sm text-red-400">
+                  Não foi possível carregar as métricas.
+                </div>
+              ) : selectedEndpointId === null ? (
+                <div className="flex min-h-64 items-center justify-center rounded-2xl border border-slate-800 bg-slate-900 p-6 text-sm text-slate-400">
+                  Nenhum endpoint disponível para exibir métricas.
+                </div>
+              ) : (
+                <MetricsChart metrics={metrics} />
+              )}
+            </section>
+
             <section aria-labelledby="health-heading">
               <div className="mb-4 flex items-center justify-between">
                 <h3
@@ -205,7 +248,9 @@ function App() {
                     </div>
 
                     <div>
-                      <h4 className="font-semibold">Recursos do sistema</h4>
+                      <h4 className="font-semibold">
+                        Recursos do sistema
+                      </h4>
 
                       <p className="text-sm text-slate-400">
                         Indicadores coletados pelos agentes
@@ -247,7 +292,9 @@ function App() {
                     </div>
 
                     <div>
-                      <h4 className="font-semibold">Status da saúde</h4>
+                      <h4 className="font-semibold">
+                        Status da saúde
+                      </h4>
 
                       <p className="text-sm text-slate-400">
                         Resumo da infraestrutura
@@ -367,7 +414,11 @@ type ResourceRowProps = {
   icon: React.ReactNode;
 };
 
-function ResourceRow({ label, value, icon }: ResourceRowProps) {
+function ResourceRow({
+  label,
+  value,
+  icon,
+}: ResourceRowProps) {
   return (
     <div className="flex items-center justify-between border-b border-slate-800 pb-4 last:border-b-0 last:pb-0">
       <div className="flex items-center gap-3 text-slate-300">
