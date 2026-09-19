@@ -1,3 +1,4 @@
+
 import type { MetricRepository } from "../repositories/metric.repository";
 import type { CreateMetricInput } from "../utils/validation/metric.schema";
 import type { AlertService } from "./alert.service";
@@ -41,5 +42,9 @@ export class MetricService {
     }
 
     return metric;
+  }
+
+  async findRecentByEndpointId(endpointId: number, limit = 20) {
+    return this.repository.findRecentByEndpointId(endpointId, limit);
   }
 }

@@ -1,3 +1,4 @@
+
 import { describe, expect, it, vi } from "vitest";
 
 import { MetricService } from "../../src/services/metric.service";
@@ -21,6 +22,7 @@ describe("MetricService", () => {
         netBytesRecv: BigInt(2000),
         collectedAt: new Date(),
       }),
+      findRecentByEndpointId: vi.fn(),
     };
 
     const alertService = {
@@ -80,6 +82,7 @@ describe("MetricService", () => {
         netBytesRecv: BigInt(2000),
         collectedAt: new Date(),
       }),
+      findRecentByEndpointId: vi.fn(),
     };
 
     const alertService = {
@@ -119,5 +122,51 @@ describe("MetricService", () => {
       thresholdValue: 80,
       severity: "HIGH",
     });
+  });
+
+  it("should return recent metrics for an endpoint", async () => {
+    const metrics = [
+      {
+        id: 2,
+        endpointId: 1,
+        cpuPercent: 45.5,
+        memoryUsed: 4096,
+        memoryTotal: 8192,
+        diskUsed: 50000,
+        diskTotal: 100000,
+        netBytesSent: BigInt(2000),
+        netBytesRecv: BigInt(3000),
+        collectedAt: new Date("2026-09-19T10:05:00.000Z"),
+      },
+      {
+        id: 1,
+        endpointId: 1,
+        cpuPercent: 35.5,
+        memoryUsed: 3072,
+        memoryTotal: 8192,
+        diskUsed: 45000,
+        diskTotal: 100000,
+        netBytesSent: BigInt(1000),
+        netBytesRecv: BigInt(2000),
+        collectedAt: new Date("2026-09-19T10:00:00.000Z"),
+      },
+    ];
+
+    const repository = {
+      findEndpointByAgentId: vi.fn(),
+      create: vi.fn(),
+      findRecentByEndpointId: vi.fn().mockResolvedValue(metrics),
+    };
+
+    const alertService = {
+      evaluate: vi.fn(),
+    };
+
+    const service = new MetricService(repository, alertService);
+
+    const result = await service.findRecentByEndpointId(1, 20);
+
+    expect(repository.findRecentByEndpointId).toHaveBeenCalledWith(1, 20);
+    expect(result).toEqual(metrics);
   });
 });

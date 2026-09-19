@@ -1,3 +1,4 @@
+
 import { prisma } from "../database/prisma";
 
 export interface MetricRepository {
@@ -28,6 +29,24 @@ export interface MetricRepository {
     netBytesRecv: bigint | null;
     collectedAt: Date;
   }>;
+
+  findRecentByEndpointId(
+    endpointId: number,
+    limit: number,
+  ): Promise<
+    {
+      id: number;
+      endpointId: number;
+      cpuPercent: number | null;
+      memoryUsed: number | null;
+      memoryTotal: number | null;
+      diskUsed: number | null;
+      diskTotal: number | null;
+      netBytesSent: bigint | null;
+      netBytesRecv: bigint | null;
+      collectedAt: Date;
+    }[]
+  >;
 }
 
 export class PrismaMetricRepository implements MetricRepository {
@@ -56,6 +75,18 @@ export class PrismaMetricRepository implements MetricRepository {
   }) {
     return prisma.metric.create({
       data,
+    });
+  }
+
+  async findRecentByEndpointId(endpointId: number, limit: number) {
+    return prisma.metric.findMany({
+      where: {
+        endpointId,
+      },
+      orderBy: {
+        collectedAt: "desc",
+      },
+      take: limit,
     });
   }
 }
