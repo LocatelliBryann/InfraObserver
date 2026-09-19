@@ -10,6 +10,8 @@ from src.services.http_client import HttpClient
 from src.services.metrics_service import MetricsService
 from src.services.registration_service import RegistrationService
 from src.watchers.file_observer_factory import create_file_observer
+from src.services.file_event_service import FileEventService
+from src.services.file_observer_service import FileObserverGroupService
 
 
 def create_file_observers(
@@ -62,10 +64,25 @@ def create_agent() -> Agent:
         metrics_collector=metrics_collector,
     )
 
+    file_event_service = FileEventService(
+        http_client=http_client,
+        settings=settings,
+    )
+
+    file_observers = create_file_observers(
+        settings=settings,
+        event_handler=file_event_service.send,
+    )
+
+    file_observer_service = FileObserverGroupService(
+        observers=file_observers,
+    )
+
     return Agent(
         registration_service=registration_service,
         metrics_service=metrics_service,
         settings=settings,
+        file_observer_service=file_observer_service,
     )
 
 

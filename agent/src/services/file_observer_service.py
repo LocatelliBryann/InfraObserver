@@ -23,3 +23,16 @@ class FileObserverService:
     def stop(self) -> None:
         self.observer.stop()
         self.observer.join()
+
+class FileObserverGroupService:
+    def __init__(self, observers):
+        self.observers = observers
+
+    def start(self) -> None:
+        for observer in self.observers:
+            observer.start()
+
+    def stop(self) -> None:
+        for observer in self.observers:
+            observer.stop()
+            observer.join()

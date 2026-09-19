@@ -8,6 +8,7 @@ def test_create_agent_builds_agent_with_required_dependencies():
     settings = Mock()
     settings.server_url = "http://localhost:3000"
     settings.agent_token = "test-token"
+    settings.monitored_directories = []
 
     with (
         patch(
@@ -83,3 +84,41 @@ def test_create_file_observers_for_configured_directories():
     )
 
     assert len(observers) == 2
+
+
+def test_create_agent_configures_file_monitoring():
+    settings = Mock()
+    settings.server_url = "http://localhost:3000"
+    settings.agent_token = "test-token"
+    settings.monitored_directories = [
+        "C:/Users/test/Documents",
+    ]
+
+    with (
+        patch(
+            "src.main.AgentSettings.from_environment",
+            return_value=settings,
+        ),
+        patch("src.main.HttpClient"),
+        patch("src.main.SystemInfoCollector"),
+        patch("src.main.RegistrationService"),
+        patch("src.main.CpuCollector"),
+        patch("src.main.MemoryCollector"),
+        patch("src.main.DiskCollector"),
+        patch("src.main.NetworkCollector"),
+        patch("src.main.MetricsCollector"),
+        patch("src.main.MetricsService"),
+        patch("src.main.FileEventService") as mock_file_event_service,
+        patch(
+            "src.main.FileObserverGroupService"
+        ) as mock_file_observer_service,
+        patch("src.main.create_file_observers") as mock_create_observers,
+    ):
+        mock_create_observers.return_value = [Mock()]
+
+        agent = create_agent()
+
+        mock_file_event_service.assert_called_once()
+        mock_file_observer_service.assert_called_once()
+
+        assert isinstance(agent, Agent)
