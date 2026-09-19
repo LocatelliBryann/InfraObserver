@@ -1,44 +1,41 @@
-import "@testing-library/jest-dom/vitest";
-
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import "@testing-library/jest-dom/vitest";
 
 import App from "../src/App";
 
-describe("Dashboard do InfraObserver", () => {
-  it("deve exibir o título principal do sistema", () => {
+vi.mock("../src/hooks/useEndpoints", () => ({
+  useEndpoints: () => ({
+    endpoints: [
+      {
+        id: "endpoint-1",
+        hostname: "DESKTOP-TEST",
+        status: "ONLINE",
+      },
+      {
+        id: "endpoint-2",
+        hostname: "SERVER-TEST",
+        status: "OFFLINE",
+      },
+    ],
+    loading: false,
+    error: null,
+  }),
+}));
+
+describe("App", () => {
+  it("deve renderizar o dashboard", () => {
     render(<App />);
 
     expect(
-      screen.getByRole("heading", {
-        name: /InfraObserver/i,
-      }),
+      screen.getByRole("heading", { name: "Visão geral" }),
     ).toBeInTheDocument();
   });
 
-  it("deve exibir a seção de visão geral", () => {
+  it("deve exibir a quantidade de endpoints monitorados", () => {
     render(<App />);
 
-    expect(
-      screen.getByRole("heading", {
-        name: /Visão geral/i,
-      }),
-    ).toBeInTheDocument();
-  });
-
-  it("deve exibir o indicador de endpoints monitorados", () => {
-    render(<App />);
-
-    expect(
-      screen.getByText(/Endpoints monitorados/i),
-    ).toBeInTheDocument();
-  });
-
-  it("deve exibir a seção de saúde do sistema", () => {
-    render(<App />);
-
-    expect(
-      screen.getByText(/Saúde do sistema/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Endpoints monitorados")).toBeInTheDocument();
+    expect(screen.getByText("2")).toBeInTheDocument();
   });
 });

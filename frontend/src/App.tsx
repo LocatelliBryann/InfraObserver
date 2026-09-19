@@ -11,7 +11,35 @@ import {
   Wifi,
 } from "lucide-react";
 
+import { useEndpoints } from "./hooks/useEndpoints";
+
 function App() {
+  const { endpoints, loading, error } = useEndpoints();
+
+  const onlineEndpoints = endpoints.filter(
+    (endpoint) => endpoint.status === "ONLINE",
+  );
+
+  const monitoredEndpointsValue = loading
+    ? "—"
+    : String(endpoints.length);
+
+  const onlineEndpointsValue = loading
+    ? "—"
+    : String(onlineEndpoints.length);
+
+  const platformStatus = loading
+    ? "Carregando dados..."
+    : error
+      ? "Erro na conexão com a API"
+      : "API conectada";
+
+  const platformDescription = loading
+    ? "Buscando endpoints registrados"
+    : error
+      ? "Não foi possível carregar os endpoints"
+      : "Monitoramento operacional";
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
       <div className="flex min-h-screen flex-col md:flex-row">
@@ -42,17 +70,18 @@ function App() {
           <div className="mt-10 rounded-xl border border-slate-800 bg-slate-950/60 p-4">
             <div className="mb-2 flex items-center gap-2 text-emerald-400">
               <Wifi size={16} />
+
               <span className="text-xs font-semibold uppercase tracking-wide">
                 Status da plataforma
               </span>
             </div>
 
             <p className="text-sm text-slate-300">
-              Monitoramento preparado
+              {platformStatus}
             </p>
 
             <p className="mt-1 text-xs text-slate-500">
-              Aguardando conexão com a API
+              {platformDescription}
             </p>
           </div>
         </aside>
@@ -75,9 +104,22 @@ function App() {
               </div>
 
               <div className="flex items-center gap-2 rounded-full border border-slate-700 bg-slate-900 px-4 py-2">
-                <span className="h-2 w-2 rounded-full bg-amber-400" />
+                <span
+                  className={`h-2 w-2 rounded-full ${
+                    error
+                      ? "bg-red-400"
+                      : loading
+                        ? "bg-amber-400"
+                        : "bg-emerald-400"
+                  }`}
+                />
+
                 <span className="text-xs text-slate-300">
-                  Ambiente de demonstração
+                  {loading
+                    ? "Carregando dados"
+                    : error
+                      ? "API indisponível"
+                      : "API conectada"}
                 </span>
               </div>
             </div>
@@ -99,16 +141,26 @@ function App() {
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <MetricCard
                   title="Endpoints monitorados"
-                  value="0"
-                  description="Nenhum endpoint conectado"
+                  value={monitoredEndpointsValue}
+                  description={
+                    loading
+                      ? "Carregando endpoints..."
+                      : error
+                        ? "Não foi possível carregar os endpoints"
+                        : `${endpoints.length} endpoint(s) registrado(s)`
+                  }
                   icon={<Monitor size={21} />}
                   accent="cyan"
                 />
 
                 <MetricCard
                   title="Endpoints online"
-                  value="0"
-                  description="Aguardando agentes ativos"
+                  value={onlineEndpointsValue}
+                  description={
+                    loading
+                      ? "Carregando status..."
+                      : "Endpoints com status online"
+                  }
                   icon={<CheckCircle2 size={21} />}
                   accent="emerald"
                 />
@@ -154,6 +206,7 @@ function App() {
 
                     <div>
                       <h4 className="font-semibold">Recursos do sistema</h4>
+
                       <p className="text-sm text-slate-400">
                         Indicadores coletados pelos agentes
                       </p>
@@ -195,6 +248,7 @@ function App() {
 
                     <div>
                       <h4 className="font-semibold">Status da saúde</h4>
+
                       <p className="text-sm text-slate-400">
                         Resumo da infraestrutura
                       </p>
@@ -207,12 +261,19 @@ function App() {
                     </div>
 
                     <p className="text-sm font-medium text-slate-300">
-                      Nenhum endpoint conectado
+                      {loading
+                        ? "Carregando endpoints..."
+                        : endpoints.length === 0
+                          ? "Nenhum endpoint conectado"
+                          : `${onlineEndpoints.length} endpoint(s) online`}
                     </p>
 
                     <p className="mt-2 text-xs leading-5 text-slate-500">
-                      Instale e configure o agente para começar a receber
-                      métricas e eventos.
+                      {error
+                        ? "Verifique a conexão com a API para atualizar os dados."
+                        : endpoints.length === 0
+                          ? "Instale e configure o agente para começar a receber métricas e eventos."
+                          : "Os endpoints registrados são exibidos conforme os dados recebidos da API."}
                     </p>
                   </div>
                 </div>
@@ -284,7 +345,9 @@ function MetricCard({
           {icon}
         </div>
 
-        <span className="text-xs text-slate-500">Demo</span>
+        <span className="text-xs text-slate-500">
+          {accent === "cyan" || accent === "emerald" ? "API" : "Demo"}
+        </span>
       </div>
 
       <p className="text-sm text-slate-400">{title}</p>
