@@ -1,6 +1,19 @@
 import { prisma } from "../database/prisma";
 
 export interface AlertRepository {
+  findActive(): Promise<
+    Array<{
+      id: number;
+      endpointId: number;
+      metricId: number | null;
+      metricType: string;
+      thresholdValue: number;
+      severity: string;
+      triggeredAt: Date;
+      resolvedAt: Date | null;
+    }>
+  >;
+
   findActiveByEndpointAndMetricType(
     endpointId: number,
     metricType: string,
@@ -55,6 +68,17 @@ export interface AlertRepository {
 }
 
 export class PrismaAlertRepository implements AlertRepository {
+  async findActive() {
+    return prisma.alert.findMany({
+      where: {
+        resolvedAt: null,
+      },
+      orderBy: {
+        triggeredAt: "desc",
+      },
+    });
+  }
+
   async findActiveByEndpointAndMetricType(
     endpointId: number,
     metricType: string,
@@ -72,73 +96,73 @@ export class PrismaAlertRepository implements AlertRepository {
   }
 
   async countConsecutiveNormalCollections(
-  endpointId: number,
-  metricType: string,
-  thresholdValue: number,
-): Promise<number> {
-  const metrics = await prisma.metric.findMany({
-    where: {
-      endpointId,
-    },
-    orderBy: {
-      collectedAt: "desc",
-    },
-    take: 100,
-    select: {
-      cpuPercent: true,
-      memoryUsed: true,
-      memoryTotal: true,
-      diskUsed: true,
-      diskTotal: true,
-      netBytesSent: true,
-      netBytesRecv: true,
-    },
-  });
+    endpointId: number,
+    metricType: string,
+    thresholdValue: number,
+  ): Promise<number> {
+    const metrics = await prisma.metric.findMany({
+      where: {
+        endpointId,
+      },
+      orderBy: {
+        collectedAt: "desc",
+      },
+      take: 100,
+      select: {
+        cpuPercent: true,
+        memoryUsed: true,
+        memoryTotal: true,
+        diskUsed: true,
+        diskTotal: true,
+        netBytesSent: true,
+        netBytesRecv: true,
+      },
+    });
 
-  let consecutiveNormalCollections = 0;
+    let consecutiveNormalCollections = 0;
 
-  for (const metric of metrics) {
-    let metricValue: number | null = null;
+    for (const metric of metrics) {
+      let metricValue: number | null = null;
 
-    switch (metricType) {
-      case "CPU":
-        metricValue = metric.cpuPercent;
+      switch (metricType) {
+        case "CPU":
+          metricValue = metric.cpuPercent;
+          break;
+
+        case "MEMORY":
+          if (metric.memoryUsed !== null && metric.memoryTotal !== null) {
+            metricValue = (metric.memoryUsed / metric.memoryTotal) * 100;
+          }
+          break;
+
+        case "DISK":
+          if (metric.diskUsed !== null && metric.diskTotal !== null) {
+            metricValue = (metric.diskUsed / metric.diskTotal) * 100;
+          }
+          break;
+
+        case "NETWORK":
+          if (
+            metric.netBytesSent !== null &&
+            metric.netBytesRecv !== null
+          ) {
+            metricValue =
+              Number(metric.netBytesSent) + Number(metric.netBytesRecv);
+          }
+          break;
+
+        default:
+          throw new Error(`Unsupported metric type: ${metricType}`);
+      }
+
+      if (metricValue === null || metricValue > thresholdValue) {
         break;
+      }
 
-      case "MEMORY":
-        if (metric.memoryUsed !== null && metric.memoryTotal !== null) {
-          metricValue = (metric.memoryUsed / metric.memoryTotal) * 100;
-        }
-        break;
-
-      case "DISK":
-        if (metric.diskUsed !== null && metric.diskTotal !== null) {
-          metricValue = (metric.diskUsed / metric.diskTotal) * 100;
-        }
-        break;
-
-      case "NETWORK":
-        if (
-          metric.netBytesSent !== null &&
-          metric.netBytesRecv !== null
-        ) {
-          metricValue =
-            Number(metric.netBytesSent) + Number(metric.netBytesRecv);
-        }
-        break;
-
-      default:
-        throw new Error(`Unsupported metric type: ${metricType}`);
+      consecutiveNormalCollections++;
     }
 
-    if (metricValue === null || metricValue > thresholdValue) {
-      break;
-    }
-
-    consecutiveNormalCollections++;
-  }
-
-  return consecutiveNormalCollections;
+    return consecutiveNormalCollections;
   }
 
   async create(data: {

@@ -12,6 +12,10 @@ export interface EvaluateAlertInput {
 export class AlertService {
   constructor(private readonly repository: AlertRepository) {}
 
+  async findActive() {
+    return this.repository.findActive();
+  }
+
   async evaluate(input: EvaluateAlertInput) {
     if (input.metricValue <= input.thresholdValue) {
       const activeAlert =
