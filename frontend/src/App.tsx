@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 
 import {
@@ -8,6 +7,7 @@ import {
 } from "lucide-react";
 
 import { DashboardContent } from "./components/DashboardContent";
+import { useAlerts } from "./hooks/useAlerts";
 import { useEndpointHealth } from "./hooks/useEndpointHealth";
 import { useEndpoints } from "./hooks/useEndpoints";
 import { useMetrics } from "./hooks/useMetrics";
@@ -23,12 +23,19 @@ function App() {
     availability,
   } = useEndpointHealth(endpoints);
 
+  const {
+    alerts,
+    loading: alertsLoading,
+    error: alertsError,
+  } = useAlerts();
+
   const [selectedEndpointId, setSelectedEndpointId] = useState<number | null>(
     null,
   );
 
   const activeEndpointId =
-    selectedEndpointId ?? (endpoints[0] ? Number(endpoints[0].id) : null);
+    selectedEndpointId ??
+    (endpoints[0] ? Number(endpoints[0].id) : null);
 
   const selectedEndpoint = endpoints.find(
     (endpoint) => Number(endpoint.id) === activeEndpointId,
@@ -46,11 +53,12 @@ function App() {
 
   const latestMetric = metrics[0] ?? null;
 
-  const platformStatus = loading
-    ? "Carregando dados..."
-    : error
-      ? "Erro na conexão com a API"
-      : "API conectada";
+  const platformStatus =
+    loading || healthLoading || alertsLoading
+      ? "Carregando dados..."
+      : error || healthError || alertsError
+        ? "Erro na conexão com a API"
+        : "API conectada";
 
   const platformDescription = loading
     ? "Buscando endpoints registrados"
@@ -58,7 +66,9 @@ function App() {
       ? "Não foi possível carregar os endpoints"
       : healthError
         ? "Erro ao verificar saúde dos endpoints"
-        : "Monitoramento operacional";
+        : alertsError
+          ? "Erro ao carregar alertas"
+          : "Monitoramento operacional";
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
@@ -124,18 +134,18 @@ function App() {
               <div className="flex items-center gap-2 rounded-full border border-slate-700 bg-slate-900 px-4 py-2">
                 <span
                   className={`h-2 w-2 rounded-full ${
-                    error
+                    error || healthError || alertsError
                       ? "bg-red-400"
-                      : loading || healthLoading
+                      : loading || healthLoading || alertsLoading
                         ? "bg-amber-400"
                         : "bg-emerald-400"
                   }`}
                 />
 
                 <span className="text-xs text-slate-300">
-                  {loading || healthLoading
+                  {loading || healthLoading || alertsLoading
                     ? "Carregando dados"
-                    : error || healthError
+                    : error || healthError || alertsError
                       ? "API indisponível"
                       : "API conectada"}
                 </span>
@@ -159,6 +169,9 @@ function App() {
             metricsLoading={metricsLoading}
             metricsError={metricsError}
             latestMetric={latestMetric}
+            alerts={alerts}
+            alertsLoading={alertsLoading}
+            alertsError={alertsError}
           />
         </main>
       </div>
