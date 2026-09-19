@@ -5,6 +5,7 @@ import { getMetrics, type Metric } from "../services/metricsService";
 import type { Endpoint } from "../services/endpointsService";
 
 const HEALTH_TIMEOUT_MS = 5 * 60 * 1000;
+const HEALTH_REFRESH_INTERVAL_MS = 60 * 1000;
 
 interface EndpointHealth {
   endpointId: number;
@@ -91,8 +92,13 @@ export function useEndpointHealth(
 
     void loadHealth();
 
+    const intervalId = window.setInterval(() => {
+      void loadHealth();
+    }, HEALTH_REFRESH_INTERVAL_MS);
+
     return () => {
       cancelled = true;
+      window.clearInterval(intervalId);
     };
   }, [endpoints]);
 
