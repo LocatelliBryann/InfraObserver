@@ -1,4 +1,6 @@
 
+import { useState } from "react";
+
 import {
   Activity,
   AlertTriangle,
@@ -19,14 +21,19 @@ import { useMetrics } from "./hooks/useMetrics";
 function App() {
   const { endpoints, loading, error } = useEndpoints();
 
- const selectedEndpointId =
-  endpoints.length > 0 ? Number(endpoints[0].id) : null;
+  const [selectedEndpointId, setSelectedEndpointId] = useState<
+    number | null
+  >(null);
+
+  const activeEndpointId =
+    selectedEndpointId ??
+    (endpoints[0] ? Number(endpoints[0].id) : null);
 
   const {
     metrics,
     loading: metricsLoading,
     error: metricsError,
-  } = useMetrics(selectedEndpointId);
+  } = useMetrics(activeEndpointId);
 
   const onlineEndpoints = endpoints.filter(
     (endpoint) => endpoint.status === "ONLINE",
@@ -196,7 +203,7 @@ function App() {
             </section>
 
             <section aria-labelledby="metrics-heading">
-              <div className="mb-4 flex items-center justify-between">
+              <div className="mb-4 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
                 <h3
                   id="metrics-heading"
                   className="text-lg font-semibold text-slate-100"
@@ -204,9 +211,43 @@ function App() {
                   Histórico de métricas
                 </h3>
 
-                <span className="rounded-full border border-slate-700 px-3 py-1 text-xs text-slate-400">
-                  Últimas 20 medições
-                </span>
+                <div className="flex flex-col gap-2 sm:items-end">
+                  <label
+                    htmlFor="endpoint-select"
+                    className="text-xs text-slate-400"
+                  >
+                    Endpoint monitorado
+                  </label>
+
+                  <select
+                    id="endpoint-select"
+                    value={activeEndpointId ?? ""}
+                    onChange={(event) => {
+                      setSelectedEndpointId(
+                        event.target.value === ""
+                          ? null
+                          : Number(event.target.value),
+                      );
+                    }}
+                    disabled={loading || endpoints.length === 0}
+                    className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-200 outline-none focus:border-cyan-400"
+                  >
+                    {endpoints.length === 0 ? (
+                      <option value="">
+                        Nenhum endpoint disponível
+                      </option>
+                    ) : (
+                      endpoints.map((endpoint) => (
+                        <option
+                          key={endpoint.id}
+                          value={endpoint.id}
+                        >
+                          Endpoint {endpoint.id}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                </div>
               </div>
 
               {metricsLoading ? (
@@ -217,7 +258,7 @@ function App() {
                 <div className="flex min-h-64 items-center justify-center rounded-2xl border border-red-900/50 bg-slate-900 p-6 text-sm text-red-400">
                   Não foi possível carregar as métricas.
                 </div>
-              ) : selectedEndpointId === null ? (
+              ) : activeEndpointId === null ? (
                 <div className="flex min-h-64 items-center justify-center rounded-2xl border border-slate-800 bg-slate-900 p-6 text-sm text-slate-400">
                   Nenhum endpoint disponível para exibir métricas.
                 </div>
