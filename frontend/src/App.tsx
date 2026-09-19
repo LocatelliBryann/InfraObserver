@@ -5,15 +5,13 @@ import {
   Activity,
   AlertTriangle,
   CheckCircle2,
-  Cpu,
-  HardDrive,
   LayoutDashboard,
   Monitor,
-  Network,
   ShieldCheck,
   Wifi,
 } from "lucide-react";
 
+import { EndpointHealthSection } from "./components/EndpointHealthSection";
 import { MetricsChart } from "./components/MetricsChart";
 import { useEndpoints } from "./hooks/useEndpoints";
 import { useMetrics } from "./hooks/useMetrics";
@@ -38,6 +36,8 @@ function App() {
     error: metricsError,
   } = useMetrics(activeEndpointId);
 
+  const latestMetric = metrics[0] ?? null;
+
   const onlineEndpoints = endpoints.filter(
     (endpoint) => endpoint.status === "ONLINE",
   );
@@ -61,8 +61,6 @@ function App() {
     : error
       ? "Não foi possível carregar os endpoints"
       : "Monitoramento operacional";
-
-  const selectedEndpointOnline = selectedEndpoint?.status === "ONLINE";
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
@@ -280,142 +278,18 @@ function App() {
                 </span>
               </div>
 
-              <div className="grid gap-6 lg:grid-cols-3">
-                <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6 lg:col-span-2">
-                  <div className="mb-6 flex items-center gap-3">
-                    <div className="rounded-xl bg-cyan-500/10 p-3 text-cyan-400">
-                      <Cpu size={22} />
-                    </div>
-
-                    <div>
-                      <h4 className="font-semibold">
-                        Recursos do sistema
-                      </h4>
-
-                      <p className="text-sm text-slate-400">
-                        Indicadores coletados pelos agentes
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-5">
-                    <ResourceRow
-                      label="Processador"
-                      value="Sem dados"
-                      icon={<Cpu size={18} />}
-                    />
-
-                    <ResourceRow
-                      label="Memória"
-                      value="Sem dados"
-                      icon={<Activity size={18} />}
-                    />
-
-                    <ResourceRow
-                      label="Armazenamento"
-                      value="Sem dados"
-                      icon={<HardDrive size={18} />}
-                    />
-
-                    <ResourceRow
-                      label="Rede"
-                      value="Sem dados"
-                      icon={<Network size={18} />}
-                    />
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
-                  <div className="mb-6 flex items-center gap-3">
-                    <div className="rounded-xl bg-emerald-500/10 p-3 text-emerald-400">
-                      <ShieldCheck size={22} />
-                    </div>
-
-                    <div>
-                      <h4 className="font-semibold">Status da saúde</h4>
-
-                      <p className="text-sm text-slate-400">
-                        Resumo do endpoint
-                      </p>
-                    </div>
-                  </div>
-
-                  {selectedEndpoint ? (
-                    <div className="space-y-4">
-                      <div className="rounded-xl border border-slate-700 bg-slate-950/50 p-4">
-                        <div className="mb-3 flex items-center justify-between gap-3">
-                          <span className="text-sm font-medium text-slate-200">
-                            {selectedEndpoint.hostname}
-                          </span>
-
-                          <span
-                            className={`rounded-full px-2 py-1 text-xs font-medium ${
-                              selectedEndpointOnline
-                                ? "bg-emerald-500/10 text-emerald-400"
-                                : "bg-red-500/10 text-red-400"
-                            }`}
-                          >
-                            {selectedEndpoint.status}
-                          </span>
-                        </div>
-
-                        <div className="space-y-2 text-xs text-slate-400">
-                          <div className="flex justify-between gap-3">
-                            <span>Identificador</span>
-                            <span className="text-slate-300">
-                              {selectedEndpoint.id}
-                            </span>
-                          </div>
-
-                          <div className="flex justify-between gap-3">
-                            <span>Saúde</span>
-                            <span
-                              className={
-                                selectedEndpointOnline
-                                  ? "text-emerald-400"
-                                  : "text-red-400"
-                              }
-                            >
-                              {selectedEndpointOnline
-                                ? "Endpoint operacional"
-                                : "Endpoint indisponível"}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2 text-xs text-slate-500">
-                        <span
-                          className={`h-2 w-2 rounded-full ${
-                            selectedEndpointOnline
-                              ? "bg-emerald-400"
-                              : "bg-red-400"
-                          }`}
-                        />
-
-                        {selectedEndpointOnline
-                          ? "O endpoint está online."
-                          : "O endpoint não está online."}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="rounded-xl border border-dashed border-slate-700 bg-slate-950/50 p-5 text-center">
-                      <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-slate-800 text-slate-500">
-                        <Monitor size={22} />
-                      </div>
-
-                      <p className="text-sm font-medium text-slate-300">
-                        Nenhum endpoint selecionado
-                      </p>
-
-                      <p className="mt-2 text-xs leading-5 text-slate-500">
-                        Instale e configure o agente para começar a receber
-                        métricas e eventos.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
+              <EndpointHealthSection
+                endpoint={
+                  selectedEndpoint
+                    ? {
+                        id: Number(selectedEndpoint.id),
+                        hostname: selectedEndpoint.hostname,
+                        status: selectedEndpoint.status,
+                      }
+                    : null
+                }
+                metric={latestMetric}
+              />
             </section>
 
             <section
@@ -515,28 +389,6 @@ function MetricCard({
 
       <p className="mt-2 text-xs text-slate-500">{description}</p>
     </article>
-  );
-}
-
-type ResourceRowProps = {
-  label: string;
-  value: string;
-  icon: React.ReactNode;
-};
-
-function ResourceRow({ label, value, icon }: ResourceRowProps) {
-  return (
-    <div className="flex items-center justify-between border-b border-slate-800 pb-4 last:border-b-0 last:pb-0">
-      <div className="flex items-center gap-3 text-slate-300">
-        <span className="text-slate-500" aria-hidden="true">
-          {icon}
-        </span>
-
-        <span className="text-sm">{label}</span>
-      </div>
-
-      <span className="text-xs text-slate-500">{value}</span>
-    </div>
   );
 }
 

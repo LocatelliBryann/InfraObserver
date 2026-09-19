@@ -23,32 +23,55 @@ interface ChartData {
   disk: number;
 }
 
+function normalizeValue(value: number | null): number {
+  if (value === null || !Number.isFinite(value)) {
+    return 0;
+  }
+
+  return Math.max(0, Math.min(100, value));
+}
+
 function formatPercentage(
   used: number | null,
   total: number | null,
 ): number {
-  if (used === null || total === null || total <= 0) {
+  if (
+    used === null ||
+    total === null ||
+    !Number.isFinite(used) ||
+    !Number.isFinite(total) ||
+    total <= 0
+  ) {
     return 0;
   }
 
-  return Number(((used / total) * 100).toFixed(2));
+  return normalizeValue(Number(((used / total) * 100).toFixed(2)));
 }
 
 function formatTimestamp(timestamp: string): string {
-  return new Date(timestamp).toLocaleTimeString("pt-BR", {
+  const date = new Date(timestamp);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Horário inválido";
+  }
+
+  return date.toLocaleTimeString("pt-BR", {
     hour: "2-digit",
     minute: "2-digit",
   });
 }
 
-export function MetricsChart({
-  metrics,
-}: MetricsChartProps) {
-  const chartData: ChartData[] = [...metrics]
+function isValidMetric(metric: Metric): boolean {
+  return !Number.isNaN(new Date(metric.collectedAt).getTime());
+}
+
+function createChartData(metrics: Metric[]): ChartData[] {
+  return [...metrics]
+    .filter(isValidMetric)
     .reverse()
     .map((metric) => ({
       timestamp: formatTimestamp(metric.collectedAt),
-      cpu: metric.cpuPercent ?? 0,
+      cpu: normalizeValue(metric.cpuPercent),
       memory: formatPercentage(
         metric.memoryUsed,
         metric.memoryTotal,
@@ -58,8 +81,12 @@ export function MetricsChart({
         metric.diskTotal,
       ),
     }));
+}
 
-  if (metrics.length === 0) {
+export function MetricsChart({ metrics }: MetricsChartProps) {
+  const chartData = createChartData(metrics);
+
+  if (chartData.length === 0) {
     return (
       <div className="flex min-h-64 items-center justify-center rounded-lg border border-slate-200 bg-white p-6 text-slate-500">
         Nenhuma métrica disponível.
@@ -74,12 +101,25 @@ export function MetricsChart({
       </h2>
 
       <div className="h-80 w-full">
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer
+          width="100%"
+          height="100%"
+          minWidth={0}
+          minHeight={0}
+        >
           <LineChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" />
+
             <XAxis dataKey="timestamp" />
-            <YAxis domain={[0, 100]} unit="%" />
+
+            <YAxis
+              domain={[0, 100]}
+              unit="%"
+              allowDataOverflow={false}
+            />
+
             <Tooltip />
+
             <Legend />
 
             <Line
@@ -89,6 +129,7 @@ export function MetricsChart({
               stroke="#2563eb"
               strokeWidth={2}
               dot={false}
+              isAnimationActive={false}
             />
 
             <Line
@@ -98,6 +139,7 @@ export function MetricsChart({
               stroke="#16a34a"
               strokeWidth={2}
               dot={false}
+              isAnimationActive={false}
             />
 
             <Line
@@ -107,6 +149,7 @@ export function MetricsChart({
               stroke="#ea580c"
               strokeWidth={2}
               dot={false}
+              isAnimationActive={false}
             />
           </LineChart>
         </ResponsiveContainer>
