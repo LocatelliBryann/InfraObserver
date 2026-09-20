@@ -5,7 +5,7 @@ import { AlertsSection } from "../../src/components/AlertsSection";
 
 const endpoints = [
   {
-    id: 10,
+    id: "10",
     hostname: "servidor-01",
     ipAddress: "192.168.1.10",
     operatingSystem: "Linux",
