@@ -105,4 +105,27 @@ describe("AlertsSection", () => {
 
     expect(screen.getByText("Endpoint #999")).toBeTruthy();
   });
+    it("exibe corretamente as diferentes severidades", () => {
+    const severities = ["LOW", "MEDIUM", "HIGH", "CRITICAL"];
+
+    severities.forEach((severity) => {
+      const { unmount } = render(
+        <AlertsSection
+          alerts={[
+            {
+              ...alerts[0],
+              severity,
+            },
+          ]}
+          loading={false}
+          error={null}
+          endpoints={endpoints}
+        />,
+      );
+
+      expect(screen.getByText(severity)).toBeTruthy();
+
+      unmount();
+    });
+  });
 });
