@@ -9,12 +9,15 @@ export interface CreateFileEventInput {
 }
 
 export class FileEventService {
-  constructor(private readonly repository: FileEventRepository) {}
+  constructor(
+    private readonly repository: FileEventRepository,
+  ) {}
 
   async create(input: CreateFileEventInput) {
-    const endpoint = await this.repository.findEndpointByAgentId(
-      input.agentId,
-    );
+    const endpoint =
+      await this.repository.findEndpointByAgentId(
+        input.agentId,
+      );
 
     if (!endpoint) {
       throw new Error("Endpoint not found");
@@ -28,5 +31,9 @@ export class FileEventService {
       occurredAt: input.occurredAt,
       receivedAt: new Date(),
     });
+  }
+
+  async findRecent(limit = 20) {
+    return this.repository.findRecent(limit);
   }
 }
