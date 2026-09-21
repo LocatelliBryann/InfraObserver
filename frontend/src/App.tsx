@@ -7,9 +7,11 @@ import {
 } from "lucide-react";
 
 import { DashboardContent } from "./components/DashboardContent";
+
 import { useAlerts } from "./hooks/useAlerts";
 import { useEndpointHealth } from "./hooks/useEndpointHealth";
 import { useEndpoints } from "./hooks/useEndpoints";
+import { useFileEvents } from "./hooks/useFileEvents";
 import { useMetrics } from "./hooks/useMetrics";
 
 function App() {
@@ -29,9 +31,14 @@ function App() {
     error: alertsError,
   } = useAlerts();
 
-  const [selectedEndpointId, setSelectedEndpointId] = useState<number | null>(
-    null,
-  );
+  const {
+    fileEvents,
+    loading: fileEventsLoading,
+    error: fileEventsError,
+  } = useFileEvents();
+
+  const [selectedEndpointId, setSelectedEndpointId] =
+    useState<number | null>(null);
 
   const activeEndpointId =
     selectedEndpointId ??
@@ -54,9 +61,15 @@ function App() {
   const latestMetric = metrics[0] ?? null;
 
   const platformStatus =
-    loading || healthLoading || alertsLoading
+    loading ||
+    healthLoading ||
+    alertsLoading ||
+    fileEventsLoading
       ? "Carregando dados..."
-      : error || healthError || alertsError
+      : error ||
+          healthError ||
+          alertsError ||
+          fileEventsError
         ? "Erro na conexão com a API"
         : "API conectada";
 
@@ -68,7 +81,21 @@ function App() {
         ? "Erro ao verificar saúde dos endpoints"
         : alertsError
           ? "Erro ao carregar alertas"
-          : "Monitoramento operacional";
+          : fileEventsError
+            ? "Erro ao carregar eventos recentes"
+            : "Monitoramento operacional";
+
+  const hasApiError =
+    error ||
+    healthError ||
+    alertsError ||
+    fileEventsError;
+
+  const isLoading =
+    loading ||
+    healthLoading ||
+    alertsLoading ||
+    fileEventsLoading;
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
@@ -93,7 +120,10 @@ function App() {
           <nav aria-label="Navegação principal">
             <div className="flex items-center gap-3 rounded-xl bg-cyan-500/10 px-4 py-3 text-cyan-400">
               <LayoutDashboard size={19} />
-              <span className="text-sm font-medium">Dashboard</span>
+
+              <span className="text-sm font-medium">
+                Dashboard
+              </span>
             </div>
           </nav>
 
@@ -106,7 +136,9 @@ function App() {
               </span>
             </div>
 
-            <p className="text-sm text-slate-300">{platformStatus}</p>
+            <p className="text-sm text-slate-300">
+              {platformStatus}
+            </p>
 
             <p className="mt-1 text-xs text-slate-500">
               {platformDescription}
@@ -134,18 +166,18 @@ function App() {
               <div className="flex items-center gap-2 rounded-full border border-slate-700 bg-slate-900 px-4 py-2">
                 <span
                   className={`h-2 w-2 rounded-full ${
-                    error || healthError || alertsError
+                    hasApiError
                       ? "bg-red-400"
-                      : loading || healthLoading || alertsLoading
+                      : isLoading
                         ? "bg-amber-400"
                         : "bg-emerald-400"
                   }`}
                 />
 
                 <span className="text-xs text-slate-300">
-                  {loading || healthLoading || alertsLoading
+                  {isLoading
                     ? "Carregando dados"
-                    : error || healthError || alertsError
+                    : hasApiError
                       ? "API indisponível"
                       : "API conectada"}
                 </span>
@@ -172,6 +204,9 @@ function App() {
             alerts={alerts}
             alertsLoading={alertsLoading}
             alertsError={alertsError}
+            fileEvents={fileEvents}
+            fileEventsLoading={fileEventsLoading}
+            fileEventsError={fileEventsError}
           />
         </main>
       </div>

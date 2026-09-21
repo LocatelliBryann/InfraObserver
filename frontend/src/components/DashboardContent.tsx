@@ -11,6 +11,7 @@ import { MetricsChart } from "./MetricsChart";
 
 import type { Alert } from "../services/alertsService";
 import type { Endpoint } from "../services/endpointsService";
+import type { FileEvent } from "../services/fileEventsService";
 import type { Metric } from "../services/metricsService";
 
 interface DashboardContentProps {
@@ -34,6 +35,9 @@ interface DashboardContentProps {
   alerts: Alert[];
   alertsLoading: boolean;
   alertsError: string | null;
+  fileEvents: FileEvent[];
+  fileEventsLoading: boolean;
+  fileEventsError: string | null;
 }
 
 export function DashboardContent({
@@ -55,6 +59,9 @@ export function DashboardContent({
   alerts,
   alertsLoading,
   alertsError,
+  fileEvents,
+  fileEventsLoading,
+  fileEventsError,
 }: DashboardContentProps) {
   const monitoredEndpointsValue = loading
     ? "—"
@@ -263,11 +270,54 @@ export function DashboardContent({
           </div>
         </div>
 
-        <div className="rounded-xl border border-dashed border-slate-700 px-5 py-8 text-center">
-          <p className="text-sm text-slate-400">
-            Nenhuma atividade registrada até o momento.
-          </p>
-        </div>
+        {fileEventsLoading ? (
+          <StatusMessage>
+            Carregando atividades recentes...
+          </StatusMessage>
+        ) : fileEventsError ? (
+          <StatusMessage error>
+            Não foi possível carregar as atividades recentes.
+          </StatusMessage>
+        ) : fileEvents.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-slate-700 px-5 py-8 text-center">
+            <p className="text-sm text-slate-400">
+              Nenhuma atividade registrada até o momento.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {fileEvents.map((event) => (
+              <article
+                key={event.id}
+                className="rounded-xl border border-slate-700 bg-slate-950/40 p-4"
+              >
+                <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-start">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-100">
+                      {event.eventType}
+                    </p>
+
+                    <p className="mt-1 text-xs text-slate-400">
+                      {event.endpoint.hostname}
+                    </p>
+                  </div>
+
+                  <span className="text-xs text-slate-500">
+                    {new Date(event.occurredAt).toLocaleString("pt-BR")}
+                  </span>
+                </div>
+
+                <p className="mt-3 break-all text-xs text-slate-400">
+                  {event.filePath}
+                </p>
+
+                <p className="mt-2 text-xs text-slate-500">
+                  Usuário: {event.username}
+                </p>
+              </article>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );
