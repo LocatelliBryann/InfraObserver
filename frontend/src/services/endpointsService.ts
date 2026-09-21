@@ -3,6 +3,8 @@ import { apiClient } from "./apiClient";
 export interface Endpoint {
   id: string;
   hostname: string;
+  ipAddress?: string;
+  operatingSystem?: string;
   status: string;
 }
 
