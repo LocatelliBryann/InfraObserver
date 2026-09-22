@@ -1,6 +1,19 @@
 import { prisma } from "../database/prisma";
 
 export interface EndpointRepository {
+  findAll(): Promise<
+    Array<{
+      id: number;
+      agentId: string;
+      hostname: string;
+      ipAddress: string;
+      osName: string | null;
+      osVersion: string | null;
+      status: string;
+      lastSeenAt: Date | null;
+    }>
+  >;
+
   findByAgentId(agentId: string): Promise<{
     id: number;
     agentId: string;
@@ -53,7 +66,17 @@ export interface EndpointRepository {
   }>;
 }
 
-export class PrismaEndpointRepository implements EndpointRepository {
+export class PrismaEndpointRepository
+  implements EndpointRepository
+{
+  async findAll() {
+    return prisma.endpoint.findMany({
+      orderBy: {
+        hostname: "asc",
+      },
+    });
+  }
+
   async findByAgentId(agentId: string) {
     return prisma.endpoint.findUnique({
       where: {

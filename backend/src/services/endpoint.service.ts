@@ -2,10 +2,17 @@ import type { EndpointRepository } from "../repositories/endpoint.repository";
 import type { RegisterEndpointInput } from "../utils/validation/endpoint.schema";
 
 export class EndpointService {
-  constructor(private readonly repository: EndpointRepository) {}
+  constructor(
+    private readonly repository: EndpointRepository,
+  ) {}
+
+  async findAll() {
+    return this.repository.findAll();
+  }
 
   async register(input: RegisterEndpointInput) {
-    const existingEndpoint = await this.repository.findByAgentId(input.agentId);
+    const existingEndpoint =
+      await this.repository.findByAgentId(input.agentId);
 
     if (existingEndpoint) {
       return this.repository.update(existingEndpoint.id, {
