@@ -1,7 +1,9 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useAlerts } from "../../src/hooks/useAlerts";
+
 import { getActiveAlerts } from "../../src/services/alertsService";
 
 vi.mock("../../src/services/alertsService", () => ({
@@ -27,7 +29,6 @@ describe("useAlerts", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useRealTimers();
-
     mockedGetActiveAlerts.mockResolvedValue(alerts);
   });
 
@@ -39,6 +40,22 @@ describe("useAlerts", () => {
     });
 
     expect(mockedGetActiveAlerts).toHaveBeenCalledTimes(1);
+    expect(result.current.alerts).toEqual(alerts);
+    expect(result.current.error).toBeNull();
+  });
+
+  it("atualiza os alertas manualmente", async () => {
+    const { result } = renderHook(() => useAlerts());
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    await act(async () => {
+      await result.current.refresh();
+    });
+
+    expect(mockedGetActiveAlerts).toHaveBeenCalledTimes(2);
     expect(result.current.alerts).toEqual(alerts);
     expect(result.current.error).toBeNull();
   });
