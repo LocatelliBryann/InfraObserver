@@ -1,10 +1,11 @@
-
 import { useEffect, useState } from "react";
 
 import {
   getMetrics,
   type Metric,
 } from "../services/metricsService";
+
+const METRICS_REFRESH_INTERVAL_MS = 10 * 1000;
 
 interface UseMetricsResult {
   metrics: Metric[];
@@ -22,6 +23,8 @@ export function useMetrics(
   useEffect(() => {
     if (endpointId === null) {
       setMetrics([]);
+      setLoading(false);
+      setError(null);
       return;
     }
 
@@ -51,8 +54,13 @@ export function useMetrics(
 
     void loadMetrics();
 
+    const intervalId = window.setInterval(() => {
+      void loadMetrics();
+    }, METRICS_REFRESH_INTERVAL_MS);
+
     return () => {
       cancelled = true;
+      window.clearInterval(intervalId);
     };
   }, [endpointId]);
 

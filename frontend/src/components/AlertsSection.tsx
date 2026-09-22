@@ -1,6 +1,8 @@
 import {
   AlertTriangle,
   CheckCircle2,
+  CircleAlert,
+  Info,
 } from "lucide-react";
 
 import type { Alert } from "../services/alertsService";
@@ -11,6 +13,32 @@ interface AlertsSectionProps {
   loading: boolean;
   error: string | null;
   endpoints: Endpoint[];
+}
+
+function getSeverityClass(severity: string): string {
+  switch (severity.toUpperCase()) {
+    case "CRITICAL":
+      return "border-red-500/30 bg-red-500/10 text-red-400";
+
+    case "HIGH":
+      return "border-amber-500/30 bg-amber-500/10 text-amber-400";
+
+    default:
+      return "border-blue-500/30 bg-blue-500/10 text-blue-400";
+  }
+}
+
+function getSeverityIcon(severity: string) {
+  switch (severity.toUpperCase()) {
+    case "CRITICAL":
+      return <CircleAlert size={14} />;
+
+    case "HIGH":
+      return <AlertTriangle size={14} />;
+
+    default:
+      return <Info size={14} />;
+  }
 }
 
 export function AlertsSection({
@@ -103,7 +131,13 @@ export function AlertsSection({
                     </p>
                   </div>
 
-                  <span className="w-fit rounded-full bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-400">
+                  <span
+                    aria-label={`Severidade: ${alert.severity}`}
+                    className={`flex w-fit items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold ${getSeverityClass(
+                      alert.severity,
+                    )}`}
+                  >
+                    {getSeverityIcon(alert.severity)}
                     {alert.severity}
                   </span>
                 </div>
