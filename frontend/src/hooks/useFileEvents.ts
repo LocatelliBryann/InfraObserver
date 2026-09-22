@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import {
   getRecentFileEvents,
@@ -11,6 +11,7 @@ interface UseFileEventsResult {
   fileEvents: FileEvent[];
   loading: boolean;
   error: string | null;
+  refresh: () => Promise<void>;
 }
 
 export function useFileEvents(
@@ -20,48 +21,37 @@ export function useFileEvents(
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    setError(null);
 
-    async function loadFileEvents() {
-      setLoading(true);
-      setError(null);
-
-      try {
-        const result = await getRecentFileEvents(limit);
-
-        if (!cancelled) {
-          setFileEvents(result);
-        }
-      } catch {
-        if (!cancelled) {
-          setError(
-            "Não foi possível carregar os eventos recentes.",
-          );
-          setFileEvents([]);
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
+    try {
+      const result = await getRecentFileEvents(limit);
+      setFileEvents(result);
+    } catch {
+      setError("Não foi possível carregar os eventos recentes.");
+      setFileEvents([]);
+    } finally {
+      setLoading(false);
     }
+  }, [limit]);
 
-    void loadFileEvents();
+  useEffect(() => {
+    void refresh();
 
     const intervalId = window.setInterval(() => {
-      void loadFileEvents();
+      void refresh();
     }, FILE_EVENTS_REFRESH_INTERVAL_MS);
 
     return () => {
-      cancelled = true;
       window.clearInterval(intervalId);
     };
-  }, [limit]);
+  }, [refresh]);
 
   return {
     fileEvents,
     loading,
     error,
+    refresh,
   };
 }
