@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 import { ShieldCheck } from "lucide-react";
 
@@ -15,7 +15,12 @@ import { useMetrics } from "./hooks/useMetrics";
 function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
-  const { endpoints, loading, error } = useEndpoints();
+  const {
+    endpoints,
+    loading,
+    error,
+    refresh: refreshEndpoints,
+  } = useEndpoints();
 
   const {
     health,
@@ -29,12 +34,14 @@ function App() {
     alerts,
     loading: alertsLoading,
     error: alertsError,
+    refresh: refreshAlerts,
   } = useAlerts();
 
   const {
     fileEvents,
     loading: fileEventsLoading,
     error: fileEventsError,
+    refresh: refreshFileEvents,
   } = useFileEvents();
 
   const [selectedEndpointId, setSelectedEndpointId] =
@@ -56,6 +63,7 @@ function App() {
     metrics,
     loading: metricsLoading,
     error: metricsError,
+    refresh: refreshMetrics,
   } = useMetrics(activeEndpointId);
 
   const latestMetric = metrics[0] ?? null;
@@ -74,6 +82,20 @@ function App() {
       fileEventsError ||
       metricsError,
   );
+
+  const refreshAllData = useCallback(async () => {
+    await Promise.all([
+      refreshEndpoints(),
+      refreshAlerts(),
+      refreshFileEvents(),
+      refreshMetrics(),
+    ]);
+  }, [
+    refreshEndpoints,
+    refreshAlerts,
+    refreshFileEvents,
+    refreshMetrics,
+  ]);
 
   const platformStatus = isLoading
     ? "Carregando dados..."
@@ -145,6 +167,7 @@ function App() {
           <DashboardHeader
             hasApiError={hasApiError}
             isLoading={isLoading}
+            onRefresh={refreshAllData}
           />
 
           <DashboardContent

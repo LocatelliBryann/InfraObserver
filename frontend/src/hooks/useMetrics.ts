@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import {
   getMetrics,
@@ -11,6 +11,7 @@ interface UseMetricsResult {
   metrics: Metric[];
   loading: boolean;
   error: string | null;
+  refresh: () => Promise<void>;
 }
 
 export function useMetrics(
@@ -20,7 +21,7 @@ export function useMetrics(
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const refresh = useCallback(async () => {
     if (endpointId === null) {
       setMetrics([]);
       setLoading(false);
@@ -28,45 +29,39 @@ export function useMetrics(
       return;
     }
 
-    const selectedEndpointId = endpointId;
-    let cancelled = false;
+    setLoading(true);
+    setError(null);
 
-    async function loadMetrics() {
-      setLoading(true);
-      setError(null);
+    try {
+      const data = await getMetrics(endpointId);
+      setMetrics(data);
+    } catch {
+      setError("Não foi possível carregar as métricas.");
+    } finally {
+      setLoading(false);
+    }
+  }, [endpointId]);
 
-      try {
-        const data = await getMetrics(selectedEndpointId);
+  useEffect(() => {
+    void refresh();
 
-        if (!cancelled) {
-          setMetrics(data);
-        }
-      } catch {
-        if (!cancelled) {
-          setError("Não foi possível carregar as métricas.");
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
+    if (endpointId === null) {
+      return;
     }
 
-    void loadMetrics();
-
     const intervalId = window.setInterval(() => {
-      void loadMetrics();
+      void refresh();
     }, METRICS_REFRESH_INTERVAL_MS);
 
     return () => {
-      cancelled = true;
       window.clearInterval(intervalId);
     };
-  }, [endpointId]);
+  }, [endpointId, refresh]);
 
   return {
     metrics,
     loading,
     error,
+    refresh,
   };
 }

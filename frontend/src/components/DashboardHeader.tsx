@@ -8,11 +8,13 @@ import {
 interface DashboardHeaderProps {
   hasApiError: boolean;
   isLoading: boolean;
+  onRefresh: () => Promise<void>;
 }
 
 export function DashboardHeader({
   hasApiError,
   isLoading,
+  onRefresh,
 }: DashboardHeaderProps) {
   const statusLabel = hasApiError
     ? "Conexão instável"
@@ -49,7 +51,7 @@ export function DashboardHeader({
           </p>
         </div>
 
-        <div className="flex flex-col items-start gap-2 lg:items-end">
+        <div className="flex flex-col items-start gap-3 lg:items-end">
           <div
             className={`flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900 px-3 py-2 text-xs font-medium ${statusColor}`}
           >
@@ -61,10 +63,26 @@ export function DashboardHeader({
             <span>{statusLabel}</span>
           </div>
 
-          <div className="flex items-center gap-2 text-xs text-slate-500">
-            <RefreshCw size={13} />
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2 text-xs text-slate-500">
+              <RefreshCw size={13} />
 
-            <span>Atualização automática a cada 60 segundos</span>
+              <span>Atualização automática a cada 60 segundos</span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => void onRefresh()}
+              disabled={isLoading}
+              className="inline-flex items-center gap-2 rounded-lg border border-cyan-500/40 bg-cyan-500/10 px-3 py-2 text-xs font-semibold text-cyan-300 transition hover:border-cyan-400 hover:bg-cyan-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <RefreshCw
+                size={14}
+                className={isLoading ? "animate-spin" : ""}
+              />
+
+              <span>{isLoading ? "Atualizando..." : "Atualizar agora"}</span>
+            </button>
           </div>
         </div>
       </div>

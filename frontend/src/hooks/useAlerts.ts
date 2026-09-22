@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import {
   getActiveAlerts,
@@ -11,6 +11,7 @@ interface UseAlertsResult {
   alerts: Alert[];
   loading: boolean;
   error: string | null;
+  refresh: () => Promise<void>;
 }
 
 export function useAlerts(): UseAlertsResult {
@@ -18,46 +19,37 @@ export function useAlerts(): UseAlertsResult {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    setError(null);
 
-    async function loadAlerts() {
-      setLoading(true);
-      setError(null);
-
-      try {
-        const result = await getActiveAlerts();
-
-        if (!cancelled) {
-          setAlerts(result);
-        }
-      } catch {
-        if (!cancelled) {
-          setError("Não foi possível carregar os alertas.");
-          setAlerts([]);
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
+    try {
+      const result = await getActiveAlerts();
+      setAlerts(result);
+    } catch {
+      setError("Não foi possível carregar os alertas.");
+      setAlerts([]);
+    } finally {
+      setLoading(false);
     }
+  }, []);
 
-    void loadAlerts();
+  useEffect(() => {
+    void refresh();
 
     const intervalId = window.setInterval(() => {
-      void loadAlerts();
+      void refresh();
     }, ALERTS_REFRESH_INTERVAL_MS);
 
     return () => {
-      cancelled = true;
       window.clearInterval(intervalId);
     };
-  }, []);
+  }, [refresh]);
 
   return {
     alerts,
     loading,
     error,
+    refresh,
   };
 }

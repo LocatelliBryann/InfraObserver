@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import {
   endpointsService,
@@ -9,6 +9,7 @@ interface UseEndpointsResult {
   endpoints: Endpoint[];
   loading: boolean;
   error: string | null;
+  refresh: () => Promise<void>;
 }
 
 export function useEndpoints(): UseEndpointsResult {
@@ -16,28 +17,28 @@ export function useEndpoints(): UseEndpointsResult {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function loadEndpoints() {
-      try {
-        setLoading(true);
-        setError(null);
+  const refresh = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
 
-        const data = await endpointsService.getEndpoints();
-
-        setEndpoints(data);
-      } catch {
-        setError("Não foi possível carregar os endpoints.");
-      } finally {
-        setLoading(false);
-      }
+      const data = await endpointsService.getEndpoints();
+      setEndpoints(data);
+    } catch {
+      setError("Não foi possível carregar os endpoints.");
+    } finally {
+      setLoading(false);
     }
-
-    void loadEndpoints();
   }, []);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
 
   return {
     endpoints,
     loading,
     error,
+    refresh,
   };
 }
