@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 
 import { AlertsSection } from "./AlertsSection";
+import { EmptyState } from "./EmptyState";
 import { EndpointHealthSection } from "./EndpointHealthSection";
 import { MetricsChart } from "./MetricsChart";
 
@@ -68,10 +69,14 @@ export function DashboardContent({
     : String(endpoints.length);
 
   const onlineEndpointsValue =
-    loading || healthLoading ? "—" : String(onlineCount);
+    loading || healthLoading
+      ? "—"
+      : String(onlineCount);
 
   const availabilityValue =
-    loading || healthLoading || availability === null
+    loading ||
+    healthLoading ||
+    availability === null
       ? "—"
       : `${availability.toFixed(1)}%`;
 
@@ -80,8 +85,11 @@ export function DashboardContent({
     : String(alerts.length);
 
   return (
-    <div className="mx-auto max-w-7xl space-y-8 p-6 md:p-10">
-      <section aria-labelledby="overview-heading">
+    <div className="mx-auto w-full max-w-7xl min-w-0 space-y-8 p-6 md:p-10">
+      <section
+        aria-labelledby="overview-heading"
+        className="min-w-0"
+      >
         <div className="mb-4 flex items-center justify-between">
           <h3
             id="overview-heading"
@@ -90,10 +98,13 @@ export function DashboardContent({
             Indicadores principais
           </h3>
 
-          <Activity className="text-slate-500" size={20} />
+          <Activity
+            className="shrink-0 text-slate-500"
+            size={20}
+          />
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <MetricCard
             title="Endpoints monitorados"
             value={monitoredEndpointsValue}
@@ -102,7 +113,9 @@ export function DashboardContent({
                 ? "Carregando endpoints..."
                 : error
                   ? "Não foi possível carregar os endpoints"
-                  : `${endpoints.length} endpoint(s) registrado(s)`
+                  : endpoints.length === 0
+                    ? "Nenhum endpoint registrado"
+                    : `${endpoints.length} endpoint(s) registrado(s)`
             }
             icon={<Monitor size={21} />}
             accent="cyan"
@@ -116,7 +129,9 @@ export function DashboardContent({
                 ? "Verificando saúde..."
                 : healthError
                   ? "Erro ao verificar status"
-                  : "Endpoints com métricas recentes"
+                  : endpoints.length === 0
+                    ? "Nenhum endpoint disponível"
+                    : "Endpoints com métricas recentes"
             }
             icon={<CheckCircle2 size={21} />}
             accent="emerald"
@@ -131,7 +146,7 @@ export function DashboardContent({
                 : alertsError
                   ? "Erro ao carregar alertas"
                   : alerts.length === 0
-                    ? "Nenhum alerta registrado"
+                    ? "Nenhum alerta ativo"
                     : "Alertas que exigem atenção"
             }
             icon={<AlertTriangle size={21} />}
@@ -144,7 +159,9 @@ export function DashboardContent({
             description={
               healthError
                 ? "Não foi possível verificar a saúde"
-                : "Endpoints com métricas recentes"
+                : endpoints.length === 0
+                  ? "Nenhum endpoint disponível"
+                  : "Endpoints com métricas recentes"
             }
             icon={<Activity size={21} />}
             accent="violet"
@@ -159,7 +176,10 @@ export function DashboardContent({
         endpoints={endpoints}
       />
 
-      <section aria-labelledby="metrics-heading">
+      <section
+        aria-labelledby="metrics-heading"
+        className="min-w-0"
+      >
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h3
             id="metrics-heading"
@@ -168,7 +188,7 @@ export function DashboardContent({
             Histórico de métricas
           </h3>
 
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 items-center gap-3">
             <label
               htmlFor="endpoint-select"
               className="text-xs text-slate-400"
@@ -186,11 +206,16 @@ export function DashboardContent({
                     : null,
                 )
               }
-              disabled={loading || endpoints.length === 0}
-              className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-slate-200 outline-none focus:border-cyan-500"
+              disabled={
+                loading ||
+                endpoints.length === 0
+              }
+              className="min-w-0 max-w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-slate-200 outline-none focus:border-cyan-500"
             >
               {endpoints.length === 0 ? (
-                <option value="">Nenhum endpoint</option>
+                <option value="">
+                  Nenhum endpoint
+                </option>
               ) : (
                 endpoints.map((endpoint) => (
                   <option
@@ -206,21 +231,34 @@ export function DashboardContent({
         </div>
 
         {metricsLoading ? (
-          <StatusMessage>Carregando métricas...</StatusMessage>
+          <StatusMessage>
+            Carregando métricas...
+          </StatusMessage>
         ) : metricsError ? (
           <StatusMessage error>
             Não foi possível carregar as métricas.
           </StatusMessage>
         ) : activeEndpointId === null ? (
-          <StatusMessage>
-            Nenhum endpoint disponível para exibir métricas.
-          </StatusMessage>
+          <EmptyState
+            title="Nenhum endpoint disponível"
+            description="Cadastre um endpoint para começar a visualizar suas métricas."
+          />
+        ) : metrics.length === 0 ? (
+          <EmptyState
+            title="Nenhuma métrica disponível"
+            description="Ainda não foram coletadas métricas para o endpoint selecionado."
+          />
         ) : (
-          <MetricsChart metrics={metrics} />
+          <div className="min-w-0">
+            <MetricsChart metrics={metrics} />
+          </div>
         )}
       </section>
 
-      <section aria-labelledby="health-heading">
+      <section
+        aria-labelledby="health-heading"
+        className="min-w-0"
+      >
         <div className="mb-4 flex items-center justify-between">
           <h3
             id="health-heading"
@@ -252,15 +290,18 @@ export function DashboardContent({
 
       <section
         aria-labelledby="activity-heading"
-        className="rounded-2xl border border-slate-800 bg-slate-900 p-6"
+        className="min-w-0 rounded-2xl border border-slate-800 bg-slate-900 p-6"
       >
         <div className="mb-4 flex items-center gap-3">
-          <div className="rounded-xl bg-violet-500/10 p-3 text-violet-400">
+          <div className="shrink-0 rounded-xl bg-violet-500/10 p-3 text-violet-400">
             <Activity size={21} />
           </div>
 
-          <div>
-            <h3 id="activity-heading" className="font-semibold">
+          <div className="min-w-0">
+            <h3
+              id="activity-heading"
+              className="font-semibold"
+            >
               Atividade recente
             </h3>
 
@@ -279,31 +320,32 @@ export function DashboardContent({
             Não foi possível carregar as atividades recentes.
           </StatusMessage>
         ) : fileEvents.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-slate-700 px-5 py-8 text-center">
-            <p className="text-sm text-slate-400">
-              Nenhuma atividade registrada até o momento.
-            </p>
-          </div>
+          <EmptyState
+            title="Nenhuma atividade registrada"
+            description="Os eventos detectados nos endpoints aparecerão nesta seção."
+          />
         ) : (
-          <div className="space-y-3">
+          <div className="min-w-0 space-y-3">
             {fileEvents.map((event) => (
               <article
                 key={event.id}
-                className="rounded-xl border border-slate-700 bg-slate-950/40 p-4"
+                className="min-w-0 rounded-xl border border-slate-700 bg-slate-950/40 p-4"
               >
                 <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-start">
-                  <div>
-                    <p className="text-sm font-semibold text-slate-100">
+                  <div className="min-w-0">
+                    <p className="break-words text-sm font-semibold text-slate-100">
                       {event.eventType}
                     </p>
 
-                    <p className="mt-1 text-xs text-slate-400">
+                    <p className="mt-1 break-words text-xs text-slate-400">
                       {event.endpoint.hostname}
                     </p>
                   </div>
 
-                  <span className="text-xs text-slate-500">
-                    {new Date(event.occurredAt).toLocaleString("pt-BR")}
+                  <span className="shrink-0 text-xs text-slate-500">
+                    {new Date(
+                      event.occurredAt,
+                    ).toLocaleString("pt-BR")}
                   </span>
                 </div>
 
@@ -311,7 +353,7 @@ export function DashboardContent({
                   {event.filePath}
                 </p>
 
-                <p className="mt-2 text-xs text-slate-500">
+                <p className="mt-2 break-words text-xs text-slate-500">
                   Usuário: {event.username}
                 </p>
               </article>
@@ -334,7 +376,7 @@ function StatusMessage({
 }: StatusMessageProps) {
   return (
     <div
-      className={`flex min-h-64 items-center justify-center rounded-2xl border bg-slate-900 p-6 text-sm ${
+      className={`flex min-h-64 min-w-0 items-center justify-center rounded-2xl border bg-slate-900 p-6 text-sm ${
         error
           ? "border-red-900/50 text-red-400"
           : "border-slate-800 text-slate-400"
@@ -368,31 +410,31 @@ function MetricCard({
   };
 
   return (
-    <article className="rounded-2xl border border-slate-800 bg-slate-900 p-5 transition-colors hover:border-slate-700">
+    <article className="min-w-0 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 p-5 transition-colors hover:border-slate-700">
       <div className="mb-5 flex items-center justify-between">
         <div
-          className={`rounded-xl p-3 ${accentClasses[accent]}`}
+          className={`shrink-0 rounded-xl p-3 ${accentClasses[accent]}`}
           aria-hidden="true"
         >
           {icon}
         </div>
 
-        <span className="text-xs text-slate-500">
-          {accent === "cyan" || accent === "emerald"
-            ? "API"
-            : accent === "amber"
-              ? "API"
-              : "Demo"}
+        <span className="shrink-0 text-xs text-slate-500">
+          API
         </span>
       </div>
 
-      <p className="text-sm text-slate-400">{title}</p>
+      <p className="break-words text-sm text-slate-400">
+        {title}
+      </p>
 
-      <p className="mt-2 text-3xl font-bold tracking-tight text-slate-100">
+      <p className="mt-2 break-words text-3xl font-bold tracking-tight text-slate-100">
         {value}
       </p>
 
-      <p className="mt-2 text-xs text-slate-500">{description}</p>
+      <p className="mt-2 break-words text-xs text-slate-500">
+        {description}
+      </p>
     </article>
   );
 }
