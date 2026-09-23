@@ -13,6 +13,9 @@ import { EndpointService } from "../services/endpoint.service";
 import { FileEventService } from "../services/file-event.service";
 import { MetricService } from "../services/metric.service";
 
+import { EndpointHealthController } from "../controllers/endpoint-health.controller";
+import { EndpointHealthService } from "../services/endpoint-health.service";
+
 const endpointRepository = new PrismaEndpointRepository();
 const endpointService = new EndpointService(endpointRepository);
 
@@ -27,6 +30,14 @@ const metricRepository = new PrismaMetricRepository();
 const metricService = new MetricService(metricRepository, alertService);
 
 export const metricController = new MetricController(metricService);
+
+const endpointHealthService = new EndpointHealthService(
+  endpointService,
+  metricService,
+);
+
+export const endpointHealthController =
+  new EndpointHealthController(endpointHealthService);
 
 const fileEventRepository = new PrismaFileEventRepository();
 const fileEventService = new FileEventService(fileEventRepository);
