@@ -1,3 +1,4 @@
+
 import type { Request, Response } from "express";
 
 import type { EndpointHealthService } from "../services/endpoint-health.service";
@@ -18,9 +19,22 @@ export class EndpointHealthController {
       const health = await this.service.findAll();
 
       res.status(200).json({
-        data: health,
+        data: health.map(({ latestMetric, ...endpoint }) => ({
+          ...endpoint,
+          latestMetric: latestMetric
+            ? {
+                ...latestMetric,
+                netBytesSent:
+                  latestMetric.netBytesSent?.toString() ?? null,
+                netBytesRecv:
+                  latestMetric.netBytesRecv?.toString() ?? null,
+              }
+            : null,
+        })),
       });
-    } catch {
+    } catch (error) {
+      console.error("Erro ao consultar saúde dos endpoints:", error);
+
       res.status(500).json({
         message: "Internal server error",
       });

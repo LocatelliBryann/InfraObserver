@@ -40,7 +40,7 @@ export class EndpointHealthService {
         const isOnline = this.isRecentMetric(latestMetric);
 
         return {
-          endpointId: endpoint.id,
+          endpointId: endpoint.id,  
           hostname: endpoint.hostname,
           isOnline,
           isStale: !isOnline,
