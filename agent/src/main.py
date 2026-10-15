@@ -1,3 +1,9 @@
+
+from dotenv import load_dotenv
+
+# Carrega as variáveis de agent/.env antes de inicializar o agente.
+load_dotenv()
+
 from src.collectors.cpu import CpuCollector
 from src.collectors.disk import DiskCollector
 from src.collectors.memory import MemoryCollector
