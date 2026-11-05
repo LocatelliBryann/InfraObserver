@@ -1,0 +1,49 @@
+name: 🐞 Bug
+description: Algo não está funcionando como deveria
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: dropdown
+    id: module
+    attributes:
+      label: Módulo
+      options:
+        - Agente
+        - Backend (API)
+        - Frontend (dashboard)
+        - Infraestrutura / CI
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: O que aconteceu
+      description: Descreva o problema de forma clara.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Passos para reproduzir
+      placeholder: |
+        1. Inicie o agente com...
+        2. Abra o dashboard em...
+        3. Veja o erro
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Comportamento esperado
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Ambiente
+      description: Sistema operacional, versão do Python/Node, navegador.
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs ou prints
+      render: shell
