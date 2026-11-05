@@ -1,4 +1,6 @@
 
+import logging
+
 from dotenv import load_dotenv
 
 # Carrega as variáveis de agent/.env antes de inicializar o agente.
@@ -93,6 +95,11 @@ def create_agent() -> Agent:
 
 
 def main() -> None:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    )
+
     agent = create_agent()
     agent.start()
 

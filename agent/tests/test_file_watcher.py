@@ -99,3 +99,45 @@ def test_file_watcher_converts_renamed_event():
 
     assert file_event.event_type == FileEventType.RENAME
     assert file_event.file_path == event.dest_path
+
+
+def test_file_watcher_uses_logged_user_in_events():
+    event_handler = Mock()
+
+    watcher = FileWatcher(
+        directory="C:/Users/test/Documents",
+        event_handler=event_handler,
+        username_provider=lambda: "maria",
+    )
+
+    event = Mock()
+    event.is_directory = False
+    event.src_path = "C:/Users/test/Documents/file.txt"
+
+    watcher.on_created(event)
+
+    file_event = event_handler.call_args.args[0]
+
+    assert file_event.username == "maria"
+
+
+def test_file_watcher_uses_logged_user_in_rename_events():
+    event_handler = Mock()
+
+    watcher = FileWatcher(
+        directory="C:/Users/test/Documents",
+        event_handler=event_handler,
+        username_provider=lambda: "maria",
+    )
+
+    event = Mock()
+    event.is_directory = False
+    event.dest_path = "C:/Users/test/Documents/renamed.txt"
+
+    watcher.on_moved(event)
+
+    file_event = event_handler.call_args.args[0]
+
+    assert file_event.event_type == FileEventType.RENAME
+    assert file_event.file_path == event.dest_path
+    assert file_event.username == "maria"

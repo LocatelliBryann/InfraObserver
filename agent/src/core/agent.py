@@ -1,4 +1,7 @@
+import logging
 import time
+
+logger = logging.getLogger(__name__)
 
 
 class Agent:
@@ -15,7 +18,7 @@ class Agent:
         self.file_observer_service = file_observer_service
 
     def start(self):
-        self.registration_service.register()
+        self.register_with_retry()
 
         if self.file_observer_service is not None:
             self.file_observer_service.start()
@@ -29,10 +32,30 @@ class Agent:
         if self.file_observer_service is not None:
             self.file_observer_service.stop()
 
+    def register_with_retry(self):
+        while True:
+            try:
+                return self.registration_service.register()
+            except Exception:
+                logger.exception(
+                    "Failed to register endpoint, retrying in %s seconds",
+                    self.settings.collection_interval,
+                )
+                time.sleep(self.settings.collection_interval)
+
     def collect_metrics(self):
         return self.metrics_service.collect_and_send()
 
+    def run_cycle(self) -> bool:
+        try:
+            self.collect_metrics()
+        except Exception:
+            logger.exception("Failed to collect or send metrics")
+            return False
+
+        return True
+
     def run(self):
         while True:
-            self.collect_metrics()
+            self.run_cycle()
             time.sleep(self.settings.collection_interval)
