@@ -112,3 +112,46 @@ def test_ignores_empty_monitored_directories(monkeypatch):
         "C:/Users/test/Documents",
         "C:/Users/test/Desktop",
     ]
+
+def test_loads_collection_interval_from_environment(monkeypatch):
+    set_required_environment(monkeypatch)
+    monkeypatch.setenv("INFRAOBSERVER_COLLECTION_INTERVAL", "30")
+
+    settings = AgentSettings.from_environment()
+
+    assert settings.collection_interval == 30
+
+
+def test_uses_default_collection_interval_when_empty(monkeypatch):
+    set_required_environment(monkeypatch)
+    monkeypatch.setenv("INFRAOBSERVER_COLLECTION_INTERVAL", "  ")
+
+    settings = AgentSettings.from_environment()
+
+    assert settings.collection_interval == 60
+
+
+def test_rejects_non_numeric_collection_interval(monkeypatch):
+    set_required_environment(monkeypatch)
+    monkeypatch.setenv("INFRAOBSERVER_COLLECTION_INTERVAL", "abc")
+
+    try:
+        AgentSettings.from_environment()
+        assert False, "Expected ValueError"
+    except ValueError as error:
+        assert str(error) == (
+            "INFRAOBSERVER_COLLECTION_INTERVAL must be a positive integer"
+        )
+
+
+def test_rejects_non_positive_collection_interval(monkeypatch):
+    set_required_environment(monkeypatch)
+    monkeypatch.setenv("INFRAOBSERVER_COLLECTION_INTERVAL", "0")
+
+    try:
+        AgentSettings.from_environment()
+        assert False, "Expected ValueError"
+    except ValueError as error:
+        assert str(error) == (
+            "INFRAOBSERVER_COLLECTION_INTERVAL must be a positive integer"
+        )
