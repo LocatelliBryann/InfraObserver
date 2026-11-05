@@ -7,6 +7,8 @@
 **Monitoramento centralizado de endpoints em rede.**
 Métricas de desempenho, alertas e eventos de sistema de arquivos de vários computadores em um único painel.
 
+**[🌐 Acessar a aplicação: infraobserver.com.br](https://infraobserver.com.br)**
+
 [![CI](https://github.com/LocatelliBryann/InfraObserver/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/LocatelliBryann/InfraObserver/actions/workflows/ci.yml)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=LocatelliBryann_InfraObserver&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=LocatelliBryann_InfraObserver)
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=LocatelliBryann_InfraObserver&metric=coverage)](https://sonarcloud.io/summary/new_code?id=LocatelliBryann_InfraObserver)
@@ -241,7 +243,7 @@ InfraObserver/
 - [x] API com autenticação dos agentes, alertas e detecção de endpoints offline
 - [x] Dashboard com status por endpoint, histórico por período e histórico de alertas
 - [x] CI com testes, cobertura e análise estática (SonarQube Cloud)
-- [ ] Deploy em nuvem com entrega contínua
+- [x] Deploy em nuvem (Microsoft Azure) com entrega contínua e domínio próprio
 - [ ] Configuração remota dos agentes pelo dashboard
 - [ ] Agente como serviço do Windows
 - [ ] Telas de gerenciamento de endpoints e configurações
