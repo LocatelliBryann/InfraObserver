@@ -2,11 +2,30 @@
 import type { Metric } from "../services/metricsService";
 import { EndpointResourceSummary } from "./EndpointResourceSummary";
 
+const STATUS_BADGES: Record<
+  string,
+  { label: string; className: string }
+> = {
+  online: {
+    label: "Operacional",
+    className: "bg-emerald-500/10 text-emerald-400",
+  },
+  alert: {
+    label: "Em alerta",
+    className: "bg-amber-500/10 text-amber-400",
+  },
+  offline: {
+    label: "Indisponível",
+    className: "bg-rose-500/10 text-rose-400",
+  },
+};
+
 interface EndpointHealthSectionProps {
   endpoint: {
     id: number;
     hostname: string;
     status: string;
+    activeAlerts?: number;
   } | null;
   metric: Metric | null;
 }
@@ -29,7 +48,12 @@ export function EndpointHealthSection({
     );
   }
 
-  const isOnline = endpoint.status.toLowerCase() === "online";
+  const badge =
+    STATUS_BADGES[endpoint.status.toLowerCase()] ?? STATUS_BADGES.offline;
+  const alertSuffix =
+    endpoint.status.toLowerCase() === "alert" && endpoint.activeAlerts
+      ? ` (${endpoint.activeAlerts})`
+      : "";
 
   return (
     <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6">
@@ -49,13 +73,10 @@ export function EndpointHealthSection({
         </div>
 
         <span
-          className={`inline-flex w-fit items-center rounded-full px-3 py-1 text-xs font-medium ${
-            isOnline
-              ? "bg-emerald-500/10 text-emerald-400"
-              : "bg-rose-500/10 text-rose-400"
-          }`}
+          className={`inline-flex w-fit items-center rounded-full px-3 py-1 text-xs font-medium ${badge.className}`}
         >
-          {isOnline ? "Operacional" : "Indisponível"}
+          {badge.label}
+          {alertSuffix}
         </span>
       </div>
 

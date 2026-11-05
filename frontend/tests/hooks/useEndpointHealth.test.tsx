@@ -27,6 +27,8 @@ const mockHealth = [
   {
     endpointId: 1,
     hostname: "DESKTOP-TEST",
+    status: "ONLINE" as const,
+    activeAlerts: 0,
     isOnline: true,
     isStale: false,
     latestMetric: {
@@ -45,6 +47,8 @@ const mockHealth = [
   {
     endpointId: 2,
     hostname: "SERVER-TEST",
+    status: "ALERT" as const,
+    activeAlerts: 1,
     isOnline: true,
     isStale: false,
     latestMetric: {
@@ -85,7 +89,7 @@ describe("useEndpointHealth", () => {
     expect(result.current.error).toBeNull();
   });
 
-  it("atualiza a saúde automaticamente a cada 60 segundos", async () => {
+  it("atualiza a saúde automaticamente a cada 30 segundos", async () => {
     vi.useFakeTimers();
 
     const { result } = renderHook(() => useEndpointHealth(endpoints));
@@ -98,7 +102,7 @@ describe("useEndpointHealth", () => {
     expect(mockedGetEndpointHealth).toHaveBeenCalledTimes(1);
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(60_000);
+      await vi.advanceTimersByTimeAsync(30_000);
     });
 
     expect(mockedGetEndpointHealth).toHaveBeenCalledTimes(2);
