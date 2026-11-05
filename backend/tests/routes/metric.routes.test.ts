@@ -6,6 +6,11 @@ import app from "../../src/app";
 
 import { prisma } from "../../src/database/prisma";
 
+const AGENT_TOKEN = "test-agent-token";
+const AGENT_AUTH_HEADER = `Bearer ${AGENT_TOKEN}`;
+
+process.env.AGENT_TOKENS = AGENT_TOKEN;
+
 describe("POST /api/v1/metrics", () => {
   const agentId = "550e8400-e29b-41d4-a716-446655440002";
 
@@ -58,6 +63,7 @@ describe("POST /api/v1/metrics", () => {
 
     const response = await request(app)
       .post("/api/v1/metrics")
+      .set("Authorization", AGENT_AUTH_HEADER)
       .send({
         agentId,
         cpuPercent: 35.5,
@@ -92,6 +98,7 @@ describe("POST /api/v1/metrics", () => {
 
     const response = await request(app)
       .post("/api/v1/metrics")
+      .set("Authorization", AGENT_AUTH_HEADER)
       .send({
         agentId,
         cpuPercent: 95,
@@ -136,6 +143,7 @@ describe("POST /api/v1/metrics", () => {
 
     const response = await request(app)
       .post("/api/v1/metrics")
+      .set("Authorization", AGENT_AUTH_HEADER)
       .send({
         agentId,
         cpuPercent: 70,
@@ -175,6 +183,7 @@ describe("POST /api/v1/metrics", () => {
 
     const alertResponse = await request(app)
       .post("/api/v1/metrics")
+      .set("Authorization", AGENT_AUTH_HEADER)
       .send({
         agentId,
         cpuPercent: 95,
@@ -191,6 +200,7 @@ describe("POST /api/v1/metrics", () => {
 
     const firstNormalResponse = await request(app)
       .post("/api/v1/metrics")
+      .set("Authorization", AGENT_AUTH_HEADER)
       .send({
         agentId,
         cpuPercent: 70,
@@ -217,6 +227,7 @@ describe("POST /api/v1/metrics", () => {
 
     const secondNormalResponse = await request(app)
       .post("/api/v1/metrics")
+      .set("Authorization", AGENT_AUTH_HEADER)
       .send({
         agentId,
         cpuPercent: 65,
@@ -244,6 +255,7 @@ describe("POST /api/v1/metrics", () => {
   it("should return 404 when the endpoint is not registered", async () => {
     const response = await request(app)
       .post("/api/v1/metrics")
+      .set("Authorization", AGENT_AUTH_HEADER)
       .send({
         agentId: "550e8400-e29b-41d4-a716-446655440003",
         cpuPercent: 25,
@@ -270,6 +282,7 @@ describe("POST /api/v1/metrics", () => {
 
     const response = await request(app)
       .post("/api/v1/metrics")
+      .set("Authorization", AGENT_AUTH_HEADER)
       .send({
         agentId,
         cpuPercent: 150,
@@ -288,6 +301,7 @@ describe("POST /api/v1/metrics", () => {
   it("should return 400 when collectedAt is invalid", async () => {
     const response = await request(app)
       .post("/api/v1/metrics")
+      .set("Authorization", AGENT_AUTH_HEADER)
       .send({
         agentId,
         cpuPercent: 35.5,
@@ -302,6 +316,7 @@ describe("POST /api/v1/metrics", () => {
   it("should return 400 when agentId is invalid", async () => {
     const response = await request(app)
       .post("/api/v1/metrics")
+      .set("Authorization", AGENT_AUTH_HEADER)
       .send({
         agentId: "invalid-agent-id",
         cpuPercent: 35.5,
@@ -311,5 +326,24 @@ describe("POST /api/v1/metrics", () => {
       });
 
     expect(response.status).toBe(400);
+  });
+
+  it("should return 401 when the agent token is missing", async () => {
+    const response = await request(app)
+      .post("/api/v1/metrics")
+      .send({});
+
+    expect(response.status).toBe(401);
+    expect(response.body.message).toBe("Missing agent token");
+  });
+
+  it("should return 401 when the agent token is invalid", async () => {
+    const response = await request(app)
+      .post("/api/v1/metrics")
+      .set("Authorization", "Bearer wrong-token")
+      .send({});
+
+    expect(response.status).toBe(401);
+    expect(response.body.message).toBe("Invalid agent token");
   });
 });
