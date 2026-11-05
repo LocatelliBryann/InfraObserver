@@ -1,5 +1,7 @@
+import "@testing-library/jest-dom/vitest";
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
 
 import { DashboardContent } from "../../src/components/DashboardContent";
 
@@ -104,6 +106,49 @@ describe("DashboardContent", () => {
 
     expect(
       screen.getByText("Não foi possível carregar as métricas."),
+    ).toBeTruthy();
+  });
+
+  it("permite trocar o período do histórico de métricas", async () => {
+    const onMetricPeriodChange = vi.fn();
+
+    render(
+      <DashboardContent
+        {...defaultProps}
+        metricPeriod="live"
+        onMetricPeriodChange={onMetricPeriodChange}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Tempo real" }),
+    ).toHaveAttribute("aria-pressed", "true");
+
+    await userEvent.click(screen.getByRole("button", { name: "24 horas" }));
+
+    expect(onMetricPeriodChange).toHaveBeenCalledWith("24h");
+  });
+
+  it("exibe o status de alerta do endpoint selecionado", () => {
+    render(
+      <DashboardContent
+        {...defaultProps}
+        selectedEndpointHealth={{
+          isOnline: true,
+          status: "ALERT",
+          activeAlerts: 2,
+        }}
+      />,
+    );
+
+    expect(screen.getByText("Em alerta (2)")).toBeTruthy();
+  });
+
+  it("mostra a atividade do endpoint selecionado", () => {
+    render(<DashboardContent {...defaultProps} />);
+
+    expect(
+      screen.getByText("Eventos de arquivo detectados em server-01."),
     ).toBeTruthy();
   });
 });

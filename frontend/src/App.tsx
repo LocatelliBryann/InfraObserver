@@ -6,6 +6,8 @@ import { DashboardContent } from "./components/DashboardContent";
 import { DashboardHeader } from "./components/DashboardHeader";
 import { PlatformStatus } from "./components/PlatformStatus";
 import { SidebarNavigation } from "./components/SidebarNavigation";
+import type { MetricPeriodKey } from "./config/metricPeriods";
+import { useAlertHistory } from "./hooks/useAlertHistory";
 import { useAlerts } from "./hooks/useAlerts";
 import { useEndpointHealth } from "./hooks/useEndpointHealth";
 import { useEndpoints } from "./hooks/useEndpoints";
@@ -38,18 +40,29 @@ function App() {
   } = useAlerts();
 
   const {
-    fileEvents,
-    loading: fileEventsLoading,
-    error: fileEventsError,
-    refresh: refreshFileEvents,
-  } = useFileEvents();
+    history: alertHistory,
+    loading: alertHistoryLoading,
+    error: alertHistoryError,
+    refresh: refreshAlertHistory,
+  } = useAlertHistory();
 
   const [selectedEndpointId, setSelectedEndpointId] =
     useState<number | null>(null);
 
+  const [metricPeriod, setMetricPeriod] =
+    useState<MetricPeriodKey>("live");
+
   const activeEndpointId =
     selectedEndpointId ??
     (endpoints[0] ? Number(endpoints[0].id) : null);
+
+  // RF20: eventos de arquivo do endpoint selecionado.
+  const {
+    fileEvents,
+    loading: fileEventsLoading,
+    error: fileEventsError,
+    refresh: refreshFileEvents,
+  } = useFileEvents(20, activeEndpointId);
 
   const selectedEndpoint = endpoints.find(
     (endpoint) => Number(endpoint.id) === activeEndpointId,
@@ -64,9 +77,12 @@ function App() {
     loading: metricsLoading,
     error: metricsError,
     refresh: refreshMetrics,
-  } = useMetrics(activeEndpointId);
+  } = useMetrics(activeEndpointId, metricPeriod);
 
-  const latestMetric = metrics[0] ?? null;
+  // O card de recursos sempre mostra a coleta mais recente,
+  // inclusive quando o gráfico exibe um período.
+  const latestMetric =
+    selectedEndpointHealth?.latestMetric ?? metrics[0] ?? null;
 
   const isLoading =
     loading ||
@@ -87,12 +103,14 @@ function App() {
     await Promise.all([
       refreshEndpoints(),
       refreshAlerts(),
+      refreshAlertHistory(),
       refreshFileEvents(),
       refreshMetrics(),
     ]);
   }, [
     refreshEndpoints,
     refreshAlerts,
+    refreshAlertHistory,
     refreshFileEvents,
     refreshMetrics,
   ]);
@@ -180,6 +198,12 @@ function App() {
             availability={availability}
             selectedEndpoint={selectedEndpoint ?? null}
             selectedEndpointHealth={selectedEndpointHealth}
+            endpointHealth={health}
+            metricPeriod={metricPeriod}
+            onMetricPeriodChange={setMetricPeriod}
+            alertHistory={alertHistory}
+            alertHistoryLoading={alertHistoryLoading}
+            alertHistoryError={alertHistoryError}
             activeEndpointId={activeEndpointId}
             setSelectedEndpointId={setSelectedEndpointId}
             metrics={metrics}
