@@ -1,0 +1,17 @@
+# Normaliza quebras de linha no repositório.
+* text=auto
+
+# Arquivos executados dentro de containers Linux precisam de LF,
+# mesmo quando editados no Windows.
+*.sh        text eol=lf
+Caddyfile   text eol=lf
+Dockerfile  text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+*.env.example text eol=lf
+
+# Binários
+*.png  binary
+*.jpg  binary
+*.pdf  binary
+*.docx binary
