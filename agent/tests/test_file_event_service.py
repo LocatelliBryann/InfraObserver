@@ -37,3 +37,24 @@ def test_file_event_service_sends_event_to_backend():
             "occurredAt": occurred_at.isoformat(),
         },
     )
+
+def test_file_event_service_does_not_raise_when_backend_fails():
+    http_client = Mock()
+    http_client.post.side_effect = ConnectionError("server unavailable")
+    settings = Mock(spec=AgentSettings)
+    settings.agent_id = "550e8400-e29b-41d4-a716-446655440000"
+
+    service = FileEventService(
+        http_client=http_client,
+        settings=settings,
+    )
+
+    event = FileEvent(
+        event_type=FileEventType.DELETE,
+        file_path="C:/Users/test/document.txt",
+        username="test-user",
+        occurred_at=datetime.now(timezone.utc),
+    )
+
+    assert service.send(event) is False
+    http_client.post.assert_called_once()
