@@ -73,19 +73,19 @@ No [portal da Azure](https://portal.azure.com), vá em **Máquinas virtuais → 
 | Assinatura | Azure for Students |
 | Grupo de recursos | Criar novo: `infraobserver-rg` |
 | Nome da máquina virtual | `infraobserver-vm` |
-| Região | Uma região permitida pela sua assinatura (ex.: *East US 2* ou *Brazil South*) |
+| Região | **Chile Central**: a mais próxima do Brasil entre as permitidas pela assinatura de estudante |
 | Imagem | **Ubuntu Server 24.04 LTS - x64 Gen2** |
-| Tamanho | **Standard_B1ms** (1 vCPU, 2 GB de RAM) |
+| Tamanho | **Standard_B2ats_v2** (2 vCPU, 1 GB de RAM; o swap de 2 GB dá folga). A stack usa cerca de 220 MB |
 | Tipo de autenticação | **Chave pública SSH** |
 | Nome de usuário | `azureuser` |
 | Origem da chave pública SSH | **Usar chave pública existente**, colando o conteúdo de `infraobserver_deploy.pub` |
 | Portas de entrada públicas | **HTTP (80), HTTPS (443) e SSH (22)** |
 
-A assinatura Azure for Students limita as regiões disponíveis. Se aparecer um erro de política (`RequestDisallowedByAzure`), escolha outra região.
+A assinatura Azure for Students só permite algumas regiões, e nem todos os tamanhos estão disponíveis em cada uma. As regiões liberadas aparecem em **Política → Atribuições → Allowed locations → Parâmetros**. Uma região fora da lista gera o erro `RequestDisallowedByAzure`. Escolha também **Opções de disponibilidade: Nenhuma redundância de infraestrutura necessária**.
 
 **Aba Discos:** *SSD Standard* é suficiente.
 
-**Aba Avançado → Dados personalizados:** cole o conteúdo de [`infrastructure/azure/cloud-init.yml`](../infrastructure/azure/cloud-init.yml). Ele instala o Docker, cria a pasta `~/infraobserver` e um swap de 2 GB.
+**Aba Avançado → Dados personalizados:** cole o conteúdo de [`infrastructure/azure/cloud-init.yml`](../infrastructure/azure/cloud-init.yml). Ele instala o Docker, cria a pasta `~/infraobserver` e um swap de 2 GB. O arquivo não tem acentos de propósito, porque caracteres corrompidos na cópia fazem o cloud-init descartá-lo inteiro.
 
 Clique em **Revisar + criar → Criar**.
 
@@ -100,7 +100,7 @@ Depois que a VM for criada, abra o recurso **Endereço IP público** dela → **
 O domínio público fica no formato:
 
 ```text
-infraobserver-bryann.<região>.cloudapp.azure.com
+infraobserver-bryann.chilecentral.cloudapp.azure.com
 ```
 
 ## 4. Configurar o servidor
@@ -108,10 +108,10 @@ infraobserver-bryann.<região>.cloudapp.azure.com
 Conecte na VM:
 
 ```powershell
-ssh -i $HOME\.ssh\infraobserver_deploy azureuser@infraobserver-bryann.<região>.cloudapp.azure.com
+ssh -i $HOME\.ssh\infraobserver_deploy azureuser@infraobserver-bryann.chilecentral.cloudapp.azure.com
 ```
 
-Confirme que o cloud-init terminou e que o Docker está instalado:
+Confirme que o cloud-init terminou e que o Docker está instalado (se o Docker não aparecer, rode manualmente os comandos da seção `runcmd` do `cloud-init.yml`, com `sudo`):
 
 ```bash
 cloud-init status --wait
