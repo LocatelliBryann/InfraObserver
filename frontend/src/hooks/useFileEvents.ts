@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 
+import { DASHBOARD_REFRESH_INTERVAL_MS } from "../config/refresh";
+
 import {
   getRecentFileEvents,
   type FileEvent,
 } from "../services/fileEventsService";
 
-const FILE_EVENTS_REFRESH_INTERVAL_MS = 60 * 1000;
 
 interface UseFileEventsResult {
   fileEvents: FileEvent[];
@@ -14,8 +15,10 @@ interface UseFileEventsResult {
   refresh: () => Promise<void>;
 }
 
+// endpointId nulo ou indefinido lista os eventos de todos os endpoints.
 export function useFileEvents(
   limit = 20,
+  endpointId: number | null = null,
 ): UseFileEventsResult {
   const [fileEvents, setFileEvents] = useState<FileEvent[]>([]);
   const [loading, setLoading] = useState(false);
@@ -26,7 +29,10 @@ export function useFileEvents(
     setError(null);
 
     try {
-      const result = await getRecentFileEvents(limit);
+      const result =
+        endpointId === null
+          ? await getRecentFileEvents(limit)
+          : await getRecentFileEvents(limit, endpointId);
       setFileEvents(result);
     } catch {
       setError("Não foi possível carregar os eventos recentes.");
@@ -34,14 +40,16 @@ export function useFileEvents(
     } finally {
       setLoading(false);
     }
-  }, [limit]);
+  }, [limit, endpointId]);
 
   useEffect(() => {
+    // Ao trocar de endpoint, não mostra eventos do endpoint anterior.
+    setFileEvents([]);
     void refresh();
 
     const intervalId = window.setInterval(() => {
       void refresh();
-    }, FILE_EVENTS_REFRESH_INTERVAL_MS);
+    }, DASHBOARD_REFRESH_INTERVAL_MS);
 
     return () => {
       window.clearInterval(intervalId);

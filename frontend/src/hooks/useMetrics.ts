@@ -1,11 +1,17 @@
 import { useCallback, useEffect, useState } from "react";
 
 import {
+  METRIC_PERIODS,
+  type MetricPeriodKey,
+} from "../config/metricPeriods";
+import {
+  DASHBOARD_REFRESH_INTERVAL_MS,
+  LIVE_METRICS_REFRESH_INTERVAL_MS,
+} from "../config/refresh";
+import {
   getMetrics,
   type Metric,
 } from "../services/metricsService";
-
-const METRICS_REFRESH_INTERVAL_MS = 10 * 1000;
 
 interface UseMetricsResult {
   metrics: Metric[];
@@ -16,6 +22,7 @@ interface UseMetricsResult {
 
 export function useMetrics(
   endpointId: number | null,
+  period: MetricPeriodKey = "live",
 ): UseMetricsResult {
   const [metrics, setMetrics] = useState<Metric[]>([]);
   const [loading, setLoading] = useState(false);
@@ -33,16 +40,26 @@ export function useMetrics(
     setError(null);
 
     try {
-      const data = await getMetrics(endpointId);
+      const { durationMs, limit } = METRIC_PERIODS[period];
+
+      const data =
+        durationMs === null
+          ? await getMetrics(endpointId)
+          : await getMetrics(endpointId, limit, {
+              from: new Date(Date.now() - durationMs),
+            });
+
       setMetrics(data);
     } catch {
       setError("Não foi possível carregar as métricas.");
     } finally {
       setLoading(false);
     }
-  }, [endpointId]);
+  }, [endpointId, period]);
 
   useEffect(() => {
+    // Ao trocar endpoint ou período, não mostra o gráfico anterior.
+    setMetrics([]);
     void refresh();
 
     if (endpointId === null) {
@@ -51,12 +68,14 @@ export function useMetrics(
 
     const intervalId = window.setInterval(() => {
       void refresh();
-    }, METRICS_REFRESH_INTERVAL_MS);
+    }, period === "live"
+      ? LIVE_METRICS_REFRESH_INTERVAL_MS
+      : DASHBOARD_REFRESH_INTERVAL_MS);
 
     return () => {
       window.clearInterval(intervalId);
     };
-  }, [endpointId, refresh]);
+  }, [endpointId, period, refresh]);
 
   return {
     metrics,
