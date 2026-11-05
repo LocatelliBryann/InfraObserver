@@ -1,6 +1,7 @@
 import type { MetricRepository } from "../repositories/metric.repository";
 import type { CreateMetricInput } from "../utils/validation/metric.schema";
 import type { AlertService } from "./alert.service";
+import type { EndpointStatusService } from "./endpoint-status.service";
 
 const ALERT_THRESHOLDS = {
   CPU: {
@@ -21,6 +22,10 @@ export class MetricService {
   constructor(
     private readonly repository: MetricRepository,
     private readonly alertService: Pick<AlertService, "evaluate">,
+    private readonly endpointStatusService: Pick<
+      EndpointStatusService,
+      "markOnline"
+    >,
   ) {}
 
   async create(input: CreateMetricInput) {
@@ -43,6 +48,8 @@ export class MetricService {
       netBytesRecv: input.netBytesRecv,
       collectedAt: input.collectedAt,
     });
+
+    await this.endpointStatusService.markOnline(endpoint.id);
 
     await this.evaluateAlerts({
       endpointId: endpoint.id,

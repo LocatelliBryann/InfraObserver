@@ -29,7 +29,15 @@ describe("MetricService", () => {
       evaluate: vi.fn(),
     };
 
-    const service = new MetricService(repository, alertService);
+    const endpointStatusService = {
+      markOnline: vi.fn(),
+    };
+
+    const service = new MetricService(
+      repository,
+      alertService,
+      endpointStatusService,
+    );
 
     const input = {
       agentId: "550e8400-e29b-41d4-a716-446655440000",
@@ -60,6 +68,8 @@ describe("MetricService", () => {
       netBytesRecv: input.netBytesRecv,
       collectedAt: input.collectedAt,
     });
+
+    expect(endpointStatusService.markOnline).toHaveBeenCalledWith(1);
 
     expect(result).toBeDefined();
   });
@@ -98,7 +108,15 @@ describe("MetricService", () => {
       }),
     };
 
-    const service = new MetricService(repository, alertService);
+    const endpointStatusService = {
+      markOnline: vi.fn(),
+    };
+
+    const service = new MetricService(
+      repository,
+      alertService,
+      endpointStatusService,
+    );
 
     const input = {
       agentId: "550e8400-e29b-41d4-a716-446655440000",
@@ -162,7 +180,15 @@ describe("MetricService", () => {
       evaluate: vi.fn(),
     };
 
-    const service = new MetricService(repository, alertService);
+    const endpointStatusService = {
+      markOnline: vi.fn(),
+    };
+
+    const service = new MetricService(
+      repository,
+      alertService,
+      endpointStatusService,
+    );
 
     const result = await service.findRecentByEndpointId(1, 20);
 
