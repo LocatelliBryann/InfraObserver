@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
+import { DASHBOARD_REFRESH_INTERVAL_MS } from "../config/refresh";
+
 import {
   getEndpointHealth,
   type EndpointHealth,
@@ -7,13 +9,13 @@ import {
 
 import type { Endpoint } from "../services/endpointsService";
 
-const HEALTH_REFRESH_INTERVAL_MS = 60 * 1000;
 
 interface UseEndpointHealthResult {
   health: EndpointHealth[];
   loading: boolean;
   error: string | null;
   onlineCount: number;
+  alertCount: number;
   unavailableCount: number;
   availability: number | null;
 }
@@ -58,7 +60,7 @@ export function useEndpointHealth(
 
     const intervalId = window.setInterval(() => {
       void refresh();
-    }, HEALTH_REFRESH_INTERVAL_MS);
+    }, DASHBOARD_REFRESH_INTERVAL_MS);
 
     return () => {
       window.clearInterval(intervalId);
@@ -66,6 +68,7 @@ export function useEndpointHealth(
   }, [hasEndpoints, refresh]);
 
   const onlineCount = health.filter((item) => item.isOnline).length;
+  const alertCount = health.filter((item) => item.status === "ALERT").length;
   const unavailableCount = health.filter((item) => !item.isOnline).length;
 
   const availability =
@@ -78,6 +81,7 @@ export function useEndpointHealth(
     loading,
     error,
     onlineCount,
+    alertCount,
     unavailableCount,
     availability,
   };

@@ -8,9 +8,19 @@ import {
 import { AlertsSection } from "./AlertsSection";
 import { EmptyState } from "./EmptyState";
 import { EndpointHealthSection } from "./EndpointHealthSection";
+import { EndpointStatusList } from "./EndpointStatusList";
 import { MetricsChart } from "./MetricsChart";
 
+import {
+  METRIC_PERIODS,
+  METRIC_PERIOD_KEYS,
+  type MetricPeriodKey,
+} from "../config/metricPeriods";
 import type { Alert } from "../services/alertsService";
+import type {
+  EndpointHealth,
+  EndpointStatus,
+} from "../services/endpointHealthService";
 import type { Endpoint } from "../services/endpointsService";
 import type { FileEvent } from "../services/fileEventsService";
 import type { Metric } from "../services/metricsService";
@@ -26,7 +36,15 @@ interface DashboardContentProps {
   selectedEndpoint: Endpoint | null;
   selectedEndpointHealth: {
     isOnline: boolean;
+    status?: EndpointStatus;
+    activeAlerts?: number;
   } | undefined;
+  endpointHealth?: EndpointHealth[];
+  metricPeriod?: MetricPeriodKey;
+  onMetricPeriodChange?: (period: MetricPeriodKey) => void;
+  alertHistory?: Alert[];
+  alertHistoryLoading?: boolean;
+  alertHistoryError?: string | null;
   activeEndpointId: number | null;
   setSelectedEndpointId: (id: number | null) => void;
   metrics: Metric[];
@@ -51,6 +69,12 @@ export function DashboardContent({
   availability,
   selectedEndpoint,
   selectedEndpointHealth,
+  endpointHealth = [],
+  metricPeriod = "live",
+  onMetricPeriodChange,
+  alertHistory,
+  alertHistoryLoading,
+  alertHistoryError,
   activeEndpointId,
   setSelectedEndpointId,
   metrics,
@@ -83,6 +107,10 @@ export function DashboardContent({
   const activeAlertsValue = alertsLoading
     ? "—"
     : String(alerts.length);
+
+  const selectedStatus: EndpointStatus =
+    selectedEndpointHealth?.status ??
+    (selectedEndpointHealth?.isOnline ? "ONLINE" : "OFFLINE");
 
   return (
     <div className="mx-auto w-full max-w-7xl min-w-0 space-y-8 p-6 md:p-10">
@@ -174,6 +202,9 @@ export function DashboardContent({
         loading={alertsLoading}
         error={alertsError}
         endpoints={endpoints}
+        history={alertHistory}
+        historyLoading={alertHistoryLoading}
+        historyError={alertHistoryError}
       />
 
       <section
@@ -188,7 +219,31 @@ export function DashboardContent({
             Histórico de métricas
           </h3>
 
-          <div className="flex min-w-0 items-center gap-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-3">
+            {onMetricPeriodChange && (
+              <div
+                role="group"
+                aria-label="Período do histórico"
+                className="flex rounded-lg border border-slate-700 p-0.5 text-xs"
+              >
+                {METRIC_PERIOD_KEYS.map((key) => (
+                  <button
+                    key={key}
+                    type="button"
+                    aria-pressed={metricPeriod === key}
+                    onClick={() => onMetricPeriodChange(key)}
+                    className={`rounded-md px-3 py-1 font-medium transition-colors ${
+                      metricPeriod === key
+                        ? "bg-slate-700 text-slate-100"
+                        : "text-slate-400 hover:text-slate-200"
+                    }`}
+                  >
+                    {METRIC_PERIODS[key].label}
+                  </button>
+                ))}
+              </div>
+            )}
+
             <label
               htmlFor="endpoint-select"
               className="text-xs text-slate-400"
@@ -230,7 +285,7 @@ export function DashboardContent({
           </div>
         </div>
 
-        {metricsLoading ? (
+        {metricsLoading && metrics.length === 0 ? (
           <StatusMessage>
             Carregando métricas...
           </StatusMessage>
@@ -246,7 +301,11 @@ export function DashboardContent({
         ) : metrics.length === 0 ? (
           <EmptyState
             title="Nenhuma métrica disponível"
-            description="Ainda não foram coletadas métricas para o endpoint selecionado."
+            description={
+              metricPeriod === "live"
+                ? "Ainda não foram coletadas métricas para o endpoint selecionado."
+                : `Nenhuma métrica coletada nas últimas ${METRIC_PERIODS[metricPeriod].label}.`
+            }
           />
         ) : (
           <div className="min-w-0">
@@ -272,15 +331,20 @@ export function DashboardContent({
           </span>
         </div>
 
+        <EndpointStatusList
+          health={endpointHealth}
+          activeEndpointId={activeEndpointId}
+          onSelect={(endpointId) => setSelectedEndpointId(endpointId)}
+        />
+
         <EndpointHealthSection
           endpoint={
             selectedEndpoint
               ? {
                   id: Number(selectedEndpoint.id),
                   hostname: selectedEndpoint.hostname,
-                  status: selectedEndpointHealth?.isOnline
-                    ? "ONLINE"
-                    : "OFFLINE",
+                  status: selectedStatus,
+                  activeAlerts: selectedEndpointHealth?.activeAlerts,
                 }
               : null
           }
@@ -306,12 +370,14 @@ export function DashboardContent({
             </h3>
 
             <p className="text-sm text-slate-400">
-              Eventos e alterações detectadas nos endpoints.
+              {selectedEndpoint
+                ? `Eventos de arquivo detectados em ${selectedEndpoint.hostname}.`
+                : "Eventos e alterações detectadas nos endpoints."}
             </p>
           </div>
         </div>
 
-        {fileEventsLoading ? (
+        {fileEventsLoading && fileEvents.length === 0 ? (
           <StatusMessage>
             Carregando atividades recentes...
           </StatusMessage>

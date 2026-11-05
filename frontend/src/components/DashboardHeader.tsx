@@ -67,7 +67,7 @@ export function DashboardHeader({
             <div className="flex items-center gap-2 text-xs text-slate-500">
               <RefreshCw size={13} />
 
-              <span>Atualização automática a cada 60 segundos</span>
+              <span>Atualização automática a cada 30 segundos</span>
             </div>
 
             <button

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 
 import { AlertsSection } from "../../src/components/AlertsSection";
 
@@ -136,5 +137,49 @@ describe("AlertsSection", () => {
     expect(screen.getByText("HIGH")).toBeTruthy();
     expect(screen.getByText("CRITICAL")).toBeTruthy();
     expect(screen.getByText("MEDIUM")).toBeTruthy();
+  });
+
+  it("alterna para o histórico de alertas resolvidos", async () => {
+    render(
+      <AlertsSection
+        alerts={alerts}
+        loading={false}
+        error={null}
+        endpoints={endpoints}
+        history={[
+          {
+            id: 2,
+            endpointId: 1,
+            metricId: null,
+            metricType: "OFFLINE",
+            thresholdValue: 180,
+            severity: "CRITICAL",
+            triggeredAt: "2026-11-05T10:00:00.000Z",
+            resolvedAt: "2026-11-05T11:30:00.000Z",
+          },
+        ]}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("tab", { name: /Histórico/ }));
+
+    expect(screen.getByText("Histórico de alertas")).toBeTruthy();
+    expect(screen.getByText("Endpoint offline")).toBeTruthy();
+    expect(screen.getByText("Limite: 180s sem dados")).toBeTruthy();
+    expect(screen.getByText("Duração: 1 h 30 min")).toBeTruthy();
+    expect(screen.getByText("1 resolvido(s)")).toBeTruthy();
+  });
+
+  it("não exibe as abas quando o histórico não é informado", () => {
+    render(
+      <AlertsSection
+        alerts={alerts}
+        loading={false}
+        error={null}
+        endpoints={endpoints}
+      />,
+    );
+
+    expect(screen.queryByRole("tab")).toBeNull();
   });
 });

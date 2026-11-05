@@ -104,4 +104,14 @@ describe("useFileEvents", () => {
       "Não foi possível carregar os eventos recentes.",
     );
   });
+
+  it("filtra os eventos pelo endpoint selecionado", async () => {
+    mockedGetRecentFileEvents.mockResolvedValue([]);
+
+    renderHook(() => useFileEvents(20, 5));
+
+    await waitFor(() => {
+      expect(mockedGetRecentFileEvents).toHaveBeenCalledWith(20, 5);
+    });
+  });
 });

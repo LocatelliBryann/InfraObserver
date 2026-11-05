@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
+import { DASHBOARD_REFRESH_INTERVAL_MS } from "../config/refresh";
+
 import {
   endpointsService,
   type Endpoint,
@@ -33,6 +35,15 @@ export function useEndpoints(): UseEndpointsResult {
 
   useEffect(() => {
     void refresh();
+
+    // Endpoints recém-registrados aparecem sem recarregar a página.
+    const intervalId = window.setInterval(() => {
+      void refresh();
+    }, DASHBOARD_REFRESH_INTERVAL_MS);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
   }, [refresh]);
 
   return {
