@@ -3,6 +3,7 @@ import type { Request, Response } from "express";
 import type { FileEventService } from "../services/file-event.service";
 
 import { createFileEventSchema } from "../utils/validation/file-event.schema";
+import { fileEventQuerySchema } from "../utils/validation/query.schema";
 
 export class FileEventController {
   constructor(
@@ -53,17 +54,19 @@ export class FileEventController {
     req: Request,
     res: Response,
   ): Promise<void> {
-    const parsedLimit = Number(req.query.limit ?? 20);
+    const query = fileEventQuerySchema.safeParse(req.query);
 
-    const limit =
-      Number.isInteger(parsedLimit) &&
-      parsedLimit > 0 &&
-      parsedLimit <= 100
-        ? parsedLimit
-        : 20;
+    if (!query.success) {
+      res.status(400).json({
+        message: "Invalid query parameters",
+        errors: query.error.issues,
+      });
+
+      return;
+    }
 
     try {
-      const fileEvents = await this.service.findRecent(limit);
+      const fileEvents = await this.service.findRecent(query.data);
 
       res.status(200).json(fileEvents);
     } catch {

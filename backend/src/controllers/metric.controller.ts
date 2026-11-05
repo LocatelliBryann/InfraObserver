@@ -3,6 +3,7 @@ import type { Request, Response } from "express";
 import type { MetricService } from "../services/metric.service";
 
 import { createMetricSchema } from "../utils/validation/metric.schema";
+import { metricHistoryQuerySchema } from "../utils/validation/query.schema";
 
 export class MetricController {
   constructor(
@@ -48,29 +49,27 @@ export class MetricController {
   }
 
   async findRecent(req: Request, res: Response): Promise<void> {
-    const endpointId = Number(req.query.endpointId);
-    const limit =
-      req.query.limit === undefined ? 20 : Number(req.query.limit);
+    const query = metricHistoryQuerySchema.safeParse(req.query);
 
-    if (
-      !Number.isInteger(endpointId) ||
-      endpointId <= 0 ||
-      !Number.isInteger(limit) ||
-      limit <= 0 ||
-      limit > 100
-    ) {
+    if (!query.success) {
       res.status(400).json({
         message: "Invalid query parameters",
+        errors: query.error.issues,
       });
 
       return;
     }
 
+    const { endpointId, limit, from, to } = query.data;
+    const hasPeriod = from !== undefined || to !== undefined;
+
     try {
-      const metrics = await this.service.findRecentByEndpointId(
-        endpointId,
-        limit,
-      );
+      const metrics = hasPeriod
+        ? await this.service.findRecentByEndpointId(endpointId, limit, {
+            from,
+            to,
+          })
+        : await this.service.findRecentByEndpointId(endpointId, limit);
 
       res.status(200).json(
         metrics.map((metric) => ({

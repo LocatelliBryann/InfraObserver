@@ -47,4 +47,37 @@ describe("FileEventService", () => {
 
     expect(result).toBeDefined();
   });
+
+  it("should list recent events with the default limit", async () => {
+    const repository = {
+      findEndpointByAgentId: vi.fn(),
+      create: vi.fn(),
+      findRecent: vi.fn().mockResolvedValue([]),
+    };
+
+    const service = new FileEventService(repository);
+
+    await service.findRecent();
+
+    expect(repository.findRecent).toHaveBeenCalledWith({ limit: 20 });
+  });
+
+  it("should forward endpoint and period filters", async () => {
+    const repository = {
+      findEndpointByAgentId: vi.fn(),
+      create: vi.fn(),
+      findRecent: vi.fn().mockResolvedValue([]),
+    };
+
+    const service = new FileEventService(repository);
+    const from = new Date("2026-11-05T10:00:00.000Z");
+
+    await service.findRecent({ endpointId: 3, from, limit: 50 });
+
+    expect(repository.findRecent).toHaveBeenCalledWith({
+      endpointId: 3,
+      from,
+      limit: 50,
+    });
+  });
 });

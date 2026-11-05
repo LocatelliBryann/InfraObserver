@@ -1,4 +1,7 @@
-import type { FileEventRepository } from "../repositories/file-event.repository";
+import type {
+  FileEventFilters,
+  FileEventRepository,
+} from "../repositories/file-event.repository";
 
 export interface CreateFileEventInput {
   agentId: string;
@@ -33,7 +36,10 @@ export class FileEventService {
     });
   }
 
-  async findRecent(limit = 20) {
-    return this.repository.findRecent(limit);
+  async findRecent(filters: Partial<FileEventFilters> = {}) {
+    return this.repository.findRecent({
+      limit: 20,
+      ...filters,
+    });
   }
 }
