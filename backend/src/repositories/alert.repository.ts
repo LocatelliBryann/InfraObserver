@@ -1,6 +1,26 @@
 import { prisma } from "../database/prisma";
+import type { AlertStatusFilter } from "../utils/validation/query.schema";
+
+export interface AlertFilters {
+  status: AlertStatusFilter;
+  endpointId?: number;
+  limit: number;
+}
 
 export interface AlertRepository {
+  findMany(filters: AlertFilters): Promise<
+    Array<{
+      id: number;
+      endpointId: number;
+      metricId: number | null;
+      metricType: string;
+      thresholdValue: number;
+      severity: string;
+      triggeredAt: Date;
+      resolvedAt: Date | null;
+    }>
+  >;
+
   findActive(): Promise<
     Array<{
       id: number;
@@ -68,6 +88,20 @@ export interface AlertRepository {
 }
 
 export class PrismaAlertRepository implements AlertRepository {
+  async findMany({ status, endpointId, limit }: AlertFilters) {
+    return prisma.alert.findMany({
+      where: {
+        ...(endpointId ? { endpointId } : {}),
+        ...(status === "active" ? { resolvedAt: null } : {}),
+        ...(status === "resolved" ? { resolvedAt: { not: null } } : {}),
+      },
+      orderBy: {
+        triggeredAt: "desc",
+      },
+      take: limit,
+    });
+  }
+
   async findActive() {
     return prisma.alert.findMany({
       where: {

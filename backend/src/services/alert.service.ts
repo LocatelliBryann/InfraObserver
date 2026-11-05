@@ -1,4 +1,7 @@
-import type { AlertRepository } from "../repositories/alert.repository";
+import type {
+  AlertFilters,
+  AlertRepository,
+} from "../repositories/alert.repository";
 
 export interface EvaluateAlertInput {
   endpointId: number;
@@ -14,6 +17,10 @@ export class AlertService {
 
   async findActive() {
     return this.repository.findActive();
+  }
+
+  async findMany(filters: AlertFilters) {
+    return this.repository.findMany(filters);
   }
 
   async evaluate(input: EvaluateAlertInput) {

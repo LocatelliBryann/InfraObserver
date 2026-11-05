@@ -5,7 +5,7 @@ import { alertController } from "../config/dependencies";
 const alertRouter = Router();
 
 alertRouter.get("/", (req, res) => {
-  void alertController.findActive(req, res);
+  void alertController.findAll(req, res);
 });
 
 export default alertRouter;

@@ -169,4 +169,23 @@ describe("AlertService", () => {
     expect.any(Date),
   );
 });
+
+  it("should list alerts using the history filters", async () => {
+    const repository = {
+      findActiveByEndpointAndMetricType: vi.fn(),
+      create: vi.fn(),
+      resolve: vi.fn(),
+      findMany: vi.fn().mockResolvedValue([]),
+    };
+
+    const service = new AlertService(repository as never);
+
+    await service.findMany({ status: "resolved", endpointId: 2, limit: 10 });
+
+    expect(repository.findMany).toHaveBeenCalledWith({
+      status: "resolved",
+      endpointId: 2,
+      limit: 10,
+    });
+  });
 });
