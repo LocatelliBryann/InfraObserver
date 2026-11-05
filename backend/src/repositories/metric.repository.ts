@@ -1,6 +1,11 @@
 
 import { prisma } from "../database/prisma";
 
+export interface MetricPeriod {
+  from?: Date;
+  to?: Date;
+}
+
 export interface MetricRepository {
   findEndpointByAgentId(agentId: string): Promise<{
     id: number;
@@ -33,6 +38,7 @@ export interface MetricRepository {
   findRecentByEndpointId(
     endpointId: number,
     limit: number,
+    period?: MetricPeriod,
   ): Promise<
     {
       id: number;
@@ -78,10 +84,22 @@ export class PrismaMetricRepository implements MetricRepository {
     });
   }
 
-  async findRecentByEndpointId(endpointId: number, limit: number) {
+  async findRecentByEndpointId(
+    endpointId: number,
+    limit: number,
+    period: MetricPeriod = {},
+  ) {
     return prisma.metric.findMany({
       where: {
         endpointId,
+        ...(period.from || period.to
+          ? {
+              collectedAt: {
+                ...(period.from ? { gte: period.from } : {}),
+                ...(period.to ? { lte: period.to } : {}),
+              },
+            }
+          : {}),
       },
       orderBy: {
         collectedAt: "desc",

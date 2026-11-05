@@ -1,5 +1,12 @@
 import { prisma } from "../database/prisma";
 
+export interface FileEventFilters {
+  limit: number;
+  endpointId?: number;
+  from?: Date;
+  to?: Date;
+}
+
 export interface FileEventRepository {
   findEndpointByAgentId(agentId: string): Promise<{
     id: number;
@@ -23,7 +30,7 @@ export interface FileEventRepository {
     receivedAt: Date;
   }>;
 
-  findRecent(limit: number): Promise<
+  findRecent(filters: FileEventFilters): Promise<
     Array<{
       id: number;
       endpointId: number;
@@ -67,8 +74,19 @@ export class PrismaFileEventRepository
     });
   }
 
-  async findRecent(limit: number) {
+  async findRecent({ limit, endpointId, from, to }: FileEventFilters) {
     return prisma.fileEvent.findMany({
+      where: {
+        ...(endpointId ? { endpointId } : {}),
+        ...(from || to
+          ? {
+              occurredAt: {
+                ...(from ? { gte: from } : {}),
+                ...(to ? { lte: to } : {}),
+              },
+            }
+          : {}),
+      },
       take: limit,
       orderBy: {
         occurredAt: "desc",
