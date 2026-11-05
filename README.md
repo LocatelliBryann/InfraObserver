@@ -113,7 +113,7 @@ Os diagramas C4 (contexto, containers e componentes) e o modelo de dados complet
 | Frontend | React 19, TypeScript, Vite, Tailwind CSS 4, Recharts, Vitest, Testing Library |
 | Banco de dados | PostgreSQL 16 |
 | Qualidade e CI | GitHub Actions, SonarQube Cloud |
-| Infraestrutura | Docker Compose |
+| Infraestrutura | Docker, Docker Compose, Caddy (HTTPS), Microsoft Azure |
 
 ## Como executar
 
@@ -230,9 +230,9 @@ InfraObserver/
 │   ├── prisma/            # Schema e migrations
 │   └── src/               # routes, controllers, services, repositories, jobs
 ├── frontend/              # Dashboard (React + Vite)
-├── infrastructure/        # Docker Compose e Terraform
+├── infrastructure/        # Docker Compose (dev e produção), cloud-init da Azure e Terraform
 ├── docs/                  # RFC, documento do projeto e imagens
-└── .github/workflows/     # Pipeline de CI
+└── .github/workflows/     # Pipelines de CI e de CD
 ```
 
 ## Roadmap
@@ -250,6 +250,7 @@ InfraObserver/
 
 - [RFC do projeto (PDF)](docs/RFC-InfraObserver.pdf): visão do produto, requisitos, casos de uso, fluxos, arquitetura C4 e modelo de dados
 - [RFC em Markdown](docs/rfc.md)
+- [Guia de deploy em produção (Azure)](docs/deploy.md): arquitetura de produção, CD, rollback e operação
 - [Documento do projeto](docs/Project.md)
 - [Como contribuir](CONTRIBUTING.md)
 
