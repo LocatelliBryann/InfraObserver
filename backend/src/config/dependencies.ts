@@ -52,6 +52,7 @@ export const metricController = new MetricController(metricService);
 const endpointHealthService = new EndpointHealthService(
   endpointService,
   metricService,
+  alertService,
 );
 
 export const endpointHealthController =

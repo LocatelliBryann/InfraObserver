@@ -2,6 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 
 import { EndpointHealthService } from "../../src/services/endpoint-health.service";
 
+const noActiveAlerts = {
+  findActive: vi.fn().mockResolvedValue([]),
+};
+
 describe("EndpointHealthService", () => {
   it("deve considerar online um endpoint com métrica recente", async () => {
     const endpointService = {
@@ -41,6 +45,7 @@ describe("EndpointHealthService", () => {
     const service = new EndpointHealthService(
       endpointService,
       metricService,
+      noActiveAlerts,
     );
 
     const result = await service.findAll();
@@ -49,6 +54,8 @@ describe("EndpointHealthService", () => {
       {
         endpointId: 1,
         hostname: "PC-001",
+        status: "ONLINE",
+        activeAlerts: 0,
         isOnline: true,
         isStale: false,
         latestMetric,
@@ -100,6 +107,7 @@ describe("EndpointHealthService", () => {
     const service = new EndpointHealthService(
       endpointService,
       metricService,
+      noActiveAlerts,
     );
 
     const result = await service.findAll();
@@ -136,6 +144,7 @@ describe("EndpointHealthService", () => {
     const service = new EndpointHealthService(
       endpointService,
       metricService,
+      noActiveAlerts,
     );
 
     const result = await service.findAll();
@@ -186,6 +195,7 @@ describe("EndpointHealthService", () => {
     const service = new EndpointHealthService(
       endpointService,
       metricService,
+      noActiveAlerts,
     );
 
     const result = await service.findAll();
@@ -251,6 +261,7 @@ describe("EndpointHealthService", () => {
     const service = new EndpointHealthService(
       endpointService,
       metricService,
+      noActiveAlerts,
       () => 3 * 60 * 1000,
     );
 
@@ -260,5 +271,115 @@ describe("EndpointHealthService", () => {
       ["PC-RECENTE", true],
       ["PC-ATRASADO", false],
     ]);
+  });
+
+  describe("status do endpoint (RF06)", () => {
+    const recentMetric = (endpointId: number) => ({
+      id: endpointId,
+      endpointId,
+      cpuPercent: 95,
+      memoryUsed: 1,
+      memoryTotal: 2,
+      diskUsed: 1,
+      diskTotal: 2,
+      netBytesSent: BigInt(0),
+      netBytesRecv: BigInt(0),
+      collectedAt: new Date(),
+    });
+
+    const endpoint = (id: number, hostname: string) => ({
+      id,
+      agentId: `agent-${id}`,
+      hostname,
+      ipAddress: "192.168.1.10",
+      osName: "Windows",
+      osVersion: "11",
+      status: "ONLINE",
+      lastSeenAt: new Date(),
+    });
+
+    const alert = (endpointId: number, metricType: string) => ({
+      id: endpointId * 10,
+      endpointId,
+      metricId: null,
+      metricType,
+      thresholdValue: 80,
+      severity: "HIGH",
+      triggeredAt: new Date(),
+      resolvedAt: null,
+    });
+
+    it("deve marcar como ALERT um endpoint online com alerta ativo", async () => {
+      const service = new EndpointHealthService(
+        { findAll: vi.fn().mockResolvedValue([endpoint(1, "PC-001")]) },
+        {
+          findRecentByEndpointId: vi
+            .fn()
+            .mockResolvedValue([recentMetric(1)]),
+        },
+        {
+          findActive: vi
+            .fn()
+            .mockResolvedValue([alert(1, "CPU"), alert(1, "MEMORY")]),
+        },
+      );
+
+      const [result] = await service.findAll();
+
+      expect(result.status).toBe("ALERT");
+      expect(result.activeAlerts).toBe(2);
+    });
+
+    it("deve priorizar OFFLINE sobre alertas de recurso", async () => {
+      const service = new EndpointHealthService(
+        { findAll: vi.fn().mockResolvedValue([endpoint(1, "PC-001")]) },
+        { findRecentByEndpointId: vi.fn().mockResolvedValue([]) },
+        { findActive: vi.fn().mockResolvedValue([alert(1, "CPU")]) },
+      );
+
+      const [result] = await service.findAll();
+
+      expect(result.status).toBe("OFFLINE");
+    });
+
+    it("não deve contar o alerta OFFLINE como alerta de recurso", async () => {
+      const service = new EndpointHealthService(
+        { findAll: vi.fn().mockResolvedValue([endpoint(1, "PC-001")]) },
+        {
+          findRecentByEndpointId: vi
+            .fn()
+            .mockResolvedValue([recentMetric(1)]),
+        },
+        { findActive: vi.fn().mockResolvedValue([alert(1, "OFFLINE")]) },
+      );
+
+      const [result] = await service.findAll();
+
+      expect(result.status).toBe("ONLINE");
+      expect(result.activeAlerts).toBe(0);
+    });
+
+    it("deve contar alertas separadamente por endpoint", async () => {
+      const service = new EndpointHealthService(
+        {
+          findAll: vi
+            .fn()
+            .mockResolvedValue([endpoint(1, "PC-001"), endpoint(2, "PC-002")]),
+        },
+        {
+          findRecentByEndpointId: vi.fn(async (id: number) => [
+            recentMetric(id),
+          ]),
+        },
+        { findActive: vi.fn().mockResolvedValue([alert(2, "DISK")]) },
+      );
+
+      const result = await service.findAll();
+
+      expect(result.map((item) => [item.hostname, item.status])).toEqual([
+        ["PC-001", "ONLINE"],
+        ["PC-002", "ALERT"],
+      ]);
+    });
   });
 });
