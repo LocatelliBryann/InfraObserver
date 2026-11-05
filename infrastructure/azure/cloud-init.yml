@@ -1,6 +1,10 @@
 #cloud-config
-# Prepara a VM do InfraObserver na criação (Azure: "Custom data" / "Dados personalizados").
-# Instala o Docker, cria a pasta da aplicação e um swap de 2 GB.
+# InfraObserver - preparacao da VM na criacao
+# (Azure: "Custom data" / "Dados personalizados").
+# Instala o Docker, cria a pasta da aplicacao e um swap de 2 GB.
+# ATENCAO: mantenha este arquivo somente com caracteres ASCII (sem acentos).
+# Acentos podem ser corrompidos ao colar no portal e o cloud-init descarta
+# o arquivo inteiro.
 
 package_update: true
 package_upgrade: true
@@ -8,6 +12,7 @@ package_upgrade: true
 packages:
   - ca-certificates
   - curl
+  - unattended-upgrades
 
 runcmd:
   # Docker Engine + Compose plugin (script oficial da Docker)
@@ -19,12 +24,9 @@ runcmd:
   - mkdir -p /home/azureuser/infraobserver
   - chown azureuser:azureuser /home/azureuser/infraobserver
 
-  # Swap de 2 GB (folga de memória para VMs pequenas)
+  # Swap de 2 GB (folga de memoria para VMs pequenas)
   - fallocate -l 2G /swapfile
   - chmod 600 /swapfile
   - mkswap /swapfile
   - swapon /swapfile
   - echo '/swapfile none swap sw 0 0' >> /etc/fstab
-
-  # Atualizações de segurança automáticas
-  - apt-get install -y unattended-upgrades
