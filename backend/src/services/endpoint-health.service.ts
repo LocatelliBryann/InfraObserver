@@ -1,7 +1,6 @@
+import { getOfflineThresholdMs } from "../config/monitoring";
 import type { EndpointService } from "./endpoint.service";
 import type { MetricService } from "./metric.service";
-
-const HEALTH_TIMEOUT_MS = 5 * 60 * 1000;
 
 export interface EndpointHealth {
   endpointId: number;
@@ -23,6 +22,7 @@ export class EndpointHealthService {
       MetricService,
       "findRecentByEndpointId"
     >,
+    private readonly offlineThresholdMs: () => number = getOfflineThresholdMs,
   ) {}
 
   async findAll(): Promise<EndpointHealth[]> {
@@ -63,6 +63,6 @@ export class EndpointHealthService {
       return false;
     }
 
-    return Date.now() - collectedAt <= HEALTH_TIMEOUT_MS;
+    return Date.now() - collectedAt <= this.offlineThresholdMs();
   }
 }

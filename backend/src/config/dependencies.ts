@@ -15,6 +15,10 @@ import { MetricService } from "../services/metric.service";
 
 import { EndpointHealthController } from "../controllers/endpoint-health.controller";
 import { EndpointHealthService } from "../services/endpoint-health.service";
+import { EndpointStatusService } from "../services/endpoint-status.service";
+
+import { OfflineDetectionJob } from "../jobs/offline-detection.job";
+import { getOfflineCheckIntervalMs } from "./monitoring";
 
 const endpointRepository = new PrismaEndpointRepository();
 const endpointService = new EndpointService(endpointRepository);
@@ -26,8 +30,22 @@ const alertService = new AlertService(alertRepository);
 
 export const alertController = new AlertController(alertService);
 
+const endpointStatusService = new EndpointStatusService(
+  endpointRepository,
+  alertRepository,
+);
+
+export const offlineDetectionJob = new OfflineDetectionJob(
+  endpointStatusService,
+  getOfflineCheckIntervalMs(),
+);
+
 const metricRepository = new PrismaMetricRepository();
-const metricService = new MetricService(metricRepository, alertService);
+const metricService = new MetricService(
+  metricRepository,
+  alertService,
+  endpointStatusService,
+);
 
 export const metricController = new MetricController(metricService);
 

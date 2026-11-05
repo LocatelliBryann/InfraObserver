@@ -201,4 +201,64 @@ describe("EndpointHealthService", () => {
       metricService.findRecentByEndpointId,
     ).toHaveBeenNthCalledWith(2, 2, 1);
   });
+
+  it("deve usar 3 ciclos de coleta como limite para considerar offline", async () => {
+    const minutesAgo = (minutes: number) =>
+      new Date(Date.now() - minutes * 60 * 1000);
+
+    const endpointService = {
+      findAll: vi.fn().mockResolvedValue([
+        {
+          id: 1,
+          agentId: "agent-1",
+          hostname: "PC-RECENTE",
+          ipAddress: "192.168.1.10",
+          osName: "Windows",
+          osVersion: "11",
+          status: "ONLINE",
+          lastSeenAt: minutesAgo(2),
+        },
+        {
+          id: 2,
+          agentId: "agent-2",
+          hostname: "PC-ATRASADO",
+          ipAddress: "192.168.1.11",
+          osName: "Windows",
+          osVersion: "11",
+          status: "ONLINE",
+          lastSeenAt: minutesAgo(4),
+        },
+      ]),
+    };
+
+    const metricService = {
+      findRecentByEndpointId: vi.fn(async (endpointId: number) => [
+        {
+          id: endpointId,
+          endpointId,
+          cpuPercent: 10,
+          memoryUsed: 1,
+          memoryTotal: 2,
+          diskUsed: 1,
+          diskTotal: 2,
+          netBytesSent: BigInt(0),
+          netBytesRecv: BigInt(0),
+          collectedAt: endpointId === 1 ? minutesAgo(2) : minutesAgo(4),
+        },
+      ]),
+    };
+
+    const service = new EndpointHealthService(
+      endpointService,
+      metricService,
+      () => 3 * 60 * 1000,
+    );
+
+    const result = await service.findAll();
+
+    expect(result.map((item) => [item.hostname, item.isOnline])).toEqual([
+      ["PC-RECENTE", true],
+      ["PC-ATRASADO", false],
+    ]);
+  });
 });

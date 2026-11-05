@@ -36,7 +36,7 @@ export interface AlertRepository {
 
   create(data: {
     endpointId: number;
-    metricId: number;
+    metricId?: number | null;
     metricType: string;
     thresholdValue: number;
     severity: string;
@@ -167,7 +167,7 @@ export class PrismaAlertRepository implements AlertRepository {
 
   async create(data: {
     endpointId: number;
-    metricId: number;
+    metricId?: number | null;
     metricType: string;
     thresholdValue: number;
     severity: string;

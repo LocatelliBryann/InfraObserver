@@ -64,6 +64,19 @@ export interface EndpointRepository {
     status: string;
     lastSeenAt: Date | null;
   }>;
+
+  findOnlineNotSeenSince(cutoff: Date): Promise<
+    Array<{
+      id: number;
+      agentId: string;
+      hostname: string;
+      ipAddress: string;
+      osName: string | null;
+      osVersion: string | null;
+      status: string;
+      lastSeenAt: Date | null;
+    }>
+  >;
 }
 
 export class PrismaEndpointRepository
@@ -115,6 +128,24 @@ export class PrismaEndpointRepository
         id,
       },
       data,
+    });
+  }
+
+  async findOnlineNotSeenSince(cutoff: Date) {
+    return prisma.endpoint.findMany({
+      where: {
+        status: "ONLINE",
+        OR: [
+          {
+            lastSeenAt: null,
+          },
+          {
+            lastSeenAt: {
+              lt: cutoff,
+            },
+          },
+        ],
+      },
     });
   }
 }
