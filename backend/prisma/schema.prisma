@@ -1,0 +1,82 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Endpoint {
+  id         Int       @id @default(autoincrement())
+  agentId    String    @unique @db.Uuid
+  hostname   String
+  ipAddress  String
+  osName     String?
+  osVersion  String?
+  status     String
+  lastSeenAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  metrics    Metric[]
+  fileEvents FileEvent[]
+  alerts     Alert[]
+
+  @@map("endpoint")
+}
+
+model Metric {
+  id           Int      @id @default(autoincrement())
+  endpointId   Int
+  cpuPercent   Float?
+  memoryUsed   Float?
+  memoryTotal  Float?
+  diskUsed     Float?
+  diskTotal    Float?
+  netBytesSent BigInt?
+  netBytesRecv BigInt?
+  collectedAt  DateTime
+
+  endpoint Endpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+  alerts   Alert[]
+
+  @@index([endpointId])
+  @@index([collectedAt])
+  @@map("metric")
+}
+
+model FileEvent {
+  id         Int      @id @default(autoincrement())
+  endpointId Int
+  username   String
+  eventType  String
+  filePath   String
+  occurredAt DateTime
+  receivedAt DateTime
+
+  endpoint Endpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+
+  @@index([endpointId])
+  @@index([occurredAt])
+  @@map("file_event")
+}
+
+model Alert {
+  id             Int       @id @default(autoincrement())
+  endpointId     Int
+  metricId       Int?
+  metricType     String
+  thresholdValue Float
+  severity       String
+  triggeredAt    DateTime
+  resolvedAt     DateTime?
+
+  endpoint Endpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+  metric   Metric?  @relation(fields: [metricId], references: [id], onDelete: SetNull)
+
+  @@index([endpointId])
+  @@index([metricId])
+  @@index([triggeredAt])
+  @@map("alert")
+}

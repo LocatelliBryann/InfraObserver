@@ -1,0 +1,31 @@
+# SITE_ADDRESS = domínio público (ex.: infraobserver.eastus2.cloudapp.azure.com).
+# Com um domínio, o Caddy emite e renova o certificado HTTPS sozinho (Let's Encrypt).
+# Sem a variável, atende só HTTP na porta 80 (útil para testes locais).
+{$SITE_ADDRESS::80} {
+	encode zstd gzip
+
+	# API do backend (rede interna do Docker; a porta 3000 não fica exposta).
+	@api path /api/* /health
+	handle @api {
+		reverse_proxy backend:3000
+	}
+
+	# Dashboard (SPA): rotas desconhecidas caem no index.html.
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}
