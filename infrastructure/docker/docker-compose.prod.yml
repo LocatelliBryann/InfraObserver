@@ -1,0 +1,74 @@
+# Ambiente de produção do InfraObserver.
+# Usado pelo workflow de CD na VM da Azure; as imagens vêm do GitHub Container Registry.
+# Variáveis: veja production.env.example (copiado como .env na VM).
+
+name: infraobserver
+
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-infraobserver}
+      POSTGRES_USER: ${POSTGRES_USER:-infraobserver}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # Sem "ports": o banco só é acessível pela rede interna do Docker.
+
+  backend:
+    image: ${REGISTRY:-ghcr.io/locatellibryann}/infraobserver-backend:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-infraobserver}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-infraobserver}
+      AGENT_TOKENS: ${AGENT_TOKENS:?defina AGENT_TOKENS no .env}
+      AGENT_COLLECTION_INTERVAL_SECONDS: ${AGENT_COLLECTION_INTERVAL_SECONDS:-60}
+      OFFLINE_CHECK_INTERVAL_SECONDS: ${OFFLINE_CHECK_INTERVAL_SECONDS:-60}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # Sem "ports": a API é publicada pelo Caddy (serviço web).
+
+  web:
+    image: ${REGISTRY:-ghcr.io/locatellibryann}/infraobserver-web:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  agent:
+    image: ${REGISTRY:-ghcr.io/locatellibryann}/infraobserver-agent:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    hostname: ${DEMO_AGENT_HOSTNAME:-AZURE-SERVIDOR-01}
+    environment:
+      INFRAOBSERVER_SERVER_URL: http://backend:3000
+      INFRAOBSERVER_AGENT_TOKEN: ${DEMO_AGENT_TOKEN:?defina DEMO_AGENT_TOKEN no .env}
+      INFRAOBSERVER_AGENT_ID: ${DEMO_AGENT_ID:?defina DEMO_AGENT_ID no .env}
+      INFRAOBSERVER_COLLECTION_INTERVAL: ${AGENT_COLLECTION_INTERVAL_SECONDS:-60}
+      INFRAOBSERVER_MONITORED_DIRECTORIES: /data/monitored
+    volumes:
+      - agent_monitored:/data/monitored
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:
+  agent_monitored:
