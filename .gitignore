@@ -29,3 +29,8 @@ backend/generated/
 
 # TypeScript
 *.tsbuildinfo
+# Cobertura de testes / SonarQube
+coverage/
+coverage.xml
+.coverage
+.scannerwork/
