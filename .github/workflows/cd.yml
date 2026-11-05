@@ -1,15 +1,148 @@
 name: CD
 
+# Deploy automático em produção (VM na Azure).
+# - Dispara quando o CI termina com sucesso na branch main.
+# - Também pode ser rodado manualmente; informando "image_tag" (SHA de um deploy anterior)
+#   ele só republica aquela versão, sem novo build — é o rollback.
 on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Rollback: SHA de uma versão já publicada (vazio = build do commit atual)"
+        required: false
+        default: ""
+
+concurrency:
+  group: production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io/locatellibryann
+  COMMIT_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
 
 jobs:
-  deployment-placeholder:
-    name: Deployment Placeholder
+  build:
+    name: Build ${{ matrix.image }}
+    if: >-
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
+      (github.event_name == 'workflow_dispatch' && inputs.image_tag == '')
     runs-on: ubuntu-latest
 
+    strategy:
+      matrix:
+        include:
+          - image: infraobserver-backend
+            context: backend
+          - image: infraobserver-web
+            context: frontend
+          - image: infraobserver-agent
+            context: agent
+
     steps:
-      - name: Deployment not configured
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.COMMIT_SHA }}
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Login no GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build e push
+        uses: docker/build-push-action@v7
+        with:
+          context: ${{ matrix.context }}
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ matrix.image }}:${{ env.COMMIT_SHA }}
+            ${{ env.REGISTRY }}/${{ matrix.image }}:latest
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ env.COMMIT_SHA }}
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+
+  deploy:
+    name: Deploy em produção
+    needs: build
+    if: >-
+      always() && (
+        needs.build.result == 'success' ||
+        (needs.build.result == 'skipped' && github.event_name == 'workflow_dispatch' && inputs.image_tag != '')
+      )
+    runs-on: ubuntu-latest
+
+    environment:
+      name: production
+      url: ${{ vars.PRODUCTION_URL }}
+
+    env:
+      IMAGE_TAG: ${{ inputs.image_tag || github.event.workflow_run.head_sha || github.sha }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.COMMIT_SHA }}
+
+      - name: Copiar docker-compose para a VM
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          source: infrastructure/docker/docker-compose.prod.yml
+          target: ~/infraobserver
+          strip_components: 2
+
+      - name: Atualizar containers
+        uses: appleboy/ssh-action@v1
+        env:
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          envs: IMAGE_TAG,GHCR_USER,GHCR_TOKEN
+          script: |
+            set -eu
+            cd ~/infraobserver
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+            export IMAGE_TAG
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            docker logout ghcr.io
+            echo "$(date -u +%FT%TZ) $IMAGE_TAG" >> deploy-history.log
+            docker image prune -af --filter "until=168h"
+            docker compose -f docker-compose.prod.yml ps
+
+      - name: Verificar se a aplicação respondeu
+        env:
+          PRODUCTION_URL: ${{ vars.PRODUCTION_URL }}
         run: |
-          echo "Deployment is not configured yet."
-          echo "Production infrastructure will be configured separately."
+          for attempt in $(seq 1 20); do
+            if curl -fsS "$PRODUCTION_URL/health"; then
+              echo
+              echo "Deploy da versão $IMAGE_TAG concluído."
+              exit 0
+            fi
+            echo "Tentativa $attempt: aplicação ainda não respondeu, aguardando..."
+            sleep 6
+          done
+          echo "A aplicação não respondeu após o deploy."
+          exit 1
