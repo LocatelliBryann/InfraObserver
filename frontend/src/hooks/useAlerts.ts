@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 
+import { DASHBOARD_REFRESH_INTERVAL_MS } from "../config/refresh";
+
 import {
   getActiveAlerts,
   type Alert,
 } from "../services/alertsService";
 
-const ALERTS_REFRESH_INTERVAL_MS = 60 * 1000;
 
 interface UseAlertsResult {
   alerts: Alert[];
@@ -39,7 +40,7 @@ export function useAlerts(): UseAlertsResult {
 
     const intervalId = window.setInterval(() => {
       void refresh();
-    }, ALERTS_REFRESH_INTERVAL_MS);
+    }, DASHBOARD_REFRESH_INTERVAL_MS);
 
     return () => {
       window.clearInterval(intervalId);

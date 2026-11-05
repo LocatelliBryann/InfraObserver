@@ -60,7 +60,7 @@ describe("useAlerts", () => {
     expect(result.current.error).toBeNull();
   });
 
-  it("atualiza os alertas automaticamente a cada 60 segundos", async () => {
+  it("atualiza os alertas automaticamente a cada 30 segundos", async () => {
     vi.useFakeTimers();
 
     const { result } = renderHook(() => useAlerts());
@@ -72,7 +72,7 @@ describe("useAlerts", () => {
     expect(mockedGetActiveAlerts).toHaveBeenCalledTimes(2);
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(60_000);
+      await vi.advanceTimersByTimeAsync(30_000);
     });
 
     expect(mockedGetActiveAlerts).toHaveBeenCalledTimes(3);
