@@ -1,58 +1,27 @@
+import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
+
 import {
-  Activity,
-  BellRing,
-  ChartLine,
-  LayoutDashboard,
-  PanelLeftClose,
-  PanelLeftOpen,
-  Server,
-  Users,
-} from "lucide-react";
+  NAVIGATION_ITEMS,
+  NAVIGATION_SECTION_IDS,
+  type NavigationItem,
+} from "../config/navigation";
+import { useActiveSection } from "../hooks/useActiveSection";
 
 interface SidebarNavigationProps {
   collapsed: boolean;
   onToggle: () => void;
-  activeItem?: "dashboard";
 }
 
-const navigationItems = [
-  {
-    label: "Dashboard",
-    icon: LayoutDashboard,
-    active: true,
-  },
-  {
-    label: "Endpoints",
-    icon: Server,
-    active: false,
-  },
-  {
-    label: "Métricas",
-    icon: ChartLine,
-    active: false,
-  },
-  {
-    label: "Alertas",
-    icon: BellRing,
-    active: false,
-  },
-  {
-    label: "Eventos",
-    icon: Activity,
-    active: false,
-  },
-  {
-    label: "Clientes",
-    icon: Users,
-    active: false,
-  },
-];
+const itemLayout = "group flex items-center rounded-xl px-3 py-3 transition-all duration-300";
 
 export function SidebarNavigation({
   collapsed,
   onToggle,
-  activeItem = "dashboard",
 }: SidebarNavigationProps) {
+  const { activeSection, setActiveSection } = useActiveSection(
+    NAVIGATION_SECTION_IDS,
+  );
+
   return (
     <div className="space-y-5">
       <div
@@ -68,6 +37,7 @@ export function SidebarNavigation({
               ? "Expandir menu lateral"
               : "Minimizar menu lateral"
           }
+          aria-expanded={!collapsed}
           title={
             collapsed
               ? "Expandir menu"
@@ -83,56 +53,112 @@ export function SidebarNavigation({
         </button>
       </div>
 
-      <nav
-        className={`space-y-2 transition-all duration-300 ${
-          collapsed ? "items-center" : ""
-        }`}
-        aria-label="Navegação principal"
-      >
-        {navigationItems.map((item) => {
-          const Icon = item.icon;
-
-          const isActive =
-            item.label.toLowerCase() === activeItem;
-
-          return (
-            <div
-              key={item.label}
-              title={collapsed ? item.label : undefined}
-              className={`group flex items-center rounded-xl px-3 py-3 transition-all duration-300 ${
-                collapsed
-                  ? "justify-center"
-                  : "justify-between"
-              } ${
-                isActive
-                  ? "bg-cyan-500/10 text-cyan-400"
-                  : "text-slate-500 hover:bg-slate-800 hover:text-slate-300"
-              }`}
-              aria-current={isActive ? "page" : undefined}
-              aria-disabled={!item.active}
-            >
-              <div className="flex items-center gap-3">
-                <Icon
-                  size={19}
-                  className="shrink-0 transition-transform duration-300 group-hover:scale-110"
+      <nav aria-label="Navegação principal">
+        <ul className="space-y-2">
+          {NAVIGATION_ITEMS.map((item) => (
+            <li key={item.label}>
+              {item.sectionId ? (
+                <SectionLink
+                  item={item}
+                  sectionId={item.sectionId}
+                  collapsed={collapsed}
+                  active={activeSection === item.sectionId}
+                  onSelect={setActiveSection}
                 />
-
-                {!collapsed && (
-                  <span className="whitespace-nowrap text-sm font-medium">
-                    {item.label}
-                  </span>
-                )}
-              </div>
-
-              {!collapsed && !item.active && (
-                <span className="text-[9px] uppercase tracking-wide text-slate-600">
-                  Em breve
-                </span>
+              ) : (
+                <ComingSoonItem item={item} collapsed={collapsed} />
               )}
-            </div>
-          );
-        })}
+            </li>
+          ))}
+        </ul>
       </nav>
     </div>
+  );
+}
+
+interface SectionLinkProps {
+  item: NavigationItem;
+  sectionId: string;
+  collapsed: boolean;
+  active: boolean;
+  onSelect: (sectionId: string) => void;
+}
+
+function SectionLink({
+  item,
+  sectionId,
+  collapsed,
+  active,
+  onSelect,
+}: SectionLinkProps) {
+  const Icon = item.icon;
+
+  return (
+    <a
+      href={`#${sectionId}`}
+      onClick={() => onSelect(sectionId)}
+      title={collapsed ? item.label : undefined}
+      aria-label={collapsed ? item.label : undefined}
+      aria-current={active ? "location" : undefined}
+      className={`${itemLayout} gap-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/50 ${
+        collapsed ? "justify-center" : ""
+      } ${
+        active
+          ? "bg-cyan-500/10 text-cyan-400"
+          : "text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+      }`}
+    >
+      <Icon
+        size={19}
+        aria-hidden="true"
+        className="shrink-0 transition-transform duration-300 group-hover:scale-110"
+      />
+
+      {!collapsed && (
+        <span className="whitespace-nowrap text-sm font-medium">
+          {item.label}
+        </span>
+      )}
+    </a>
+  );
+}
+
+interface ComingSoonItemProps {
+  item: NavigationItem;
+  collapsed: boolean;
+}
+
+// Funcionalidade ainda não disponível: visível, mas sem link, sem efeito de
+// hover e anunciada como desabilitada para leitores de tela.
+function ComingSoonItem({ item, collapsed }: ComingSoonItemProps) {
+  const Icon = item.icon;
+  const description =
+    item.comingSoonDescription ?? `${item.label} (em breve)`;
+
+  return (
+    <span
+      aria-disabled="true"
+      title={description}
+      aria-label={collapsed ? description : undefined}
+      className={`${itemLayout} cursor-not-allowed text-slate-600 ${
+        collapsed ? "justify-center" : "justify-between"
+      }`}
+    >
+      <span className="flex items-center gap-3">
+        <Icon size={19} aria-hidden="true" className="shrink-0" />
+
+        {!collapsed && (
+          <span className="whitespace-nowrap text-sm font-medium">
+            {item.label}
+          </span>
+        )}
+      </span>
+
+      {!collapsed && (
+        <span className="rounded-full border border-slate-700 px-2 py-0.5 text-[9px] uppercase tracking-wide text-slate-500">
+          Em breve
+        </span>
+      )}
+    </span>
   );
 }

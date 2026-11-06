@@ -11,6 +11,7 @@ import { EndpointHealthSection } from "./EndpointHealthSection";
 import { EndpointStatusList } from "./EndpointStatusList";
 import { MetricsChart } from "./MetricsChart";
 
+import { DASHBOARD_SECTIONS } from "../config/navigation";
 import {
   METRIC_PERIODS,
   METRIC_PERIOD_KEYS,
@@ -115,8 +116,9 @@ export function DashboardContent({
   return (
     <div className="mx-auto w-full max-w-7xl min-w-0 space-y-8 p-6 md:p-10">
       <section
+        id={DASHBOARD_SECTIONS.overview}
         aria-labelledby="overview-heading"
-        className="min-w-0"
+        className="min-w-0 scroll-mt-6"
       >
         <div className="mb-4 flex items-center justify-between">
           <h3
@@ -208,8 +210,9 @@ export function DashboardContent({
       />
 
       <section
+        id={DASHBOARD_SECTIONS.metrics}
         aria-labelledby="metrics-heading"
-        className="min-w-0"
+        className="min-w-0 scroll-mt-6"
       >
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h3
@@ -315,8 +318,9 @@ export function DashboardContent({
       </section>
 
       <section
+        id={DASHBOARD_SECTIONS.endpoints}
         aria-labelledby="health-heading"
-        className="min-w-0"
+        className="min-w-0 scroll-mt-6"
       >
         <div className="mb-4 flex items-center justify-between">
           <h3
@@ -353,8 +357,9 @@ export function DashboardContent({
       </section>
 
       <section
+        id={DASHBOARD_SECTIONS.events}
         aria-labelledby="activity-heading"
-        className="min-w-0 rounded-2xl border border-slate-800 bg-slate-900 p-6"
+        className="min-w-0 scroll-mt-6 rounded-2xl border border-slate-800 bg-slate-900 p-6"
       >
         <div className="mb-4 flex items-center gap-3">
           <div className="shrink-0 rounded-xl bg-violet-500/10 p-3 text-violet-400">

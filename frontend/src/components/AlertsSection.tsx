@@ -10,6 +10,7 @@ import {
 
 import type { Alert } from "../services/alertsService";
 import type { Endpoint } from "../services/endpointsService";
+import { DASHBOARD_SECTIONS } from "../config/navigation";
 
 type AlertsTab = "active" | "history";
 
@@ -117,8 +118,9 @@ export function AlertsSection({
 
   return (
     <section
+      id={DASHBOARD_SECTIONS.alerts}
       aria-labelledby="alerts-heading"
-      className="rounded-2xl border border-slate-800 bg-slate-900 p-6"
+      className="scroll-mt-6 rounded-2xl border border-slate-800 bg-slate-900 p-6"
     >
       <div className="mb-5 flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
