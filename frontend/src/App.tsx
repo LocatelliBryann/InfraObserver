@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 
 import { ShieldCheck } from "lucide-react";
 
+import { UserMenu } from "./auth/UserMenu";
 import { DashboardContent } from "./components/DashboardContent";
 import { DashboardHeader } from "./components/DashboardHeader";
 import { PlatformStatus } from "./components/PlatformStatus";
@@ -178,6 +179,8 @@ function App() {
               description={platformDescription}
             />
           )}
+
+          <UserMenu collapsed={sidebarCollapsed} />
         </aside>
 
         <main className="min-w-0 flex-1 overflow-hidden">

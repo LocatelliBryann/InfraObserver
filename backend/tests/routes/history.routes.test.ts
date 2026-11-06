@@ -3,6 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import app from "../../src/app";
 import { prisma } from "../../src/database/prisma";
+import { createSessionCookie } from "../helpers/auth-session";
 
 // Dados próprios deste arquivo, isolados pelos agentIds abaixo.
 const AGENT_A = "6a1f0c2e-1111-4a5b-8c9d-000000000001";
@@ -13,6 +14,12 @@ const minutes = (value: number) => new Date(base.getTime() + value * 60_000);
 
 let endpointA: number;
 let endpointB: number;
+let sessionCookie: string;
+
+// As rotas de leitura exigem login de administrador.
+const api = {
+  get: (path: string) => request(app).get(path).set("Cookie", sessionCookie),
+};
 
 async function cleanup() {
   await prisma.endpoint.deleteMany({
@@ -22,6 +29,7 @@ async function cleanup() {
 
 describe("GET history routes", () => {
   beforeAll(async () => {
+    sessionCookie = await createSessionCookie();
     await cleanup();
 
     const [a, b] = await Promise.all(
@@ -98,7 +106,7 @@ describe("GET history routes", () => {
 
   describe("GET /api/v1/metrics", () => {
     it("should filter metrics by period", async () => {
-      const response = await request(app).get("/api/v1/metrics").query({
+      const response = await api.get("/api/v1/metrics").query({
         endpointId: endpointA,
         from: minutes(5).toISOString(),
         to: minutes(25).toISOString(),
@@ -111,7 +119,7 @@ describe("GET history routes", () => {
     });
 
     it("should return 400 when the period is inverted", async () => {
-      const response = await request(app).get("/api/v1/metrics").query({
+      const response = await api.get("/api/v1/metrics").query({
         endpointId: endpointA,
         from: minutes(25).toISOString(),
         to: minutes(5).toISOString(),
@@ -123,7 +131,7 @@ describe("GET history routes", () => {
 
   describe("GET /api/v1/file-events", () => {
     it("should filter events by endpoint", async () => {
-      const response = await request(app)
+      const response = await api
         .get("/api/v1/file-events")
         .query({ endpointId: endpointB });
 
@@ -137,7 +145,7 @@ describe("GET history routes", () => {
     });
 
     it("should filter events by period", async () => {
-      const response = await request(app).get("/api/v1/file-events").query({
+      const response = await api.get("/api/v1/file-events").query({
         endpointId: endpointA,
         from: minutes(10).toISOString(),
       });
@@ -149,7 +157,7 @@ describe("GET history routes", () => {
 
   describe("GET /api/v1/alerts", () => {
     it("should keep returning only active alerts by default", async () => {
-      const response = await request(app)
+      const response = await api
         .get("/api/v1/alerts")
         .query({ endpointId: endpointA });
 
@@ -159,7 +167,7 @@ describe("GET history routes", () => {
     });
 
     it("should return resolved alerts for the history", async () => {
-      const response = await request(app)
+      const response = await api
         .get("/api/v1/alerts")
         .query({ endpointId: endpointA, status: "resolved" });
 
@@ -169,7 +177,7 @@ describe("GET history routes", () => {
     });
 
     it("should return every alert with status=all", async () => {
-      const response = await request(app)
+      const response = await api
         .get("/api/v1/alerts")
         .query({ endpointId: endpointA, status: "all" });
 

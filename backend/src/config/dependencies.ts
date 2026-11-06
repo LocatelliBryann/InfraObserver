@@ -21,10 +21,22 @@ import { OfflineDetectionJob } from "../jobs/offline-detection.job";
 import { getOfflineCheckIntervalMs } from "./monitoring";
 
 import { PrometheusController } from "../controllers/prometheus.controller";
+
+import { AuthController } from "../controllers/auth.controller";
+import { createLoginRateLimit } from "../middlewares/login-rate-limit.middleware";
+import { createRequireAuth } from "../middlewares/require-auth.middleware";
+import { PrismaUserRepository } from "../repositories/user.repository";
+import { AuthService } from "../services/auth.service";
 import {
   metricsRegistry,
   registerDomainMetrics,
 } from "../observability/metrics";
+
+const userRepository = new PrismaUserRepository();
+export const authService = new AuthService(userRepository);
+export const authController = new AuthController(authService);
+export const requireAuth = createRequireAuth(authService);
+export const loginRateLimit = createLoginRateLimit();
 
 const endpointRepository = new PrismaEndpointRepository();
 const endpointService = new EndpointService(endpointRepository);
