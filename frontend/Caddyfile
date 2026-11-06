@@ -10,6 +10,11 @@
 		reverse_proxy backend:3000
 	}
 
+	# Grafana (observabilidade). Pede login; o usuário é definido no .env da VM.
+	handle /grafana* {
+		reverse_proxy grafana:3000
+	}
+
 	# Dashboard (SPA): rotas desconhecidas caem no index.html.
 	handle {
 		root * /srv

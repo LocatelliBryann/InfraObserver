@@ -3,10 +3,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { OfflineDetectionJob } from "../../src/jobs/offline-detection.job";
 
 describe("OfflineDetectionJob", () => {
+  const log = {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  };
+
   beforeEach(() => {
     vi.useFakeTimers();
-    vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    vi.clearAllMocks();
   });
 
   afterEach(() => {
@@ -18,7 +23,7 @@ describe("OfflineDetectionJob", () => {
     const service = {
       detectOfflineEndpoints: vi.fn().mockResolvedValue([]),
     };
-    const job = new OfflineDetectionJob(service, 60_000);
+    const job = new OfflineDetectionJob(service, 60_000, log);
 
     job.start();
 
@@ -41,10 +46,14 @@ describe("OfflineDetectionJob", () => {
         { id: 2, hostname: "PC-002" },
       ]),
     };
-    const job = new OfflineDetectionJob(service, 60_000);
+    const job = new OfflineDetectionJob(service, 60_000, log);
 
     await expect(job.runOnce()).resolves.toBe(2);
-    expect(console.warn).toHaveBeenCalledTimes(2);
+    expect(log.warn).toHaveBeenCalledTimes(2);
+    expect(log.warn).toHaveBeenCalledWith(
+      { endpointId: 1, hostname: "PC-001" },
+      "Endpoint marked as OFFLINE",
+    );
   });
 
   it("should keep running when a detection fails", async () => {
@@ -54,12 +63,12 @@ describe("OfflineDetectionJob", () => {
         .mockRejectedValueOnce(new Error("database unavailable"))
         .mockResolvedValueOnce([]),
     };
-    const job = new OfflineDetectionJob(service, 60_000);
+    const job = new OfflineDetectionJob(service, 60_000, log);
 
     await expect(job.runOnce()).resolves.toBe(0);
     await expect(job.runOnce()).resolves.toBe(0);
 
-    expect(console.error).toHaveBeenCalledTimes(1);
+    expect(log.error).toHaveBeenCalledTimes(1);
     expect(service.detectOfflineEndpoints).toHaveBeenCalledTimes(2);
   });
 
@@ -67,7 +76,7 @@ describe("OfflineDetectionJob", () => {
     const service = {
       detectOfflineEndpoints: vi.fn().mockResolvedValue([]),
     };
-    const job = new OfflineDetectionJob(service, 60_000);
+    const job = new OfflineDetectionJob(service, 60_000, log);
 
     job.start();
     job.start();

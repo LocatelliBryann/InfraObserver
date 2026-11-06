@@ -1,6 +1,7 @@
 
 import type { Request, Response } from "express";
 
+import { logger } from "../config/logger";
 import type { EndpointHealthService } from "../services/endpoint-health.service";
 
 export class EndpointHealthController {
@@ -33,7 +34,7 @@ export class EndpointHealthController {
         })),
       });
     } catch (error) {
-      console.error("Erro ao consultar saúde dos endpoints:", error);
+      logger.error({ err: error }, "Failed to load endpoint health");
 
       res.status(500).json({
         message: "Internal server error",

@@ -4,10 +4,17 @@
 
 name: infraobserver
 
+# Limita o tamanho dos logs de cada container (3 arquivos de 10 MB) para não encher o disco.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
 
 services:
   postgres:
     image: postgres:16-alpine
+    logging: *default-logging
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-infraobserver}
@@ -24,12 +31,14 @@ services:
 
   backend:
     image: ${REGISTRY:-ghcr.io/locatellibryann}/infraobserver-backend:${IMAGE_TAG:-latest}
+    logging: *default-logging
     restart: unless-stopped
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-infraobserver}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-infraobserver}
       AGENT_TOKENS: ${AGENT_TOKENS:?defina AGENT_TOKENS no .env}
       AGENT_COLLECTION_INTERVAL_SECONDS: ${AGENT_COLLECTION_INTERVAL_SECONDS:-60}
       OFFLINE_CHECK_INTERVAL_SECONDS: ${OFFLINE_CHECK_INTERVAL_SECONDS:-60}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
     depends_on:
       postgres:
         condition: service_healthy
@@ -37,6 +46,7 @@ services:
 
   web:
     image: ${REGISTRY:-ghcr.io/locatellibryann}/infraobserver-web:${IMAGE_TAG:-latest}
+    logging: *default-logging
     restart: unless-stopped
     environment:
       SITE_ADDRESS: ${SITE_ADDRESS:-:80}
@@ -53,6 +63,7 @@ services:
 
   agent:
     image: ${REGISTRY:-ghcr.io/locatellibryann}/infraobserver-agent:${IMAGE_TAG:-latest}
+    logging: *default-logging
     restart: unless-stopped
     hostname: ${DEMO_AGENT_HOSTNAME:-AZURE-SERVIDOR-01}
     environment:
@@ -67,8 +78,67 @@ services:
       backend:
         condition: service_healthy
 
+  # --- Observabilidade (docs/observability.md) ---
+
+  prometheus:
+    image: prom/prometheus:v3.16.0
+    logging: *default-logging
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=15d
+      - --storage.tsdb.retention.size=1GB
+    volumes:
+      - ./monitoring/prometheus:/etc/prometheus:ro
+      - prometheus_data:/prometheus
+    mem_limit: 256m
+    depends_on:
+      - backend
+    # Sem "ports": acessado só pelo Grafana, na rede interna.
+
+  node-exporter:
+    image: prom/node-exporter:v1.12.1
+    logging: *default-logging
+    restart: unless-stopped
+    command:
+      - --path.rootfs=/host
+    pid: host
+    volumes:
+      - /:/host:ro,rslave
+    mem_limit: 64m
+
+  grafana:
+    image: grafana/grafana-oss:13.0.2
+    logging: *default-logging
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?defina GRAFANA_ADMIN_PASSWORD no .env}
+      # Publicado pelo Caddy em https://<domínio>/grafana/
+      GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-http://localhost/grafana/}
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_NEWS_NEWS_FEED_ENABLED: "false"
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/infraobserver.json
+      # Economia de memória na VM de 1 GB: sem plugins extras e com GC mais agressivo.
+      GF_PLUGINS_PREINSTALL_DISABLED: "true"
+      GOMEMLIMIT: 350MiB
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    mem_limit: 512m
+    depends_on:
+      - prometheus
+
 volumes:
   postgres_data:
   caddy_data:
   caddy_config:
   agent_monitored:
+  prometheus_data:
+  grafana_data:

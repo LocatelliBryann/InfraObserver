@@ -25,6 +25,7 @@ Métricas de desempenho, alertas e eventos de sistema de arquivos de vários com
 [Arquitetura](#arquitetura) ·
 [Como executar](#como-executar) ·
 [API](#api) ·
+[Observabilidade](#observabilidade) ·
 [Qualidade](#qualidade-e-testes) ·
 [Documentação](#documentação)
 
@@ -116,6 +117,7 @@ Os diagramas C4 (contexto, containers e componentes) e o modelo de dados complet
 | Banco de dados | PostgreSQL 16 |
 | Qualidade e CI | GitHub Actions, SonarQube Cloud |
 | Infraestrutura | Docker, Docker Compose, Caddy (HTTPS), Microsoft Azure |
+| Observabilidade | Prometheus, Grafana, node-exporter, pino (logs em JSON) |
 
 ## Como executar
 
@@ -207,6 +209,14 @@ Para gerar um UUID: `python -c "import uuid; print(uuid.uuid4())"`
 | `GET` | `/api/v1/alerts` | Alertas · `status=active\|resolved\|all`, `endpointId`, `limit` | — |
 | `GET` | `/health` | Verificação de saúde da API | — |
 
+## Observabilidade
+
+A própria aplicação é monitorada em produção. O backend expõe métricas no formato do Prometheus (requisições, tempo de resposta, endpoints por status, alertas abertos e o processo Node.js), o node-exporter mede a VM, e o Grafana junta tudo num dashboard com regras de alerta para API fora do ar, erros 5xx, lentidão e falta de dados dos agentes. Os logs do backend saem em JSON, uma linha por requisição.
+
+![Dashboard do Grafana](docs/assets/grafana-dashboard.png)
+
+Detalhes, métricas e alertas em [docs/observability.md](docs/observability.md).
+
 ## Qualidade e testes
 
 Todo push e pull request passa pelo pipeline de CI: testes dos três módulos com cobertura, build e análise estática no **SonarQube Cloud**, que comenta o resultado do Quality Gate em cada pull request.
@@ -232,7 +242,7 @@ InfraObserver/
 │   ├── prisma/            # Schema e migrations
 │   └── src/               # routes, controllers, services, repositories, jobs
 ├── frontend/              # Dashboard (React + Vite)
-├── infrastructure/        # Docker Compose (dev e produção), cloud-init da Azure e Terraform
+├── infrastructure/        # Docker Compose (dev e produção), Prometheus/Grafana, cloud-init da Azure e Terraform
 ├── docs/                  # RFC, documento do projeto e imagens
 └── .github/workflows/     # Pipelines de CI e de CD
 ```
@@ -244,6 +254,7 @@ InfraObserver/
 - [x] Dashboard com status por endpoint, histórico por período e histórico de alertas
 - [x] CI com testes, cobertura e análise estática (SonarQube Cloud)
 - [x] Deploy em nuvem (Microsoft Azure) com entrega contínua e domínio próprio
+- [x] Observabilidade da aplicação com Prometheus, Grafana e logs estruturados
 - [ ] Configuração remota dos agentes pelo dashboard
 - [ ] Agente como serviço do Windows
 - [ ] Telas de gerenciamento de endpoints e configurações
@@ -254,6 +265,7 @@ InfraObserver/
 - [RFC do projeto (PDF)](docs/RFC-InfraObserver.pdf): visão do produto, requisitos, casos de uso, fluxos, arquitetura C4 e modelo de dados
 - [RFC em Markdown](docs/rfc.md)
 - [Guia de deploy em produção (Azure)](docs/deploy.md): arquitetura de produção, CD, rollback e operação
+- [Observabilidade](docs/observability.md): métricas, logs, alertas e acesso ao Grafana
 - [Documento do projeto](docs/Project.md)
 - [Como contribuir](CONTRIBUTING.md)
 

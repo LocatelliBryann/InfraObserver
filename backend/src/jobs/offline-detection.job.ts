@@ -1,3 +1,4 @@
+import { logger, type Logger } from "../config/logger";
 import type { EndpointStatusService } from "../services/endpoint-status.service";
 
 export class OfflineDetectionJob {
@@ -10,6 +11,7 @@ export class OfflineDetectionJob {
       "detectOfflineEndpoints"
     >,
     private readonly intervalMs: number,
+    private readonly log: Logger = logger,
   ) {}
 
   start(): void {
@@ -42,14 +44,15 @@ export class OfflineDetectionJob {
         await this.endpointStatusService.detectOfflineEndpoints();
 
       for (const endpoint of offlineEndpoints) {
-        console.warn(
-          `Endpoint ${endpoint.hostname} (id ${endpoint.id}) marked as OFFLINE`,
+        this.log.warn(
+          { endpointId: endpoint.id, hostname: endpoint.hostname },
+          "Endpoint marked as OFFLINE",
         );
       }
 
       return offlineEndpoints.length;
     } catch (error) {
-      console.error("Offline detection job failed", error);
+      this.log.error({ err: error }, "Offline detection job failed");
       return 0;
     } finally {
       this.running = false;
