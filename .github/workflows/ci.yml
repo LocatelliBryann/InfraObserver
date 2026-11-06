@@ -173,10 +173,17 @@ jobs:
           name: agent-coverage
           path: agent
 
+       # No plano gratuito do SonarQube Cloud, só a develop (branch principal no Sonar)
+      # e os pull requests têm Quality Gate. No push para a main o código já foi
+      # aprovado no PR, então a análise roda sem esperar o resultado do gate.
       - name: SonarQube Cloud Scan
         uses: SonarSource/sonarqube-scan-action@v8
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >-
+            -Dsonar.qualitygate.wait=${{ github.ref != 'refs/heads/main' }}
+            -Dsonar.qualitygate.timeout=300
 
   docker:
     name: Docker - Build das imagens
