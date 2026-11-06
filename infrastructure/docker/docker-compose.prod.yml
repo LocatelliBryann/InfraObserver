@@ -92,7 +92,7 @@ services:
     volumes:
       - ./monitoring/prometheus:/etc/prometheus:ro
       - prometheus_data:/prometheus
-    mem_limit: 256m
+    mem_limit: 512m
     depends_on:
       - backend
     # Sem "ports": acessado só pelo Grafana, na rede interna.
@@ -124,14 +124,14 @@ services:
       GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
       GF_NEWS_NEWS_FEED_ENABLED: "false"
       GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/infraobserver.json
-      # Economia de memória na VM de 1 GB: sem plugins extras e com GC mais agressivo.
+      # Sem plugins extras e com o garbage collector liberando memória antes do limite.
       GF_PLUGINS_PREINSTALL_DISABLED: "true"
-      GOMEMLIMIT: 350MiB
+      GOMEMLIMIT: 700MiB
     volumes:
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
       - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
       - grafana_data:/var/lib/grafana
-    mem_limit: 512m
+    mem_limit: 1g
     depends_on:
       - prometheus
 

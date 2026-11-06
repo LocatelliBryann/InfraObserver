@@ -105,15 +105,17 @@ Os alertas aparecem no Grafana em **Alerting → Alert rules**. O envio por e-ma
 
 ## Recursos na VM
 
-A VM tem 1 GB de RAM e 2 GB de swap, então cada serviço de monitoramento tem um limite de memória:
+A VM tem 4 GB de RAM (Standard_B2als_v2). Cada serviço de monitoramento tem um limite de memória, para que um problema nele não derrube a aplicação:
 
-| Serviço | Limite | Uso medido |
+| Serviço | Limite | Uso medido em produção |
 |---|---|---|
-| Prometheus | 256 MB | ~40 MB |
-| Grafana | 512 MB | ~150 a 320 MB |
-| node-exporter | 64 MB | ~7 MB |
+| Prometheus | 512 MB | ~15 a 40 MB |
+| Grafana | 1 GB | ~460 MB |
+| node-exporter | 64 MB | ~20 MB |
 
-O Grafana roda sem plugins extras e com `GOMEMLIMIT` para o garbage collector liberar memória mais cedo. O Prometheus guarda 15 dias ou no máximo 1 GB, o que vier primeiro.
+O Grafana roda sem plugins extras e com `GOMEMLIMIT` (700 MiB) para o garbage collector liberar memória antes de chegar ao limite. O Prometheus guarda 15 dias ou no máximo 1 GB, o que vier primeiro.
+
+A primeira versão rodou numa VM de 1 GB. O Grafana 13 não coube junto com o resto: a VM passou a usar o swap e o painel ficou lento. Por isso a VM foi para 4 GB.
 
 ## Mudando a configuração
 

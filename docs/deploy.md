@@ -85,7 +85,7 @@ No [portal da Azure](https://portal.azure.com), vá em **Máquinas virtuais → 
 | Nome da máquina virtual | `infraobserver-vm` |
 | Região | **Chile Central**: a mais próxima do Brasil entre as permitidas pela assinatura de estudante |
 | Imagem | **Ubuntu Server 24.04 LTS - x64 Gen2** |
-| Tamanho | **Standard_B2ats_v2** (2 vCPU, 1 GB de RAM; o swap de 2 GB dá folga). A stack usa cerca de 220 MB |
+| Tamanho | **Standard_B2als_v2** (2 vCPU, 4 GB de RAM). A aplicação usa cerca de 350 MB e o Grafana até 1 GB |
 | Tipo de autenticação | **Chave pública SSH** |
 | Nome de usuário | `azureuser` |
 | Origem da chave pública SSH | **Usar chave pública existente**, colando o conteúdo de `infraobserver_deploy.pub` |
@@ -112,6 +112,8 @@ O domínio público fica no formato:
 ```text
 infraobserver-bryann.chilecentral.cloudapp.azure.com
 ```
+
+> **Por que 4 GB:** a VM começou como Standard_B2ats_v2 (1 GB). Ela dava conta da aplicação, mas com o Prometheus e o Grafana a memória acabou, o sistema passou a usar o swap (565 MB em uso, 35 GB lidos do disco pelo Grafana) e tudo ficou lento. O redimensionamento é feito em **VM → Tamanho**, leva alguns minutos e mantém disco, IP e domínio.
 
 ## 4. Configurar o servidor
 
