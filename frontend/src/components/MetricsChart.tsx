@@ -12,6 +12,14 @@ import {
 
 import type { Metric } from "../services/metricsService";
 
+const CHART_COLORS = {
+  grid: "#334155",
+  axis: "#94a3b8",
+  tooltipBackground: "#0f172a",
+  tooltipBorder: "#334155",
+  tooltipText: "#e2e8f0",
+};
+
 interface MetricsChartProps {
   metrics: Metric[];
 }
@@ -88,15 +96,18 @@ export function MetricsChart({ metrics }: MetricsChartProps) {
 
   if (chartData.length === 0) {
     return (
-      <div className="flex min-h-64 items-center justify-center rounded-lg border border-slate-200 bg-white p-6 text-slate-500">
+      <div className="flex min-h-64 items-center justify-center rounded-2xl border border-slate-800 bg-slate-900 p-6 text-slate-400">
         Nenhuma métrica disponível.
       </div>
     );
   }
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-4">
-      <h2 className="mb-4 text-lg font-semibold text-slate-800">
+    <div
+      data-testid="metrics-chart"
+      className="rounded-2xl border border-slate-800 bg-slate-900 p-4"
+    >
+      <h2 className="mb-4 text-lg font-semibold text-slate-100">
         Histórico de métricas
       </h2>
 
@@ -108,19 +119,35 @@ export function MetricsChart({ metrics }: MetricsChartProps) {
           minHeight={0}
         >
           <LineChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" />
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke={CHART_COLORS.grid}
+            />
 
-            <XAxis dataKey="timestamp" />
+            <XAxis
+              dataKey="timestamp"
+              stroke={CHART_COLORS.axis}
+              tick={{ fill: CHART_COLORS.axis }}
+            />
 
             <YAxis
               domain={[0, 100]}
               unit="%"
               allowDataOverflow={false}
+              stroke={CHART_COLORS.axis}
+              tick={{ fill: CHART_COLORS.axis }}
             />
 
-            <Tooltip />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: CHART_COLORS.tooltipBackground,
+                borderColor: CHART_COLORS.tooltipBorder,
+                color: CHART_COLORS.tooltipText,
+              }}
+              labelStyle={{ color: CHART_COLORS.tooltipText }}
+            />
 
-            <Legend />
+            <Legend wrapperStyle={{ color: CHART_COLORS.axis }} />
 
             <Line
               type="monotone"
