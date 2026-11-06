@@ -1,3 +1,5 @@
+import { randomBytes } from "node:crypto";
+
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
@@ -11,11 +13,19 @@ import type {
 // Custo do bcrypt: ~250 ms por verificação, o que encarece ataques de força bruta.
 const BCRYPT_ROUNDS = 12;
 
-// Hash de uma senha aleatória. Quando o e-mail não existe, a senha é comparada
-// com ele mesmo assim, para a resposta levar o mesmo tempo e não revelar quais
-// e-mails estão cadastrados.
-const DUMMY_PASSWORD_HASH =
-  "$2b$12$AXldhQXcTZSeTp0/3X2FGOJQjU0KeUuvANXeEMNCkgqEZOPTSaWWO";
+// Quando o e-mail não existe, a senha é comparada com o hash de uma senha
+// aleatória mesmo assim, para a resposta levar o mesmo tempo e não revelar
+// quais e-mails estão cadastrados. O hash é gerado uma vez, em memória.
+let dummyPasswordHash: Promise<string> | undefined;
+
+function getDummyPasswordHash(): Promise<string> {
+  dummyPasswordHash ??= bcrypt.hash(
+    randomBytes(32).toString("hex"),
+    BCRYPT_ROUNDS,
+  );
+
+  return dummyPasswordHash;
+}
 
 export const USER_ROLES = {
   admin: "ADMIN",
@@ -54,7 +64,7 @@ export class AuthService {
 
     const passwordMatches = await bcrypt.compare(
       input.password,
-      user?.passwordHash ?? DUMMY_PASSWORD_HASH,
+      user?.passwordHash ?? (await getDummyPasswordHash()),
     );
 
     if (!user || !passwordMatches) {
