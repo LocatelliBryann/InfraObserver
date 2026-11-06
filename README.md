@@ -250,6 +250,7 @@ InfraObserver/
 
 ## Documentação
 
+- [Wiki](https://github.com/LocatelliBryann/InfraObserver/wiki): instalação do agente, regras de alerta, decisões técnicas e problemas comuns
 - [RFC do projeto (PDF)](docs/RFC-InfraObserver.pdf): visão do produto, requisitos, casos de uso, fluxos, arquitetura C4 e modelo de dados
 - [RFC em Markdown](docs/rfc.md)
 - [Guia de deploy em produção (Azure)](docs/deploy.md): arquitetura de produção, CD, rollback e operação
