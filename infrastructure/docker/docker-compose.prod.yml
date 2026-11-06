@@ -39,6 +39,11 @@ services:
       AGENT_COLLECTION_INTERVAL_SECONDS: ${AGENT_COLLECTION_INTERVAL_SECONDS:-60}
       OFFLINE_CHECK_INTERVAL_SECONDS: ${OFFLINE_CHECK_INTERVAL_SECONDS:-60}
       LOG_LEVEL: ${LOG_LEVEL:-info}
+      # Login do dashboard: assina o cookie de sessão (mínimo de 32 caracteres).
+      JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET no .env}
+      SESSION_HOURS: ${SESSION_HOURS:-8}
+      # Atrás do Caddy: o limite de tentativas de login usa o IP real do cliente.
+      TRUST_PROXY: "true"
     depends_on:
       postgres:
         condition: service_healthy

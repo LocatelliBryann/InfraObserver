@@ -80,3 +80,18 @@ model Alert {
   @@index([triggeredAt])
   @@map("alert")
 }
+
+// Usuário do dashboard. Hoje só existe o papel ADMIN; o multi-cliente
+// acrescenta o papel CLIENT e a ligação com o cliente.
+model User {
+  id           Int       @id @default(autoincrement())
+  email        String    @unique
+  name         String
+  passwordHash String
+  role         String    @default("ADMIN")
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@map("user")
+}

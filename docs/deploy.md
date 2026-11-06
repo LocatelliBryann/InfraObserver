@@ -145,7 +145,7 @@ openssl rand -hex 32                  # para POSTGRES_PASSWORD e cada token de a
 cat /proc/sys/kernel/random/uuid      # para DEMO_AGENT_ID
 ```
 
-Em `SITE_ADDRESS`, coloque o domínio do passo 3, **sem** `https://`. O `DEMO_AGENT_TOKEN` precisa estar na lista `AGENT_TOKENS`. Defina também `GRAFANA_ADMIN_PASSWORD` (gerado com `openssl rand -hex 16`) e `GRAFANA_ROOT_URL` com o endereço público seguido de `/grafana/`; sem a senha, o deploy falha.
+Em `SITE_ADDRESS`, coloque o domínio do passo 3, **sem** `https://`. O `DEMO_AGENT_TOKEN` precisa estar na lista `AGENT_TOKENS`. Gere também o `JWT_SECRET` (`openssl rand -hex 32`), que assina as sessões do login. Defina também `GRAFANA_ADMIN_PASSWORD` (gerado com `openssl rand -hex 16`) e `GRAFANA_ROOT_URL` com o endereço público seguido de `/grafana/`; sem a senha, o deploy falha.
 
 Proteja o arquivo:
 
@@ -182,6 +182,16 @@ O workflow **CD** roda sozinho quando o **CI** termina com sucesso na `main`. Pa
 3. Acesse o `PRODUCTION_URL`. No primeiro acesso, o Caddy pode levar alguns segundos para emitir o certificado HTTPS.
 
 Também é possível disparar manualmente em **Actions → CD → Run workflow**, na branch `main`.
+
+**Criar o administrador do dashboard** (uma vez, depois do primeiro deploy com login):
+
+```bash
+cd ~/infraobserver
+docker compose -f docker-compose.prod.yml exec backend \
+  node dist/src/scripts/create-admin.js --email voce@exemplo.com --name "Seu Nome"
+```
+
+O comando pede a senha duas vezes, sem mostrá-la na tela (mínimo de 12 caracteres). Rodar de novo com o mesmo e-mail troca a senha.
 
 ## 7. Domínio próprio
 
