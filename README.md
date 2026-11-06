@@ -52,6 +52,7 @@ O **InfraObserver** é uma alternativa leve e sem custo: um **agente** instalado
 | 📴 **Detecção de indisponibilidade** | Endpoint sem dados por 3 ciclos de coleta vira **offline** e gera alerta; ao voltar, é reativado sozinho |
 | 🟢 **Status por endpoint** | Online, Alerta ou Offline, com a quantidade de alertas ativos |
 | 📈 **Histórico** | Gráficos em tempo real ou dos últimos 1 h, 6 h e 24 h; histórico de alertas resolvidos com duração |
+| 🔑 **Login de administrador** | Dashboard e consultas da API protegidos por login, com sessão em cookie `httpOnly`, bloqueio após 5 tentativas erradas e proteção contra CSRF |
 | 🔐 **Autenticação dos agentes** | Token Bearer por agente, validado em tempo constante |
 | 🔁 **Agente resiliente** | Continua funcionando e tenta de novo se o servidor ficar fora do ar |
 
@@ -140,6 +141,7 @@ cd backend
 cp .env.example .env          # ajuste AGENT_TOKENS
 npm install
 npx prisma migrate deploy
+npm run create-admin -- --email voce@exemplo.com --name "Seu Nome"   # pede a senha
 npm run dev                   # http://localhost:3000
 ```
 
@@ -180,6 +182,9 @@ python -m src.main
 | `AGENT_COLLECTION_INTERVAL_SECONDS` | Intervalo de coleta dos agentes | `60` |
 | `OFFLINE_CHECK_INTERVAL_SECONDS` | Frequência da verificação de endpoints inativos | `60` |
 | `PORT` | Porta da API | `3000` |
+| `JWT_SECRET` | Segredo que assina a sessão do login (obrigatório em produção, mínimo 32 caracteres) | segredo de desenvolvimento |
+| `SESSION_HOURS` | Duração da sessão do administrador, em horas | `8` |
+| `CORS_ORIGINS` | Origens do dashboard liberadas para chamar a API com o cookie | `http://localhost:5173` |
 
 **Agente** (`agent/.env`)
 
@@ -202,11 +207,14 @@ Para gerar um UUID: `python -c "import uuid; print(uuid.uuid4())"`
 | `POST` | `/api/v1/endpoints/register` | Registra ou atualiza um endpoint | Token do agente |
 | `POST` | `/api/v1/metrics` | Envia uma coleta de métricas | Token do agente |
 | `POST` | `/api/v1/file-events` | Envia um evento de sistema de arquivos | Token do agente |
-| `GET` | `/api/v1/endpoints` | Lista os endpoints registrados | — |
-| `GET` | `/api/v1/endpoints/health` | Status (online, alerta, offline) e última coleta de cada endpoint | — |
-| `GET` | `/api/v1/metrics` | Histórico de métricas · `endpointId`, `from`, `to`, `limit` | — |
-| `GET` | `/api/v1/file-events` | Eventos de arquivos · `endpointId`, `from`, `to`, `limit` | — |
-| `GET` | `/api/v1/alerts` | Alertas · `status=active\|resolved\|all`, `endpointId`, `limit` | — |
+| `POST` | `/api/v1/auth/login` | Login do administrador (grava o cookie de sessão) | — |
+| `POST` | `/api/v1/auth/logout` | Encerra a sessão | — |
+| `GET` | `/api/v1/auth/me` | Usuário da sessão atual | Sessão |
+| `GET` | `/api/v1/endpoints` | Lista os endpoints registrados | Sessão |
+| `GET` | `/api/v1/endpoints/health` | Status (online, alerta, offline) e última coleta de cada endpoint | Sessão |
+| `GET` | `/api/v1/metrics` | Histórico de métricas · `endpointId`, `from`, `to`, `limit` | Sessão |
+| `GET` | `/api/v1/file-events` | Eventos de arquivos · `endpointId`, `from`, `to`, `limit` | Sessão |
+| `GET` | `/api/v1/alerts` | Alertas · `status=active\|resolved\|all`, `endpointId`, `limit` | Sessão |
 | `GET` | `/health` | Verificação de saúde da API | — |
 
 ## Observabilidade
@@ -266,6 +274,7 @@ InfraObserver/
 - [RFC em Markdown](docs/rfc.md)
 - [Guia de deploy em produção (Azure)](docs/deploy.md): arquitetura de produção, CD, rollback e operação
 - [Observabilidade](docs/observability.md): métricas, logs, alertas e acesso ao Grafana
+- [Segurança](docs/security.md): login do administrador, sessão, proteção contra força bruta, CSRF e XSS
 - [Documento do projeto](docs/Project.md)
 - [Como contribuir](CONTRIBUTING.md)
 
