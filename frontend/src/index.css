@@ -14,6 +14,14 @@
   box-sizing: border-box;
 }
 
+/* Rolagem suave ao clicar nos itens da barra lateral, exceto para quem
+   pediu menos animação no sistema operacional. */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
 body {
   margin: 0;
   min-width: 320px;

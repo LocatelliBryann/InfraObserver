@@ -139,7 +139,7 @@ function App() {
     <div className="min-h-screen bg-slate-950 text-slate-100">
       <div className="flex min-h-screen flex-col md:flex-row">
         <aside
-          className={`relative w-full border-b border-slate-800 bg-slate-900 p-6 transition-all duration-300 md:min-h-screen md:border-b-0 md:border-r ${
+          className={`relative w-full border-b border-slate-800 bg-slate-900 p-6 transition-all duration-300 md:sticky md:top-0 md:h-screen md:shrink-0 md:overflow-y-auto md:border-b-0 md:border-r ${
             sidebarCollapsed ? "md:w-20" : "md:w-64"
           }`}
         >
@@ -170,7 +170,6 @@ function App() {
             onToggle={() =>
               setSidebarCollapsed((current) => !current)
             }
-            activeItem="dashboard"
           />
 
           {!sidebarCollapsed && (
