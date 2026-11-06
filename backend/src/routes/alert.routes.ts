@@ -1,10 +1,10 @@
 import { Router } from "express";
 
-import { alertController } from "../config/dependencies";
+import { alertController, requireAuth } from "../config/dependencies";
 
 const alertRouter = Router();
 
-alertRouter.get("/", (req, res) => {
+alertRouter.get("/", requireAuth, (req, res) => {
   void alertController.findAll(req, res);
 });
 

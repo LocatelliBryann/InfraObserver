@@ -1,10 +1,10 @@
 import { Router } from "express";
 
-import { endpointHealthController } from "../config/dependencies";
+import { endpointHealthController, requireAuth } from "../config/dependencies";
 
 const endpointHealthRouter = Router();
 
-endpointHealthRouter.get("/", (req, res) => {
+endpointHealthRouter.get("/", requireAuth, (req, res) => {
   void endpointHealthController.findAll(req, res);
 });
 
