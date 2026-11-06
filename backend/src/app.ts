@@ -26,4 +26,10 @@ app.use("/api/v1/metrics", metricRouter);
 app.use("/api/v1/file-events", fileEventRouter);
 app.use("/api/v1/alerts", alertRouter);
 
+app.use((_req, res) => {
+  res.status(404).json({
+    error: "Rota não encontrada",
+  });
+});
+
 export default app;
