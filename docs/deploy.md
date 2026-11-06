@@ -1,5 +1,7 @@
 # Deploy em produção (Azure)
 
+A aplicação está disponível em **https://infraobserver.com.br**.
+
 Este guia descreve como o InfraObserver é publicado em produção: uma máquina virtual Linux na **Microsoft Azure** executando os containers com **Docker Compose**, atualizada automaticamente pelo **GitHub Actions** a cada merge na `main`.
 
 ## Arquitetura de produção
@@ -16,9 +18,12 @@ flowchart LR
         API["backend<br/>API REST"]
         DB[("postgres")]
         AG["agent<br/>agente de demonstração"]
+        MON["prometheus · grafana<br/>node-exporter"]
         WEB -- "/api" --> API
+        WEB -- "/grafana" --> MON
         API --> DB
         AG --> API
+        MON -- "/metrics" --> API
     end
 
     U(("Usuário")) -- "HTTPS" --> WEB
@@ -31,6 +36,11 @@ flowchart LR
 | `backend` | `ghcr.io/locatellibryann/infraobserver-backend` | Não: só pela rede interna, via Caddy |
 | `postgres` | `postgres:16-alpine` | Não |
 | `agent` | `ghcr.io/locatellibryann/infraobserver-agent` | Não |
+| `prometheus` | `prom/prometheus` | Não |
+| `node-exporter` | `prom/node-exporter` | Não |
+| `grafana` | `grafana/grafana-oss` | Sim, pelo Caddy em `/grafana`, com login |
+
+O monitoramento da própria aplicação está descrito em [observability.md](observability.md).
 
 Decisões principais:
 
@@ -133,7 +143,7 @@ openssl rand -hex 32                  # para POSTGRES_PASSWORD e cada token de a
 cat /proc/sys/kernel/random/uuid      # para DEMO_AGENT_ID
 ```
 
-Em `SITE_ADDRESS`, coloque o domínio do passo 3, **sem** `https://`. O `DEMO_AGENT_TOKEN` precisa estar na lista `AGENT_TOKENS`.
+Em `SITE_ADDRESS`, coloque o domínio do passo 3, **sem** `https://`. O `DEMO_AGENT_TOKEN` precisa estar na lista `AGENT_TOKENS`. Defina também `GRAFANA_ADMIN_PASSWORD` (gerado com `openssl rand -hex 16`) e `GRAFANA_ROOT_URL` com o endereço público seguido de `/grafana/`; sem a senha, o deploy falha.
 
 Proteja o arquivo:
 
@@ -171,6 +181,31 @@ O workflow **CD** roda sozinho quando o **CI** termina com sucesso na `main`. Pa
 
 Também é possível disparar manualmente em **Actions → CD → Run workflow**, na branch `main`.
 
+## 7. Domínio próprio
+
+O sistema também responde no domínio **infraobserver.com.br**, registrado no [Registro.br](https://registro.br).
+
+**DNS** (no painel do Registro.br, em *Editar zona*):
+
+| Tipo | Nome | Dados |
+|---|---|---|
+| A | *(raiz)* | IP público estático da VM |
+| CNAME | `www` | `infraobserver.com.br.` |
+
+**Servidor:** liste todos os endereços no `SITE_ADDRESS` do `.env`, separados por vírgula, e recrie o container do Caddy:
+
+```bash
+SITE_ADDRESS=infraobserver.com.br, www.infraobserver.com.br, infraobserver-bryann.chilecentral.cloudapp.azure.com
+```
+
+```bash
+docker compose -f docker-compose.prod.yml up -d web
+```
+
+O Caddy emite um certificado HTTPS para cada endereço assim que o DNS estiver apontando para a VM. Confira com `nslookup infraobserver.com.br` antes de recriar o container. O endereço `cloudapp.azure.com` continua ativo para os links antigos e para o SSH do deploy (`VM_HOST`).
+
+**GitHub:** atualize a variável `PRODUCTION_URL` do environment `production` para `https://infraobserver.com.br`.
+
 ## Operação
 
 **Ver o estado e os logs**
@@ -181,6 +216,8 @@ docker compose -f docker-compose.prod.yml ps
 docker compose -f docker-compose.prod.yml logs -f backend
 cat deploy-history.log                 # versões publicadas, com data
 ```
+
+Métricas, painéis e alertas da aplicação ficam no Grafana, em `https://infraobserver.com.br/grafana/`. Veja [observability.md](observability.md).
 
 **Rollback para uma versão anterior**
 

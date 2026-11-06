@@ -1,0 +1,63 @@
+# Regras de alerta sobre a saúde da própria aplicação (não dos endpoints monitorados,
+# que já geram alertas dentro do InfraObserver). Aparecem no Grafana em Alerting.
+
+groups:
+  - name: infraobserver-api
+    rules:
+      - alert: ApiFora
+        expr: up{job="backend"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "A API não responde ao Prometheus há 2 minutos"
+
+      - alert: TaxaDeErrosAlta
+        expr: |
+          sum(rate(http_requests_total{status_code=~"5.."}[5m]))
+            / sum(rate(http_requests_total[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Mais de 5% das requisições estão terminando em erro 5xx"
+
+      - alert: RespostasLentas
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le) (rate(http_request_duration_seconds_bucket{route!="/metrics"}[5m]))
+          ) > 1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "95% das requisições estão levando mais de 1 segundo"
+
+      - alert: AgentesSemEnviarDados
+        expr: |
+          (sum(rate(http_requests_total{route="/api/v1/metrics", method="POST", status_code="201"}[10m])) or vector(0)) == 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Nenhuma coleta de agente foi recebida nos últimos 10 minutos"
+
+  - name: infraobserver-servidor
+    rules:
+      - alert: MemoriaDoServidorAlta
+        expr: (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) > 0.9
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "A VM está usando mais de 90% da memória"
+
+      - alert: DiscoDoServidorQuaseCheio
+        expr: |
+          (1 - node_filesystem_avail_bytes{mountpoint="/", fstype!="tmpfs"}
+            / node_filesystem_size_bytes{mountpoint="/", fstype!="tmpfs"}) > 0.85
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "O disco da VM passou de 85%"

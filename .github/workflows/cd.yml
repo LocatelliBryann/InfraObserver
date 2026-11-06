@@ -99,13 +99,13 @@ jobs:
         with:
           ref: ${{ env.COMMIT_SHA }}
 
-      - name: Copiar docker-compose para a VM
+      - name: Copiar docker-compose e configuração de monitoramento para a VM
         uses: appleboy/scp-action@v1
         with:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.VM_SSH_KEY }}
-          source: infrastructure/docker/docker-compose.prod.yml
+          source: infrastructure/docker/docker-compose.prod.yml,infrastructure/docker/monitoring
           target: ~/infraobserver
           strip_components: 2
 
@@ -126,6 +126,8 @@ jobs:
             export IMAGE_TAG
             docker compose -f docker-compose.prod.yml pull
             docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            # Recarrega prometheus.yml e alerts.yml sem reiniciar o Prometheus.
+            docker compose -f docker-compose.prod.yml kill -s SIGHUP prometheus
             docker logout ghcr.io
             echo "$(date -u +%FT%TZ) $IMAGE_TAG" >> deploy-history.log
             docker image prune -af --filter "until=168h"

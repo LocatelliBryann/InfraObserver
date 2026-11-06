@@ -20,6 +20,12 @@ import { EndpointStatusService } from "../services/endpoint-status.service";
 import { OfflineDetectionJob } from "../jobs/offline-detection.job";
 import { getOfflineCheckIntervalMs } from "./monitoring";
 
+import { PrometheusController } from "../controllers/prometheus.controller";
+import {
+  metricsRegistry,
+  registerDomainMetrics,
+} from "../observability/metrics";
+
 const endpointRepository = new PrismaEndpointRepository();
 const endpointService = new EndpointService(endpointRepository);
 
@@ -57,6 +63,13 @@ const endpointHealthService = new EndpointHealthService(
 
 export const endpointHealthController =
   new EndpointHealthController(endpointHealthService);
+
+registerDomainMetrics(metricsRegistry, {
+  endpointHealth: endpointHealthService,
+  alerts: alertService,
+});
+
+export const prometheusController = new PrometheusController(metricsRegistry);
 
 const fileEventRepository = new PrismaFileEventRepository();
 const fileEventService = new FileEventService(fileEventRepository);
