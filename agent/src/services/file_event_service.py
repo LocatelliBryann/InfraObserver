@@ -22,8 +22,12 @@ class FileEventService:
             "username": event.username,
             "eventType": event.event_type.value,
             "filePath": event.file_path,
+            "isDirectory": event.is_directory,
             "occurredAt": event.occurred_at.isoformat(),
         }
+
+        if event.previous_path:
+            payload["previousPath"] = event.previous_path
 
         # Roda dentro da thread do watchdog: uma exceção aqui derrubaria
         # o monitoramento do diretório, então o erro é só registrado.

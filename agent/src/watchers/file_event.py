@@ -7,7 +7,10 @@ class FileEventType(StrEnum):
     CREATE = "CREATE"
     MODIFY = "MODIFY"
     DELETE = "DELETE"
+    # Novo nome na mesma pasta.
     RENAME = "RENAME"
+    # Levado para outra pasta.
+    MOVE = "MOVE"
 
 
 @dataclass(frozen=True)
@@ -16,3 +19,6 @@ class FileEvent:
     file_path: str
     username: str
     occurred_at: datetime
+    # Caminho anterior, em RENAME e MOVE.
+    previous_path: str | None = None
+    is_directory: bool = False
