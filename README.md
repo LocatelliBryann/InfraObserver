@@ -1,8 +1,11 @@
 <div align="center">
 
-<img src="docs/assets/logo.svg" alt="InfraObserver" width="72" />
-
-# InfraObserver
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/brand/logo-horizontal-branco.svg" />
+    <img src="docs/brand/logo-horizontal.svg" alt="InfraObserver" width="360" />
+  </picture>
+</h1>
 
 **Monitoramento centralizado de endpoints em rede.**
 Métricas de desempenho, alertas e eventos de sistema de arquivos de vários computadores em um único painel.
@@ -276,6 +279,7 @@ InfraObserver/
 - [Observabilidade](docs/observability.md): métricas, logs, alertas e acesso ao Grafana
 - [Segurança](docs/security.md): login do administrador, sessão, proteção contra força bruta, CSRF e XSS
 - [Documento do projeto](docs/Project.md)
+- [Identidade visual](docs/brand/README.md): logo, cores, tipografia e regras de uso
 - [Como contribuir](CONTRIBUTING.md)
 
 ## Autor
