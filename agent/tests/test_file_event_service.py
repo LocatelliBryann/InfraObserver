@@ -34,9 +34,35 @@ def test_file_event_service_sends_event_to_backend():
             "username": "test-user",
             "eventType": "CREATE",
             "filePath": "C:/Users/test/document.txt",
+            "isDirectory": False,
             "occurredAt": occurred_at.isoformat(),
         },
     )
+
+
+def test_file_event_service_sends_previous_path_of_moves():
+    http_client = Mock()
+    settings = Mock(spec=AgentSettings)
+    settings.agent_id = "550e8400-e29b-41d4-a716-446655440000"
+
+    service = FileEventService(http_client=http_client, settings=settings)
+
+    event = FileEvent(
+        event_type=FileEventType.MOVE,
+        file_path="C:/Users/test/Arquivo/2025",
+        username="test-user",
+        occurred_at=datetime.now(timezone.utc),
+        previous_path="C:/Users/test/Documents/2025",
+        is_directory=True,
+    )
+
+    service.send(event)
+
+    payload = http_client.post.call_args.args[1]
+
+    assert payload["eventType"] == "MOVE"
+    assert payload["previousPath"] == "C:/Users/test/Documents/2025"
+    assert payload["isDirectory"] is True
 
 def test_file_event_service_does_not_raise_when_backend_fails():
     http_client = Mock()

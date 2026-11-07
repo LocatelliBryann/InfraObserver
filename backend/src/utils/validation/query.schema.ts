@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { FILE_EVENT_TYPES } from "./file-event.schema";
+
 const optionalEndpointId = z.coerce.number().int().positive().optional();
 const optionalDate = z.coerce.date().optional();
 
@@ -28,12 +30,24 @@ export const metricHistoryQuerySchema = z
   .refine(isValidPeriod, invalidPeriod);
 
 // RF09 / RF20: eventos de arquivo, opcionalmente por endpoint e período.
+// Lista separada por vírgula: ?eventType=DELETE,MOVE
+const optionalEventTypes = z
+  .string()
+  .trim()
+  .min(1)
+  .transform((value) => value.split(",").map((type) => type.trim().toUpperCase()))
+  .pipe(z.array(z.enum(FILE_EVENT_TYPES)).min(1))
+  .optional();
+
 export const fileEventQuerySchema = z
   .object({
     endpointId: optionalEndpointId,
     from: optionalDate,
     to: optionalDate,
     limit: z.coerce.number().int().positive().max(100).default(20),
+    eventType: optionalEventTypes,
+    // Busca no caminho atual, no caminho anterior e no usuário.
+    search: z.string().trim().min(1).max(200).optional(),
   })
   .refine(isValidPeriod, invalidPeriod);
 

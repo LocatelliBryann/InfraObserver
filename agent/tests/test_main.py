@@ -1,7 +1,11 @@
-from unittest.mock import Mock, patch
+from unittest.mock import ANY, Mock, patch
 
 from src.core.agent import Agent
-from src.main import create_agent, create_file_observers
+from src.main import (
+    create_agent,
+    create_file_observers,
+    resolve_monitored_directories,
+)
 
 
 def test_create_agent_builds_agent_with_required_dependencies():
@@ -9,8 +13,10 @@ def test_create_agent_builds_agent_with_required_dependencies():
     settings.server_url = "http://localhost:3000"
     settings.agent_token = "test-token"
     settings.monitored_directories = []
+    settings.ignored_patterns = []
 
     with (
+        patch("src.main.default_monitored_directories", return_value=[]),
         patch(
             "src.main.AgentSettings.from_environment",
             return_value=settings,
@@ -62,10 +68,14 @@ def test_create_file_observers_for_configured_directories():
         "C:/Users/test/Documents",
         "C:/Users/test/Desktop",
     ]
+    settings.ignored_patterns = ["*.bak"]
 
     event_handler = Mock()
 
-    with patch("src.main.create_file_observer") as mock_factory:
+    with (
+        patch("src.main.create_file_observer") as mock_factory,
+        patch("src.main.os.path.isdir", return_value=True),
+    ):
         observers = create_file_observers(
             settings=settings,
             event_handler=event_handler,
@@ -76,14 +86,47 @@ def test_create_file_observers_for_configured_directories():
     mock_factory.assert_any_call(
         directory="C:/Users/test/Documents",
         event_handler=event_handler,
+        event_filter=ANY,
     )
 
     mock_factory.assert_any_call(
         directory="C:/Users/test/Desktop",
         event_handler=event_handler,
+        event_filter=ANY,
     )
 
+    event_filter = mock_factory.call_args.kwargs["event_filter"]
+    assert event_filter.should_ignore("C:/Users/test/Desktop/copia.bak")
+
     assert len(observers) == 2
+
+
+def test_resolve_uses_default_directories_when_none_configured(tmp_path):
+    documents = tmp_path / "Documents"
+    documents.mkdir()
+
+    settings = Mock()
+    settings.monitored_directories = []
+
+    with patch(
+        "src.main.default_monitored_directories",
+        return_value=[str(documents)],
+    ):
+        assert resolve_monitored_directories(settings) == [str(documents)]
+
+
+def test_resolve_skips_missing_directories(tmp_path, caplog):
+    existing = tmp_path / "Compartilhado"
+    existing.mkdir()
+
+    settings = Mock()
+    settings.monitored_directories = [
+        str(existing),
+        str(tmp_path / "nao-existe"),
+    ]
+
+    assert resolve_monitored_directories(settings) == [str(existing)]
+    assert "Monitored directory not found" in caplog.text
 
 
 def test_create_agent_configures_file_monitoring():

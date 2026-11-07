@@ -44,6 +44,7 @@ describe("FileEventController", () => {
       username: "Bryann",
       eventType: "CREATE",
       filePath: "C:\\Users\\Bryann\\Documents\\test.txt",
+      isDirectory: false,
       occurredAt: expect.any(Date),
     });
 
@@ -79,5 +80,30 @@ describe("FileEventController", () => {
     expect(res.status).toHaveBeenCalledWith(400);
     expect(json).toHaveBeenCalled();
     expect(service.create).not.toHaveBeenCalled();
+  });
+
+  it("should pass the type and search filters to the service", async () => {
+    const service = {
+      create: vi.fn(),
+      findRecent: vi.fn().mockResolvedValue([]),
+    };
+    const controller = new FileEventController(service);
+    const json = vi.fn();
+    const res = {
+      status: vi.fn().mockReturnValue({ json }),
+    } as unknown as Response;
+
+    await controller.findRecent(
+      {
+        query: { eventType: "DELETE,MOVE", search: "contrato", limit: "50" },
+      } as unknown as Request,
+      res,
+    );
+
+    expect(service.findRecent).toHaveBeenCalledWith({
+      limit: 50,
+      eventTypes: ["DELETE", "MOVE"],
+      search: "contrato",
+    });
   });
 });

@@ -5,6 +5,10 @@ from uuid import UUID
 DEFAULT_COLLECTION_INTERVAL = 60
 
 
+def _parse_list(value: str | None) -> list[str]:
+    return [item.strip() for item in (value or "").split(",") if item.strip()]
+
+
 def _parse_collection_interval(value: str | None) -> int:
     if value is None or not value.strip():
         return DEFAULT_COLLECTION_INTERVAL
@@ -30,7 +34,10 @@ class AgentSettings:
     agent_token: str
     agent_id: UUID
     collection_interval: int = DEFAULT_COLLECTION_INTERVAL
+    # Vazio = pastas padrão do usuário (ver watchers/default_directories.py).
     monitored_directories: list[str] = field(default_factory=list)
+    # Padrões extras de arquivos a ignorar, além dos temporários conhecidos.
+    ignored_patterns: list[str] = field(default_factory=list)
 
     @classmethod
     def from_environment(cls) -> "AgentSettings":
@@ -51,16 +58,12 @@ class AgentSettings:
             os.getenv("INFRAOBSERVER_COLLECTION_INTERVAL"),
         )
 
-        directories_value = os.getenv(
-            "INFRAOBSERVER_MONITORED_DIRECTORIES",
-            "",
+        monitored_directories = _parse_list(
+            os.getenv("INFRAOBSERVER_MONITORED_DIRECTORIES"),
         )
-
-        monitored_directories = [
-            directory.strip()
-            for directory in directories_value.split(",")
-            if directory.strip()
-        ]
+        ignored_patterns = _parse_list(
+            os.getenv("INFRAOBSERVER_IGNORED_PATTERNS"),
+        )
 
         return cls(
             server_url=server_url,
@@ -68,4 +71,5 @@ class AgentSettings:
             agent_id=UUID(agent_id),
             collection_interval=collection_interval,
             monitored_directories=monitored_directories,
+            ignored_patterns=ignored_patterns,
         )

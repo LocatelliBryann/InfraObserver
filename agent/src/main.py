@@ -1,5 +1,6 @@
 
 import logging
+import os
 
 from dotenv import load_dotenv
 
@@ -20,20 +21,45 @@ from src.services.registration_service import RegistrationService
 from src.watchers.file_observer_factory import create_file_observer
 from src.services.file_event_service import FileEventService
 from src.services.file_observer_service import FileObserverGroupService
+from src.watchers.default_directories import default_monitored_directories
+from src.watchers.file_filter import FileEventFilter
+
+logger = logging.getLogger(__name__)
+
+
+def resolve_monitored_directories(settings: AgentSettings) -> list[str]:
+    """Pastas configuradas ou, se nenhuma, as pastas padrão do usuário.
+
+    Pastas que não existem (ou unidades de rede indisponíveis) são puladas com
+    um aviso, para o agente não parar por causa de uma delas.
+    """
+    configured = settings.monitored_directories or default_monitored_directories()
+    directories = []
+
+    for directory in configured:
+        if os.path.isdir(directory):
+            directories.append(directory)
+        else:
+            logger.warning("Monitored directory not found: %s", directory)
+
+    return directories
 
 
 def create_file_observers(
     settings: AgentSettings,
     event_handler,
 ):
+    event_filter = FileEventFilter(extra_patterns=settings.ignored_patterns)
     observers = []
 
-    for directory in settings.monitored_directories:
+    for directory in resolve_monitored_directories(settings):
         observer = create_file_observer(
             directory=directory,
             event_handler=event_handler,
+            event_filter=event_filter,
         )
         observers.append(observer)
+        logger.info("Monitoring directory: %s", directory)
 
     return observers
 
