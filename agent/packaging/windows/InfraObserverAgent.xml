@@ -1,0 +1,32 @@
+<!--
+  Serviço do Windows do InfraObserver Agent, executado pelo WinSW 2.12
+  (InfraObserverAgent.exe é o WinSW-x64.exe renomeado; %BASE% é a pasta dele).
+  Referência: https://github.com/winsw/winsw/blob/v2.12.0/doc/xmlConfigFile.md
+-->
+<service>
+  <id>InfraObserverAgent</id>
+  <name>InfraObserver Agent</name>
+  <description>Coleta métricas e eventos de arquivos deste computador e envia ao servidor InfraObserver.</description>
+
+  <executable>%BASE%\agent\infraobserver-agent.exe</executable>
+  <env name="INFRAOBSERVER_CONFIG" value="%ProgramData%\InfraObserver\agent.env"/>
+
+  <!-- Conta LocalSystem (padrão): enxerga as pastas de todos os usuários. -->
+  <startmode>Automatic</startmode>
+  <delayedAutoStart/>
+
+  <!-- Se o agente cair, o Windows reinicia: 10 s, 30 s e depois a cada 60 s. -->
+  <onfailure action="restart" delay="10 sec"/>
+  <onfailure action="restart" delay="30 sec"/>
+  <onfailure action="restart" delay="60 sec"/>
+  <resetfailure>1 hour</resetfailure>
+
+  <!-- Parada: Ctrl+C para o agente encerrar os observadores, até 15 s. -->
+  <stoptimeout>15 sec</stoptimeout>
+
+  <logpath>%ProgramData%\InfraObserver\logs</logpath>
+  <log mode="roll-by-size">
+    <sizeThreshold>10240</sizeThreshold>
+    <keepFiles>5</keepFiles>
+  </log>
+</service>

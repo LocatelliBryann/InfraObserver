@@ -34,3 +34,8 @@ coverage/
 coverage.xml
 .coverage
 .scannerwork/
+
+# Build do instalador do agente (agent/packaging/windows/build.ps1)
+agent/build/
+agent/src/_build_info.py
+agent/agent-id

@@ -160,7 +160,9 @@ Por padrão o dashboard consome a API em `http://localhost:3000`. Para outro end
 
 ### 4. Agente
 
-Em cada computador que será monitorado:
+**No Windows (recomendado):** baixe o `InfraObserverAgentSetup-<versão>.exe` na [última release](https://github.com/LocatelliBryann/InfraObserver/releases/latest), rode como administrador e informe o endereço do servidor e o token do agente. O agente vira um serviço do Windows que inicia com o computador e volta sozinho se cair. Instalação silenciosa, logs e desinstalação em [docs/agent-windows.md](docs/agent-windows.md).
+
+**Pelo código-fonte** (desenvolvimento, Windows ou Linux):
 
 ```bash
 cd agent
@@ -195,12 +197,14 @@ python -m src.main
 |---|---|---|
 | `INFRAOBSERVER_SERVER_URL` | Endereço do servidor central | — |
 | `INFRAOBSERVER_AGENT_TOKEN` | Token do agente (deve estar em `AGENT_TOKENS`) | — |
-| `INFRAOBSERVER_AGENT_ID` | UUID único do endpoint | — |
+| `INFRAOBSERVER_AGENT_ID` | UUID único do endpoint. Sem ele, o agente gera um e salva em `agent-id` ao lado do `agent.env` (no instalador do Windows é sempre assim) | — |
 | `INFRAOBSERVER_COLLECTION_INTERVAL` | Intervalo de coleta, em segundos | `60` |
 | `INFRAOBSERVER_MONITORED_DIRECTORIES` | Diretórios monitorados, separados por vírgula. Pastas de rede pelo caminho UNC (`\\servidor\pasta`) | Área de Trabalho, Documentos, Downloads e Imagens de cada usuário |
 | `INFRAOBSERVER_IGNORED_PATTERNS` | Padrões extras de arquivos a ignorar (ex.: `*.bak,*.log`) | — |
 
 Para gerar um UUID: `python -c "import uuid; print(uuid.uuid4())"`
+
+No agente instalado pelo `setup.exe`, essas variáveis ficam em `C:\ProgramData\InfraObserver\agent.env`.
 
 </details>
 
@@ -268,7 +272,8 @@ InfraObserver/
 - [x] Deploy em nuvem (Microsoft Azure) com entrega contínua e domínio próprio
 - [x] Observabilidade da aplicação com Prometheus, Grafana e logs estruturados
 - [ ] Configuração remota dos agentes pelo dashboard
-- [ ] Agente como serviço do Windows
+- [x] Instalador do agente para Windows, rodando como serviço
+- [ ] Atualização automática dos agentes
 - [ ] Telas de gerenciamento de endpoints e configurações
 
 ## Documentação
@@ -276,6 +281,7 @@ InfraObserver/
 - [Wiki](https://github.com/LocatelliBryann/InfraObserver/wiki): instalação do agente, regras de alerta, decisões técnicas e problemas comuns
 - [RFC do projeto (PDF)](docs/RFC-InfraObserver.pdf): visão do produto, requisitos, casos de uso, fluxos, arquitetura C4 e modelo de dados
 - [RFC em Markdown](docs/rfc.md)
+- [Agente no Windows](docs/agent-windows.md): instalador, serviço, instalação silenciosa, logs e build do instalador
 - [Guia de deploy em produção (Azure)](docs/deploy.md): arquitetura de produção, CD, rollback e operação
 - [Observabilidade](docs/observability.md): métricas, logs, alertas e acesso ao Grafana
 - [Segurança](docs/security.md): login do administrador, sessão, proteção contra força bruta, CSRF e XSS

@@ -1,3 +1,4 @@
+import logging
 from unittest.mock import ANY, Mock, patch
 
 from src.core.agent import Agent
@@ -165,3 +166,44 @@ def test_create_agent_configures_file_monitoring():
         mock_file_observer_service.assert_called_once()
 
         assert isinstance(agent, Agent)
+
+def test_main_prints_version_without_starting_agent(capsys):
+    from src.main import main
+
+    with patch("src.main.create_agent") as mock_create_agent:
+        main(["--version"])
+
+    assert capsys.readouterr().out.startswith("InfraObserver Agent ")
+    mock_create_agent.assert_not_called()
+
+
+def test_main_loads_configuration_and_starts_agent(tmp_path):
+    from src.main import main
+
+    config_path = tmp_path / "agent.env"
+
+    with (
+        patch("src.main.load_configuration", return_value=config_path),
+        patch("src.main.ensure_agent_id") as mock_ensure_agent_id,
+        patch("src.main.create_agent") as mock_create_agent,
+    ):
+        main([])
+
+    mock_ensure_agent_id.assert_called_once_with(ANY, tmp_path / "agent-id")
+    mock_create_agent.return_value.start.assert_called_once_with()
+
+
+def test_main_stops_quietly_on_ctrl_c(caplog):
+    from src.main import main
+
+    with (
+        patch("src.main.load_configuration", return_value=None),
+        patch("src.main.ensure_agent_id"),
+        patch("src.main.create_agent") as mock_create_agent,
+    ):
+        mock_create_agent.return_value.start.side_effect = KeyboardInterrupt
+
+        with caplog.at_level(logging.INFO):
+            main([])
+
+    assert "InfraObserver Agent stopped" in caplog.text
