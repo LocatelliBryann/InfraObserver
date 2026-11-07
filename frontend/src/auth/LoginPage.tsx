@@ -1,7 +1,8 @@
 import { useState, type FormEvent } from "react";
 
-import { Eye, EyeOff, LockKeyhole, ShieldCheck } from "lucide-react";
+import { Eye, EyeOff, LockKeyhole } from "lucide-react";
 
+import { BrandMark } from "../components/BrandMark";
 import { loginErrorMessage } from "../services/authService";
 
 interface LoginPageProps {
@@ -40,9 +41,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
     <main className="flex min-h-screen items-center justify-center bg-slate-950 px-4 py-10 text-slate-100">
       <div className="w-full max-w-sm">
         <div className="mb-8 flex flex-col items-center text-center">
-          <div className="mb-4 rounded-2xl bg-cyan-500/15 p-3 text-cyan-400">
-            <ShieldCheck size={32} aria-hidden="true" />
-          </div>
+          <BrandMark size={48} className="mb-4 text-slate-100" />
 
           <h1 className="text-2xl font-bold tracking-tight">InfraObserver</h1>
 

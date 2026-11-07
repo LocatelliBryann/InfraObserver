@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="6 6 52 52">
+  <title>InfraObserver</title>
+  <style>
+    .ring { stroke: #0F1B2D; }
+    @media (prefers-color-scheme: dark) { .ring { stroke: #FFFFFF; } }
+  </style>
+  <path class="ring" d="M 50.79 25.16 A 20 20 0 1 1 35.47 12.30" fill="none" stroke-width="8" />
+  <circle cx="44.86" cy="16.68" r="5" fill="#1FA971" />
+</svg>
