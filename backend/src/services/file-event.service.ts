@@ -8,6 +8,9 @@ export interface CreateFileEventInput {
   username: string;
   eventType: string;
   filePath: string;
+  previousPath?: string;
+  isDirectory?: boolean;
+  sourceIp?: string;
   occurredAt: Date;
 }
 
@@ -31,6 +34,9 @@ export class FileEventService {
       username: input.username,
       eventType: input.eventType,
       filePath: input.filePath,
+      previousPath: input.previousPath,
+      isDirectory: input.isDirectory ?? false,
+      sourceIp: input.sourceIp,
       occurredAt: input.occurredAt,
       receivedAt: new Date(),
     });
