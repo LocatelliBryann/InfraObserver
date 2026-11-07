@@ -54,12 +54,13 @@ try {
     python -m pip install --disable-pip-version-check -r $runtimeFile "pyinstaller==$PyInstallerVersion"
     if ($LASTEXITCODE -ne 0) { throw "pip install falhou" }
 
-    python -m PyInstaller packaging\windows\agent_entry.py `
+    # Caminhos absolutos: o PyInstaller resolve os relativos a partir do --specpath.
+    python -m PyInstaller (Join-Path $PackagingDir "agent_entry.py") `
         --name infraobserver-agent `
         --onedir --console --noconfirm --clean `
         --paths . `
         --collect-submodules watchdog.observers `
-        --icon packaging\windows\infraobserver.ico `
+        --icon (Join-Path $PackagingDir "infraobserver.ico") `
         --distpath (Join-Path $BuildDir "dist") `
         --workpath (Join-Path $BuildDir "work") `
         --specpath (Join-Path $BuildDir "work")
