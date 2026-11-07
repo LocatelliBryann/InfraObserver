@@ -1,11 +1,25 @@
 import { apiClient } from "./apiClient";
 
+export type FileEventType = "CREATE" | "MODIFY" | "DELETE" | "RENAME" | "MOVE";
+
+export const FILE_EVENT_TYPES: FileEventType[] = [
+  "CREATE",
+  "MODIFY",
+  "DELETE",
+  "RENAME",
+  "MOVE",
+];
+
 export interface FileEvent {
   id: number;
   endpointId: number;
   username: string;
-  eventType: string;
+  eventType: FileEventType;
   filePath: string;
+  // Caminho anterior, em renomeações e movimentações.
+  previousPath?: string | null;
+  isDirectory?: boolean;
+  sourceIp?: string | null;
   occurredAt: string;
   receivedAt: string;
   endpoint: {
@@ -13,9 +27,20 @@ export interface FileEvent {
   };
 }
 
+export interface FileEventFilters {
+  eventTypes: FileEventType[];
+  search: string;
+}
+
+export const EMPTY_FILE_EVENT_FILTERS: FileEventFilters = {
+  eventTypes: [],
+  search: "",
+};
+
 export async function getRecentFileEvents(
   limit = 20,
   endpointId?: number,
+  filters: FileEventFilters = EMPTY_FILE_EVENT_FILTERS,
 ): Promise<FileEvent[]> {
   const params = new URLSearchParams({
     limit: String(limit),
@@ -23,6 +48,16 @@ export async function getRecentFileEvents(
 
   if (endpointId !== undefined) {
     params.set("endpointId", String(endpointId));
+  }
+
+  if (filters.eventTypes.length > 0) {
+    params.set("eventType", filters.eventTypes.join(","));
+  }
+
+  const search = filters.search.trim();
+
+  if (search) {
+    params.set("search", search);
   }
 
   return apiClient.get<FileEvent[]>(

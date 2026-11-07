@@ -26,7 +26,7 @@ const mockEvents: FileEvent[] = [
     id: 1,
     endpointId: 10,
     username: "admin",
-    eventType: "created",
+    eventType: "CREATE",
     filePath: "C:\\Users\\admin\\documento.txt",
     occurredAt: "2026-09-22T10:00:00.000Z",
     receivedAt: "2026-09-22T10:00:01.000Z",

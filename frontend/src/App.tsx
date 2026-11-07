@@ -13,6 +13,10 @@ import { useEndpointHealth } from "./hooks/useEndpointHealth";
 import { useEndpoints } from "./hooks/useEndpoints";
 import { useFileEvents } from "./hooks/useFileEvents";
 import { useMetrics } from "./hooks/useMetrics";
+import {
+  EMPTY_FILE_EVENT_FILTERS,
+  type FileEventFilters,
+} from "./services/fileEventsService";
 
 function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -51,6 +55,9 @@ function App() {
 
   const [metricPeriod, setMetricPeriod] =
     useState<MetricPeriodKey>("live");
+  const [fileEventFilters, setFileEventFilters] = useState<FileEventFilters>(
+    EMPTY_FILE_EVENT_FILTERS,
+  );
 
   const activeEndpointId =
     selectedEndpointId ??
@@ -62,7 +69,7 @@ function App() {
     loading: fileEventsLoading,
     error: fileEventsError,
     refresh: refreshFileEvents,
-  } = useFileEvents(20, activeEndpointId);
+  } = useFileEvents(20, activeEndpointId, fileEventFilters);
 
   const selectedEndpoint = endpoints.find(
     (endpoint) => Number(endpoint.id) === activeEndpointId,
@@ -215,6 +222,8 @@ function App() {
             fileEvents={fileEvents}
             fileEventsLoading={fileEventsLoading}
             fileEventsError={fileEventsError}
+            fileEventFilters={fileEventFilters}
+            onFileEventFiltersChange={setFileEventFilters}
           />
         </main>
       </div>

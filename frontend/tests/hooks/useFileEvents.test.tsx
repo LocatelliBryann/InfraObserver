@@ -17,7 +17,7 @@ const fileEvents = [
     id: 1,
     endpointId: 10,
     username: "admin",
-    eventType: "created",
+    eventType: "CREATE" as const,
     filePath: "C:\\Users\\admin\\documento.txt",
     occurredAt: "2026-09-22T10:00:00.000Z",
     receivedAt: "2026-09-22T10:00:01.000Z",
@@ -60,7 +60,7 @@ describe("useFileEvents", () => {
       {
         ...fileEvents[0],
         id: 2,
-        eventType: "modified",
+        eventType: "MODIFY" as const,
         filePath: "C:\\Users\\admin\\arquivo-atualizado.txt",
       },
     ];
@@ -112,6 +112,21 @@ describe("useFileEvents", () => {
 
     await waitFor(() => {
       expect(mockedGetRecentFileEvents).toHaveBeenCalledWith(20, 5);
+    });
+  });
+
+  it("envia os filtros de tipo e busca", async () => {
+    mockedGetRecentFileEvents.mockResolvedValue([]);
+
+    renderHook(() =>
+      useFileEvents(20, 5, { eventTypes: ["DELETE", "MOVE"], search: " contrato " }),
+    );
+
+    await waitFor(() => {
+      expect(mockedGetRecentFileEvents).toHaveBeenCalledWith(20, 5, {
+        eventTypes: ["DELETE", "MOVE"],
+        search: "contrato",
+      });
     });
   });
 });
