@@ -47,3 +47,44 @@ def test_file_observer_service_schedules_file_watcher():
         path=str(service.directory),
         recursive=True,
     )
+
+def make_observer(path: str, start_error: Exception | None = None):
+    observer = Mock()
+    emitter = Mock()
+    emitter.watch.path = path
+    observer.emitters = [emitter]
+    if start_error is not None:
+        observer.start.side_effect = start_error
+    return observer
+
+
+def test_group_keeps_monitoring_other_directories_when_one_fails(caplog):
+    from src.services.file_observer_service import FileObserverGroupService
+
+    denied = make_observer("C:/Users/Usuário Padrão/Desktop", PermissionError("Acesso negado"))
+    allowed = make_observer("C:/Users/maria/Desktop")
+    group = FileObserverGroupService([denied, allowed])
+
+    group.start()
+    group.stop()
+
+    allowed.start.assert_called_once_with()
+    allowed.stop.assert_called_once_with()
+    allowed.join.assert_called_once_with()
+    denied.stop.assert_not_called()
+    denied.join.assert_not_called()
+    assert "Could not monitor C:/Users/Usuário Padrão/Desktop: Acesso negado" in caplog.text
+
+
+def test_group_logs_error_when_no_directory_can_be_monitored(caplog):
+    from src.services.file_observer_service import FileObserverGroupService
+
+    observer = Mock()
+    observer.emitters = None
+    observer.start.side_effect = OSError("offline")
+    group = FileObserverGroupService([observer])
+
+    group.start()
+
+    assert "Could not monitor unknown directory: offline" in caplog.text
+    assert "No directory could be monitored" in caplog.text
