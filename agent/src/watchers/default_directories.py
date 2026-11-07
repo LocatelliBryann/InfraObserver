@@ -5,10 +5,21 @@ from pathlib import Path
 # Pastas de cada usuário monitoradas quando nenhuma é configurada.
 USER_FOLDERS = ("Desktop", "Documents", "Downloads", "Pictures")
 
-# Perfis do Windows que não são de pessoas.
+# Perfis do Windows que não são de pessoas. Os atalhos antigos com nome
+# traduzido ("Todos os Usuários", "Usuário Padrão") são junções e ficam de
+# fora em _is_user_profile.
 SYSTEM_PROFILES = frozenset(
     {"default", "default user", "public", "all users", "defaultapppool"}
 )
+
+
+def _is_user_profile(path: Path) -> bool:
+    # Junções e links simbólicos em C:\Users apontam para outras pastas e
+    # negam a listagem até para o sistema (WinError 5).
+    if path.is_symlink() or path.is_junction():
+        return False
+
+    return path.is_dir() and path.name.lower() not in SYSTEM_PROFILES
 
 
 def default_monitored_directories(
@@ -30,7 +41,7 @@ def default_monitored_directories(
             [
                 profile
                 for profile in sorted(root.iterdir())
-                if profile.is_dir() and profile.name.lower() not in SYSTEM_PROFILES
+                if _is_user_profile(profile)
             ]
             if root.is_dir()
             else []

@@ -1,4 +1,7 @@
+import logging
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 
 class FileObserverService:
@@ -24,15 +27,40 @@ class FileObserverService:
         self.observer.stop()
         self.observer.join()
 
+def _watched_paths(observer) -> str:
+    try:
+        return ", ".join(str(emitter.watch.path) for emitter in observer.emitters)
+    except Exception:
+        return "unknown directory"
+
+
 class FileObserverGroupService:
+    """Um observador por pasta. Se uma pasta não puder ser observada (sem
+    permissão, unidade de rede fora do ar), as outras continuam e o agente
+    segue enviando métricas."""
+
     def __init__(self, observers):
         self.observers = observers
+        self.started = []
 
     def start(self) -> None:
         for observer in self.observers:
-            observer.start()
+            paths = _watched_paths(observer)
+
+            try:
+                observer.start()
+            except Exception as error:
+                logger.warning("Could not monitor %s: %s", paths, error)
+                continue
+
+            self.started.append(observer)
+
+        if self.observers and not self.started:
+            logger.error("No directory could be monitored")
 
     def stop(self) -> None:
-        for observer in self.observers:
+        for observer in self.started:
             observer.stop()
             observer.join()
+
+        self.started = []
