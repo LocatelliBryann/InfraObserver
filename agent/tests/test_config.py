@@ -155,3 +155,17 @@ def test_rejects_non_positive_collection_interval(monkeypatch):
         assert str(error) == (
             "INFRAOBSERVER_COLLECTION_INTERVAL must be a positive integer"
         )
+
+
+def test_loads_ignored_patterns_from_environment(monkeypatch):
+    monkeypatch.setenv("INFRAOBSERVER_SERVER_URL", "http://localhost:3000")
+    monkeypatch.setenv("INFRAOBSERVER_AGENT_TOKEN", "token")
+    monkeypatch.setenv(
+        "INFRAOBSERVER_AGENT_ID",
+        "550e8400-e29b-41d4-a716-446655440000",
+    )
+    monkeypatch.setenv("INFRAOBSERVER_IGNORED_PATTERNS", "*.bak, *.log ,")
+
+    settings = AgentSettings.from_environment()
+
+    assert settings.ignored_patterns == ["*.bak", "*.log"]

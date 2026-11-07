@@ -71,6 +71,29 @@ describe("fileEventQuerySchema", () => {
   });
 });
 
+describe("fileEventQuerySchema filters", () => {
+  it("should parse a comma separated list of event types", () => {
+    expect(
+      fileEventQuerySchema.parse({ eventType: "delete, MOVE" }).eventType,
+    ).toEqual(["DELETE", "MOVE"]);
+  });
+
+  it("should reject an unknown event type", () => {
+    expect(
+      fileEventQuerySchema.safeParse({ eventType: "DELETE,COPY" }).success,
+    ).toBe(false);
+  });
+
+  it("should trim the search text and reject an empty one", () => {
+    expect(fileEventQuerySchema.parse({ search: "  relatorio " }).search).toBe(
+      "relatorio",
+    );
+    expect(fileEventQuerySchema.safeParse({ search: "   " }).success).toBe(
+      false,
+    );
+  });
+});
+
 describe("alertQuerySchema", () => {
   it("should default to active alerts", () => {
     expect(alertQuerySchema.parse({})).toEqual({

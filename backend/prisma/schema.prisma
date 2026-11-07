@@ -47,18 +47,24 @@ model Metric {
 }
 
 model FileEvent {
-  id         Int      @id @default(autoincrement())
-  endpointId Int
-  username   String
-  eventType  String
-  filePath   String
-  occurredAt DateTime
-  receivedAt DateTime
+  id           Int      @id @default(autoincrement())
+  endpointId   Int
+  username     String
+  eventType    String
+  filePath     String
+  // Caminho anterior, em renomeações (RENAME) e movimentações (MOVE).
+  previousPath String?
+  isDirectory  Boolean  @default(false)
+  // IP de quem fez a ação pela rede (preenchido pela auditoria do Windows).
+  sourceIp     String?
+  occurredAt   DateTime
+  receivedAt   DateTime
 
   endpoint Endpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
 
   @@index([endpointId])
   @@index([occurredAt])
+  @@index([eventType])
   @@map("file_event")
 }
 

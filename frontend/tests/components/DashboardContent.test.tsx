@@ -148,7 +148,7 @@ describe("DashboardContent", () => {
     render(<DashboardContent {...defaultProps} />);
 
     expect(
-      screen.getByText("Eventos de arquivo detectados em server-01."),
+      screen.getByText("Eventos de arquivos e pastas detectados em server-01."),
     ).toBeTruthy();
   });
 });

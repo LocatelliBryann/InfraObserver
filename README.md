@@ -50,7 +50,7 @@ O **InfraObserver** é uma alternativa leve e sem custo: um **agente** instalado
 | Recurso | Descrição |
 |---|---|
 | 📊 **Métricas de desempenho** | CPU, memória, disco e rede de cada endpoint, coletadas em intervalo configurável |
-| 📁 **Eventos de arquivos** | Criação, modificação, exclusão e renomeação em diretórios monitorados, com o usuário logado (auditoria básica) |
+| 📁 **Eventos de arquivos** | Criação, modificação, exclusão, renomeação e movimentação de arquivos e pastas, com caminho anterior, usuário e filtros por tipo e busca no dashboard. Temporários do Office e do Windows são ignorados |
 | 🚨 **Alertas automáticos** | CPU ou memória acima de 80% e disco acima de 90%; o alerta é resolvido após duas coletas normais seguidas |
 | 📴 **Detecção de indisponibilidade** | Endpoint sem dados por 3 ciclos de coleta vira **offline** e gera alerta; ao voltar, é reativado sozinho |
 | 🟢 **Status por endpoint** | Online, Alerta ou Offline, com a quantidade de alertas ativos |
@@ -197,7 +197,8 @@ python -m src.main
 | `INFRAOBSERVER_AGENT_TOKEN` | Token do agente (deve estar em `AGENT_TOKENS`) | — |
 | `INFRAOBSERVER_AGENT_ID` | UUID único do endpoint | — |
 | `INFRAOBSERVER_COLLECTION_INTERVAL` | Intervalo de coleta, em segundos | `60` |
-| `INFRAOBSERVER_MONITORED_DIRECTORIES` | Diretórios monitorados, separados por vírgula | — |
+| `INFRAOBSERVER_MONITORED_DIRECTORIES` | Diretórios monitorados, separados por vírgula. Pastas de rede pelo caminho UNC (`\\servidor\pasta`) | Área de Trabalho, Documentos, Downloads e Imagens de cada usuário |
+| `INFRAOBSERVER_IGNORED_PATTERNS` | Padrões extras de arquivos a ignorar (ex.: `*.bak,*.log`) | — |
 
 Para gerar um UUID: `python -c "import uuid; print(uuid.uuid4())"`
 
@@ -216,7 +217,7 @@ Para gerar um UUID: `python -c "import uuid; print(uuid.uuid4())"`
 | `GET` | `/api/v1/endpoints` | Lista os endpoints registrados | Sessão |
 | `GET` | `/api/v1/endpoints/health` | Status (online, alerta, offline) e última coleta de cada endpoint | Sessão |
 | `GET` | `/api/v1/metrics` | Histórico de métricas · `endpointId`, `from`, `to`, `limit` | Sessão |
-| `GET` | `/api/v1/file-events` | Eventos de arquivos · `endpointId`, `from`, `to`, `limit` | Sessão |
+| `GET` | `/api/v1/file-events` | Eventos de arquivos · `endpointId`, `eventType` (ex.: `DELETE,MOVE`), `search`, `from`, `to`, `limit` | Sessão |
 | `GET` | `/api/v1/alerts` | Alertas · `status=active\|resolved\|all`, `endpointId`, `limit` | Sessão |
 | `GET` | `/health` | Verificação de saúde da API | — |
 

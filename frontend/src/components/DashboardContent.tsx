@@ -9,6 +9,7 @@ import { AlertsSection } from "./AlertsSection";
 import { EmptyState } from "./EmptyState";
 import { EndpointHealthSection } from "./EndpointHealthSection";
 import { EndpointStatusList } from "./EndpointStatusList";
+import { FileEventsSection } from "./FileEventsSection";
 import { MetricsChart } from "./MetricsChart";
 
 import { DASHBOARD_SECTIONS } from "../config/navigation";
@@ -23,7 +24,10 @@ import type {
   EndpointStatus,
 } from "../services/endpointHealthService";
 import type { Endpoint } from "../services/endpointsService";
-import type { FileEvent } from "../services/fileEventsService";
+import type {
+  FileEvent,
+  FileEventFilters,
+} from "../services/fileEventsService";
 import type { Metric } from "../services/metricsService";
 
 interface DashboardContentProps {
@@ -58,7 +62,12 @@ interface DashboardContentProps {
   fileEvents: FileEvent[];
   fileEventsLoading: boolean;
   fileEventsError: string | null;
+  fileEventFilters?: FileEventFilters;
+  onFileEventFiltersChange?: (filters: FileEventFilters) => void;
 }
+
+const NO_FILE_EVENT_FILTERS: FileEventFilters = { eventTypes: [], search: "" };
+const ignoreFilterChange = () => {};
 
 export function DashboardContent({
   endpoints,
@@ -88,6 +97,8 @@ export function DashboardContent({
   fileEvents,
   fileEventsLoading,
   fileEventsError,
+  fileEventFilters = NO_FILE_EVENT_FILTERS,
+  onFileEventFiltersChange = ignoreFilterChange,
 }: DashboardContentProps) {
   const monitoredEndpointsValue = loading
     ? "—"
@@ -356,82 +367,14 @@ export function DashboardContent({
         />
       </section>
 
-      <section
-        id={DASHBOARD_SECTIONS.events}
-        aria-labelledby="activity-heading"
-        className="min-w-0 scroll-mt-6 rounded-2xl border border-slate-800 bg-slate-900 p-6"
-      >
-        <div className="mb-4 flex items-center gap-3">
-          <div className="shrink-0 rounded-xl bg-violet-500/10 p-3 text-violet-400">
-            <Activity size={21} />
-          </div>
-
-          <div className="min-w-0">
-            <h3
-              id="activity-heading"
-              className="font-semibold"
-            >
-              Atividade recente
-            </h3>
-
-            <p className="text-sm text-slate-400">
-              {selectedEndpoint
-                ? `Eventos de arquivo detectados em ${selectedEndpoint.hostname}.`
-                : "Eventos e alterações detectadas nos endpoints."}
-            </p>
-          </div>
-        </div>
-
-        {fileEventsLoading && fileEvents.length === 0 ? (
-          <StatusMessage>
-            Carregando atividades recentes...
-          </StatusMessage>
-        ) : fileEventsError ? (
-          <StatusMessage error>
-            Não foi possível carregar as atividades recentes.
-          </StatusMessage>
-        ) : fileEvents.length === 0 ? (
-          <EmptyState
-            title="Nenhuma atividade registrada"
-            description="Os eventos detectados nos endpoints aparecerão nesta seção."
-          />
-        ) : (
-          <div className="min-w-0 space-y-3">
-            {fileEvents.map((event) => (
-              <article
-                key={event.id}
-                className="min-w-0 rounded-xl border border-slate-700 bg-slate-950/40 p-4"
-              >
-                <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-start">
-                  <div className="min-w-0">
-                    <p className="break-words text-sm font-semibold text-slate-100">
-                      {event.eventType}
-                    </p>
-
-                    <p className="mt-1 break-words text-xs text-slate-400">
-                      {event.endpoint.hostname}
-                    </p>
-                  </div>
-
-                  <span className="shrink-0 text-xs text-slate-500">
-                    {new Date(
-                      event.occurredAt,
-                    ).toLocaleString("pt-BR")}
-                  </span>
-                </div>
-
-                <p className="mt-3 break-all text-xs text-slate-400">
-                  {event.filePath}
-                </p>
-
-                <p className="mt-2 break-words text-xs text-slate-500">
-                  Usuário: {event.username}
-                </p>
-              </article>
-            ))}
-          </div>
-        )}
-      </section>
+      <FileEventsSection
+        events={fileEvents}
+        loading={fileEventsLoading}
+        error={fileEventsError}
+        hostname={selectedEndpoint?.hostname}
+        filters={fileEventFilters}
+        onFiltersChange={onFileEventFiltersChange}
+      />
     </div>
   );
 }

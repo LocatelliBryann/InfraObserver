@@ -66,7 +66,11 @@ export class FileEventController {
     }
 
     try {
-      const fileEvents = await this.service.findRecent(query.data);
+      const { eventType, ...filters } = query.data;
+      const fileEvents = await this.service.findRecent({
+        ...filters,
+        eventTypes: eventType,
+      });
 
       res.status(200).json(fileEvents);
     } catch {
