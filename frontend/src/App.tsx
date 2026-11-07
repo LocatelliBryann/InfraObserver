@@ -1,8 +1,7 @@
 import { useCallback, useState } from "react";
 
-import { ShieldCheck } from "lucide-react";
-
 import { UserMenu } from "./auth/UserMenu";
+import { BrandMark } from "./components/BrandMark";
 import { DashboardContent } from "./components/DashboardContent";
 import { DashboardHeader } from "./components/DashboardHeader";
 import { PlatformStatus } from "./components/PlatformStatus";
@@ -149,9 +148,7 @@ function App() {
               sidebarCollapsed ? "justify-center" : ""
             }`}
           >
-            <div className="shrink-0 rounded-xl bg-cyan-500/15 p-2 text-cyan-400">
-              <ShieldCheck size={26} />
-            </div>
+            <BrandMark size={36} className="shrink-0 text-slate-100" />
 
             {!sidebarCollapsed && (
               <div className="overflow-hidden whitespace-nowrap">
