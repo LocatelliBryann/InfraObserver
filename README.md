@@ -57,7 +57,7 @@ O **InfraObserver** é uma alternativa leve e sem custo: um **agente** instalado
 | 📈 **Histórico** | Gráficos em tempo real ou dos últimos 1 h, 6 h e 24 h; histórico de alertas resolvidos com duração |
 | 🔑 **Login de administrador** | Dashboard e consultas da API protegidos por login, com sessão em cookie `httpOnly`, bloqueio após 5 tentativas erradas e proteção contra CSRF |
 | 🔐 **Autenticação dos agentes** | Token Bearer por agente, validado em tempo constante |
-| 🔁 **Agente resiliente** | Continua funcionando e tenta de novo se o servidor ficar fora do ar |
+| 🔁 **Agente resiliente** | Sem conexão com o servidor, guarda eventos e métricas numa fila em disco e envia tudo, na ordem e com o horário original, quando a conexão volta |
 
 <details>
 <summary><b>Mais telas</b></summary>
