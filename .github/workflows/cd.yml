@@ -126,6 +126,13 @@ jobs:
             export IMAGE_TAG
             docker compose -f docker-compose.prod.yml pull
             docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            # Grava a versão no .env: um "up -d" manual na VM continua nela,
+            # em vez de cair numa imagem antiga.
+            if grep -q '^IMAGE_TAG=' .env; then
+              sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=$IMAGE_TAG/" .env
+            else
+              echo "IMAGE_TAG=$IMAGE_TAG" >> .env
+            fi
             # Recarrega prometheus.yml e alerts.yml sem reiniciar o Prometheus.
             docker compose -f docker-compose.prod.yml kill -s SIGHUP prometheus
             docker logout ghcr.io
