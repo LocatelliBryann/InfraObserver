@@ -48,6 +48,30 @@ describe("POST /api/v1/endpoints/register", () => {
     expect(response.body.status).toBe("ONLINE");
   });
 
+  it("should store the agent version and update it on the next registration", async () => {
+    const register = (agentVersion: string) =>
+      request(app)
+        .post("/api/v1/endpoints/register")
+        .set("Authorization", AGENT_AUTH_HEADER)
+        .send({ agentId, hostname: "PC-001", ipAddress: "192.168.1.10", agentVersion });
+
+    expect((await register("0.0.0-dev.3")).body.agentVersion).toBe("0.0.0-dev.3");
+
+    const updated = await register("1.5.0");
+
+    expect(updated.status).toBe(200);
+    expect(updated.body.agentVersion).toBe("1.5.0");
+  });
+
+  it("should return 400 when the agent version is invalid", async () => {
+    const response = await request(app)
+      .post("/api/v1/endpoints/register")
+      .set("Authorization", AGENT_AUTH_HEADER)
+      .send({ agentId, hostname: "PC-001", ipAddress: "192.168.1.10", agentVersion: "latest; rm -rf" });
+
+    expect(response.status).toBe(400);
+  });
+
   it("should return 400 when the payload is invalid", async () => {
     const response = await request(app)
       .post("/api/v1/endpoints/register")

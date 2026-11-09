@@ -8,16 +8,18 @@ datasource db {
 }
 
 model Endpoint {
-  id         Int       @id @default(autoincrement())
-  agentId    String    @unique @db.Uuid
-  hostname   String
-  ipAddress  String
-  osName     String?
-  osVersion  String?
-  status     String
-  lastSeenAt DateTime?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  id           Int       @id @default(autoincrement())
+  agentId      String    @unique @db.Uuid
+  hostname     String
+  ipAddress    String
+  osName       String?
+  osVersion    String?
+  // Versão do agente instalado (enviada no registro).
+  agentVersion String?
+  status       String
+  lastSeenAt   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   metrics    Metric[]
   fileEvents FileEvent[]

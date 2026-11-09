@@ -9,6 +9,7 @@ export interface EndpointRepository {
       ipAddress: string;
       osName: string | null;
       osVersion: string | null;
+      agentVersion: string | null;
       status: string;
       lastSeenAt: Date | null;
     }>
@@ -21,6 +22,7 @@ export interface EndpointRepository {
     ipAddress: string;
     osName: string | null;
     osVersion: string | null;
+    agentVersion: string | null;
     status: string;
     lastSeenAt: Date | null;
   } | null>;
@@ -31,6 +33,7 @@ export interface EndpointRepository {
     ipAddress: string;
     osName?: string;
     osVersion?: string;
+    agentVersion?: string;
     status: string;
     lastSeenAt: Date;
   }): Promise<{
@@ -40,6 +43,7 @@ export interface EndpointRepository {
     ipAddress: string;
     osName: string | null;
     osVersion: string | null;
+    agentVersion: string | null;
     status: string;
     lastSeenAt: Date | null;
   }>;
@@ -51,6 +55,7 @@ export interface EndpointRepository {
       ipAddress?: string;
       osName?: string;
       osVersion?: string;
+      agentVersion?: string;
       status?: string;
       lastSeenAt?: Date;
     },
@@ -61,6 +66,7 @@ export interface EndpointRepository {
     ipAddress: string;
     osName: string | null;
     osVersion: string | null;
+    agentVersion: string | null;
     status: string;
     lastSeenAt: Date | null;
   }>;
@@ -73,6 +79,7 @@ export interface EndpointRepository {
       ipAddress: string;
       osName: string | null;
       osVersion: string | null;
+      agentVersion: string | null;
       status: string;
       lastSeenAt: Date | null;
     }>
@@ -104,6 +111,7 @@ export class PrismaEndpointRepository
     ipAddress: string;
     osName?: string;
     osVersion?: string;
+    agentVersion?: string;
     status: string;
     lastSeenAt: Date;
   }) {
@@ -119,6 +127,7 @@ export class PrismaEndpointRepository
       ipAddress?: string;
       osName?: string;
       osVersion?: string;
+      agentVersion?: string;
       status?: string;
       lastSeenAt?: Date;
     },

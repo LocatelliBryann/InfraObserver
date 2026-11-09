@@ -20,6 +20,7 @@ export class EndpointService {
         ipAddress: input.ipAddress,
         osName: input.osName,
         osVersion: input.osVersion,
+        agentVersion: input.agentVersion,
         status: "ONLINE",
         lastSeenAt: new Date(),
       });

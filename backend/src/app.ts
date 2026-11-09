@@ -4,6 +4,7 @@ import express from "express";
 import helmet from "helmet";
 
 import { getAllowedOrigins } from "./config/auth";
+import agentUpdateRouter from "./routes/agent-update.routes";
 import alertRouter from "./routes/alert.routes";
 import authRouter from "./routes/auth.routes";
 import endpointRouter from "./routes/endpoint.routes";
@@ -44,6 +45,7 @@ app.use("/api/v1/endpoints/health", endpointHealthRouter);
 app.use("/api/v1/metrics", metricRouter);
 app.use("/api/v1/file-events", fileEventRouter);
 app.use("/api/v1/alerts", alertRouter);
+app.use("/api/v1/agent/update", agentUpdateRouter);
 
 app.use((_req, res) => {
   res.status(404).json({
