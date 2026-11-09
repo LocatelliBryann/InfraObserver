@@ -13,7 +13,6 @@ function response(status: number, body: unknown) {
     ok: status >= 200 && status < 300,
     status,
     json: async () => body,
-    text: async () => String(body),
   };
 }
 
@@ -47,21 +46,6 @@ describe("GitHubAgentReleaseSource", () => {
     );
   });
 
-  it("reads the .sha256 file when there is no digest", async () => {
-    const checksum = {
-      name: `${installerName("1.5.0")}.sha256`,
-      browser_download_url: `${DOWNLOAD}/${installerName("1.5.0")}.sha256`,
-    };
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(response(200, release([installer(), checksum])))
-      .mockResolvedValueOnce(response(200, `${SHA}  ${installerName("1.5.0")}\n`));
-    const source = new GitHubAgentReleaseSource("LocatelliBryann/InfraObserver", fetchMock);
-
-    await expect(source.fetchRelease()).resolves.toMatchObject({ sha256: SHA });
-    expect(fetchMock).toHaveBeenLastCalledWith(checksum.browser_download_url, expect.anything());
-  });
-
   it("asks for a specific tag when a version is pinned", async () => {
     const fetchMock = vi.fn().mockResolvedValue(response(404, {}));
     const source = new GitHubAgentReleaseSource("LocatelliBryann/InfraObserver", fetchMock);
@@ -77,6 +61,7 @@ describe("GitHubAgentReleaseSource", () => {
       release([]),
       release([installer({ browser_download_url: "https://evil.example/setup.exe", digest: `sha256:${SHA}` })]),
       release([installer({ digest: "sha256:not-a-hash" })]),
+      release([installer({ digest: `md5:${SHA}` })]),
       release([installer()]),
     ];
 
@@ -85,23 +70,6 @@ describe("GitHubAgentReleaseSource", () => {
         "LocatelliBryann/InfraObserver",
         vi.fn().mockResolvedValue(response(200, body)),
       );
-      await expect(source.fetchRelease()).resolves.toBeNull();
-    }
-  });
-
-  it("ignores an unreadable or invalid checksum file", async () => {
-    const checksum = {
-      name: `${installerName("1.5.0")}.sha256`,
-      browser_download_url: `${DOWNLOAD}/${installerName("1.5.0")}.sha256`,
-    };
-
-    for (const checksumResponse of [response(500, ""), response(200, "nope")]) {
-      const fetchMock = vi
-        .fn()
-        .mockResolvedValueOnce(response(200, release([installer(), checksum])))
-        .mockResolvedValueOnce(checksumResponse);
-      const source = new GitHubAgentReleaseSource("LocatelliBryann/InfraObserver", fetchMock);
-
       await expect(source.fetchRelease()).resolves.toBeNull();
     }
   });

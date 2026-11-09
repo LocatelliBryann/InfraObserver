@@ -1,6 +1,6 @@
 // Busca o instalador do agente nas releases do GitHub.
 // O workflow agent-windows.yml anexa em cada release o
-// InfraObserverAgentSetup-<versão>.exe e o .sha256 dele.
+// InfraObserverAgentSetup-<versão>.exe; o SHA-256 vem da própria API do GitHub.
 
 export interface AgentRelease {
   version: string;
@@ -31,11 +31,22 @@ type FetchLike = (
   ok: boolean;
   status: number;
   json(): Promise<unknown>;
-  text(): Promise<string>;
 }>;
 
 const SHA256_PATTERN = /^[a-f0-9]{64}$/;
 const ALLOWED_DOWNLOAD_PREFIX = "https://github.com/";
+
+// O GitHub informa o SHA-256 de cada arquivo da release no campo "digest".
+function readSha256(asset: GitHubAsset): string | null {
+  const digest = asset.digest?.toLowerCase();
+
+  if (!digest?.startsWith("sha256:")) {
+    return null;
+  }
+
+  const value = digest.slice("sha256:".length);
+  return SHA256_PATTERN.test(value) ? value : null;
+}
 
 export function installerName(version: string): string {
   return `InfraObserverAgentSetup-${version}.exe`;
@@ -68,12 +79,11 @@ export class GitHubAgentReleaseSource implements AgentReleaseSource {
     return this.parseRelease((await response.json()) as GitHubRelease);
   }
 
-  private async parseRelease(
-    release: GitHubRelease,
-  ): Promise<AgentRelease | null> {
+  private parseRelease(release: GitHubRelease): AgentRelease | null {
     const version = release.tag_name.replace(/^v/, "");
-    const assets = release.assets ?? [];
-    const installer = assets.find((asset) => asset.name === installerName(version));
+    const installer = (release.assets ?? []).find(
+      (asset) => asset.name === installerName(version),
+    );
 
     if (
       !installer ||
@@ -82,7 +92,7 @@ export class GitHubAgentReleaseSource implements AgentReleaseSource {
       return null;
     }
 
-    const sha256 = await this.resolveSha256(installer, assets);
+    const sha256 = readSha256(installer);
 
     if (!sha256) {
       return null;
@@ -91,35 +101,8 @@ export class GitHubAgentReleaseSource implements AgentReleaseSource {
     return { version, url: installer.browser_download_url, sha256 };
   }
 
-  // O GitHub informa o SHA-256 de cada arquivo (campo digest); releases antigas
-  // não têm, então vale o .sha256 publicado junto.
-  private async resolveSha256(
-    installer: GitHubAsset,
-    assets: GitHubAsset[],
-  ): Promise<string | null> {
-    const digest = installer.digest?.toLowerCase();
-
-    if (digest?.startsWith("sha256:")) {
-      const value = digest.slice("sha256:".length);
-      return SHA256_PATTERN.test(value) ? value : null;
-    }
-
-    const checksum = assets.find((asset) => asset.name === `${installer.name}.sha256`);
-
-    if (!checksum?.browser_download_url.startsWith(ALLOWED_DOWNLOAD_PREFIX)) {
-      return null;
-    }
-
-    const response = await this.request(checksum.browser_download_url);
-
-    if (!response.ok) {
-      return null;
-    }
-
-    const value = (await response.text()).trim().split(/\s+/)[0]?.toLowerCase() ?? "";
-    return SHA256_PATTERN.test(value) ? value : null;
-  }
-
+  // Só chama a API do GitHub, num endereço montado com o repositório da
+  // configuração: nenhum endereço que vem na resposta é acessado pelo servidor.
   private request(url: string) {
     return this.fetchImpl(url, {
       headers: {
