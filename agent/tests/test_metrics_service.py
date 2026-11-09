@@ -51,3 +51,37 @@ def test_metrics_service_collects_and_sends_metrics():
     assert payload["netBytesRecv"] == 2048
 
     assert "collectedAt" in payload
+
+def test_metrics_go_to_the_queue_when_there_is_one():
+    from unittest.mock import Mock
+
+    from src.services.metrics_service import MetricsService
+
+    http_client = Mock()
+    outbox = Mock()
+    settings = Mock()
+    settings.agent_id = "550e8400-e29b-41d4-a716-446655440000"
+    collector = Mock()
+    collector.collect.return_value = Mock(
+        cpu_percent=10.0,
+        memory_used=1,
+        memory_total=2,
+        disk_used=3,
+        disk_total=4,
+        net_bytes_sent=5,
+        net_bytes_recv=6,
+    )
+    service = MetricsService(
+        http_client=http_client,
+        settings=settings,
+        metrics_collector=collector,
+        outbox=outbox,
+    )
+
+    service.collect_and_send()
+
+    http_client.post.assert_not_called()
+    path, payload = outbox.put.call_args.args
+    assert path == "/api/v1/metrics"
+    assert payload["cpuPercent"] == 10.0
+    assert "collectedAt" in payload

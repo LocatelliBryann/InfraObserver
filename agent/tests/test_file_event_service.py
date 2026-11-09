@@ -84,3 +84,31 @@ def test_file_event_service_does_not_raise_when_backend_fails():
 
     assert service.send(event) is False
     http_client.post.assert_called_once()
+
+
+def test_file_event_goes_to_the_queue_when_there_is_one():
+    from datetime import datetime, timezone
+    from unittest.mock import Mock
+
+    from src.services.file_event_service import FileEventService
+    from src.watchers.file_event import FileEvent, FileEventType
+
+    http_client = Mock()
+    outbox = Mock()
+    settings = Mock()
+    settings.agent_id = "550e8400-e29b-41d4-a716-446655440000"
+    service = FileEventService(http_client=http_client, settings=settings, outbox=outbox)
+    event = FileEvent(
+        event_type=FileEventType.DELETE,
+        file_path="C:/Users/maria/Desktop/contrato.pdf",
+        username="maria",
+        occurred_at=datetime(2026, 11, 7, 12, 0, tzinfo=timezone.utc),
+    )
+
+    assert service.send(event) is True
+
+    http_client.post.assert_not_called()
+    path, payload = outbox.put.call_args.args
+    assert path == "/api/v1/file-events"
+    assert payload["eventType"] == "DELETE"
+    assert payload["occurredAt"] == "2026-11-07T12:00:00+00:00"

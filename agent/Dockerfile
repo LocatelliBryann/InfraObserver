@@ -17,9 +17,12 @@ RUN grep -viE '^pytest' requirements.txt > requirements-runtime.txt \
 
 COPY src ./src
 
+# /data/agent guarda a fila de envios (outbox.db) quando o backend não responde.
+ENV INFRAOBSERVER_DATA_DIR=/data/agent
+
 RUN useradd --create-home --uid 10001 agent \
-  && mkdir -p /data/monitored \
-  && chown agent:agent /data/monitored
+  && mkdir -p /data/monitored /data/agent \
+  && chown agent:agent /data/monitored /data/agent
 USER agent
 
 CMD ["python", "-m", "src.main"]

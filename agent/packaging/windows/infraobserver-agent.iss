@@ -330,6 +330,9 @@ begin
   begin
     DelTree(ConfigDir() + '\logs', True, True, True);
     DelTree(ConfigDir() + '\updates', True, True, True);
+    { Fila de envios pendentes: sem o agente, ela não seria mais enviada. }
+    DeleteFile(ConfigDir() + '\outbox.db');
+    DeleteFile(ConfigDir() + '\outbox.db-journal');
 
     { A configuração e o identificador ficam, para uma reinstalação voltar
       como o mesmo endpoint. Na desinstalação manual, o usuário escolhe. }

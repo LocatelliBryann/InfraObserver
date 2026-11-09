@@ -263,3 +263,28 @@ def test_agent_skips_update_check_when_metrics_fail():
     assert agent.run_cycle() is False
 
     update_service.check_if_due.assert_not_called()
+
+
+def test_agent_with_queue_watches_folders_before_the_server_answers():
+    calls = []
+    registration_service = Mock()
+    registration_service.register.side_effect = lambda: calls.append("register")
+    file_observer_service = Mock()
+    file_observer_service.start.side_effect = lambda: calls.append("watch")
+    outbox_sender = Mock()
+    outbox_sender.start.side_effect = lambda: calls.append("send queue")
+
+    agent = Agent(
+        registration_service=registration_service,
+        metrics_service=Mock(),
+        settings=Mock(),
+        file_observer_service=file_observer_service,
+        outbox_sender=outbox_sender,
+    )
+
+    with patch.object(agent, "run"):
+        agent.start()
+
+    assert calls == ["watch", "register", "send queue"]
+    file_observer_service.stop.assert_called_once_with()
+    outbox_sender.stop.assert_called_once_with()
