@@ -12,9 +12,13 @@ class FileEventService:
         self,
         http_client: HttpClient,
         settings: AgentSettings,
+        outbox=None,
     ):
         self.http_client = http_client
         self.settings = settings
+        # Com a fila, o evento é guardado e enviado em segundo plano; sem rede,
+        # ele espera a conexão voltar em vez de se perder.
+        self.outbox = outbox
 
     def send(self, event: FileEvent) -> bool:
         payload = {
@@ -32,10 +36,13 @@ class FileEventService:
         # Roda dentro da thread do watchdog: uma exceção aqui derrubaria
         # o monitoramento do diretório, então o erro é só registrado.
         try:
-            self.http_client.post(
-                "/api/v1/file-events",
-                payload,
-            )
+            if self.outbox is not None:
+                self.outbox.put("/api/v1/file-events", payload)
+            else:
+                self.http_client.post(
+                    "/api/v1/file-events",
+                    payload,
+                )
         except Exception:
             logger.exception(
                 "Failed to send file event for %s",

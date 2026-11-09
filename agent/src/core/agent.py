@@ -12,18 +12,29 @@ class Agent:
         settings,
         file_observer_service=None,
         update_service=None,
+        outbox_sender=None,
     ):
         self.registration_service = registration_service
         self.metrics_service = metrics_service
         self.settings = settings
         self.file_observer_service = file_observer_service
         self.update_service = update_service
+        self.outbox_sender = outbox_sender
 
     def start(self):
-        self.register_with_retry()
-
-        if self.file_observer_service is not None:
+        # Com a fila, as pastas são observadas desde já, mesmo que o servidor
+        # esteja fora do ar: os eventos esperam na fila até o registro.
+        if self.outbox_sender is not None and self.file_observer_service is not None:
             self.file_observer_service.start()
+            self.register_with_retry()
+        else:
+            self.register_with_retry()
+
+            if self.file_observer_service is not None:
+                self.file_observer_service.start()
+
+        if self.outbox_sender is not None:
+            self.outbox_sender.start()
 
         try:
             self.run()
@@ -33,6 +44,9 @@ class Agent:
     def stop(self):
         if self.file_observer_service is not None:
             self.file_observer_service.stop()
+
+        if self.outbox_sender is not None:
+            self.outbox_sender.stop()
 
     def register_with_retry(self):
         while True:
