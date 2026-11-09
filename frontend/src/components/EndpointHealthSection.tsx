@@ -20,12 +20,33 @@ const STATUS_BADGES: Record<
   },
 };
 
+function describeEndpoint(endpoint: {
+  id: number;
+  ipAddress?: string;
+  osName?: string | null;
+  osVersion?: string | null;
+  agentVersion?: string | null;
+}): string[] {
+  const system = [endpoint.osName, endpoint.osVersion].filter(Boolean).join(" ");
+
+  return [
+    `ID ${endpoint.id}`,
+    endpoint.ipAddress,
+    system,
+    endpoint.agentVersion ? `Agente ${endpoint.agentVersion}` : undefined,
+  ].filter((part): part is string => Boolean(part));
+}
+
 interface EndpointHealthSectionProps {
   endpoint: {
     id: number;
     hostname: string;
     status: string;
     activeAlerts?: number;
+    ipAddress?: string;
+    osName?: string | null;
+    osVersion?: string | null;
+    agentVersion?: string | null;
   } | null;
   metric: Metric | null;
 }
@@ -68,7 +89,7 @@ export function EndpointHealthSection({
           </h2>
 
           <p className="mt-1 text-xs text-slate-500">
-            ID: {endpoint.id}
+            {describeEndpoint(endpoint).join(" · ")}
           </p>
         </div>
 

@@ -360,6 +360,10 @@ export function DashboardContent({
                   hostname: selectedEndpoint.hostname,
                   status: selectedStatus,
                   activeAlerts: selectedEndpointHealth?.activeAlerts,
+                  ipAddress: selectedEndpoint.ipAddress,
+                  osName: selectedEndpoint.osName,
+                  osVersion: selectedEndpoint.osVersion,
+                  agentVersion: selectedEndpoint.agentVersion,
                 }
               : null
           }
