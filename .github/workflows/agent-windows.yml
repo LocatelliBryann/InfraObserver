@@ -1,0 +1,117 @@
+name: Agent Windows Installer
+
+# Gera e testa o instalador do agente numa máquina Windows.
+# - PR que mexe no agente: gera, testa e guarda o instalador como artefato
+# - Manual (Run workflow): o mesmo, para baixar e testar num PC
+# - Release publicada: gera com a versão da tag e anexa na release
+on:
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - "agent/**"
+      - ".github/workflows/agent-windows.yml"
+  workflow_dispatch:
+  release:
+    types:
+      - published
+
+permissions:
+  contents: read
+
+concurrency:
+  group: agent-windows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  installer:
+    name: Agent - Windows Installer
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    defaults:
+      run:
+        shell: pwsh
+        working-directory: agent
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: agent/requirements.txt
+
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Run tests on Windows
+        run: python -m pytest
+
+      - name: Define version
+        id: version
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          TAG_NAME: ${{ github.event.release.tag_name }}
+          RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          if ($env:EVENT_NAME -eq "release") {
+            $version = $env:TAG_NAME.TrimStart("v")
+          } else {
+            $version = "0.0.0-dev.$env:RUN_NUMBER"
+          }
+          "value=$version" >> $env:GITHUB_OUTPUT
+          Write-Host "Versão: $version"
+
+      - name: Install Inno Setup
+        run: |
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) {
+            choco install innosetup -y --no-progress
+          }
+
+      - name: Build installer
+        env:
+          VERSION: ${{ steps.version.outputs.value }}
+        run: ./packaging/windows/build.ps1 -Version $env:VERSION
+
+      - name: Test installer (install, service, update, uninstall)
+        env:
+          VERSION: ${{ steps.version.outputs.value }}
+        run: >-
+          ./packaging/windows/smoke-test.ps1
+          -Setup "build/windows/output/InfraObserverAgentSetup-$env:VERSION.exe"
+          -Version $env:VERSION
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: infraobserver-agent-windows
+          path: agent/build/windows/output/
+          retention-days: 14
+
+  release-assets:
+    name: Attach installer to release
+    if: github.event_name == 'release'
+    needs: installer
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download installer
+        uses: actions/download-artifact@v4
+        with:
+          name: infraobserver-agent-windows
+          path: output
+
+      - name: Upload to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG_NAME: ${{ github.event.release.tag_name }}
+        run: gh release upload "$TAG_NAME" output/* --clobber

@@ -169,3 +169,32 @@ def test_loads_ignored_patterns_from_environment(monkeypatch):
     settings = AgentSettings.from_environment()
 
     assert settings.ignored_patterns == ["*.bak", "*.log"]
+
+
+def test_update_interval_defaults_to_six_hours(monkeypatch):
+    set_required_environment(monkeypatch)
+    monkeypatch.delenv("INFRAOBSERVER_UPDATE_INTERVAL_HOURS", raising=False)
+
+    assert AgentSettings.from_environment().update_interval_hours == 6
+
+
+def test_update_interval_can_be_configured_or_disabled(monkeypatch):
+    set_required_environment(monkeypatch)
+
+    monkeypatch.setenv("INFRAOBSERVER_UPDATE_INTERVAL_HOURS", "0.5")
+    assert AgentSettings.from_environment().update_interval_hours == 0.5
+
+    monkeypatch.setenv("INFRAOBSERVER_UPDATE_INTERVAL_HOURS", "0")
+    assert AgentSettings.from_environment().update_interval_hours == 0
+
+
+def test_rejects_invalid_update_interval(monkeypatch):
+    import pytest
+
+    set_required_environment(monkeypatch)
+
+    for value in ("sempre", "-1"):
+        monkeypatch.setenv("INFRAOBSERVER_UPDATE_INTERVAL_HOURS", value)
+
+        with pytest.raises(ValueError, match="UPDATE_INTERVAL_HOURS"):
+            AgentSettings.from_environment()

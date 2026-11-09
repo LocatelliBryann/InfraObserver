@@ -220,6 +220,10 @@ O Caddy emite um certificado HTTPS para cada endereço assim que o DNS estiver a
 
 ## Operação
 
+**Versão em produção**
+
+O CD grava a versão publicada (SHA do commit) em `IMAGE_TAG`, no `.env` da VM. Assim, qualquer `docker compose ... up -d` feito à mão recria os containers na mesma versão do último deploy. Sem essa variável, o compose para com erro em vez de usar uma imagem antiga.
+
 **Ver o estado e os logs**
 
 ```bash
@@ -240,8 +244,8 @@ Métricas, painéis e alertas da aplicação ficam no Grafana, em `https://infra
 **Conectar um computador real ao servidor**
 
 1. Gere um token novo (`openssl rand -hex 32`) e acrescente-o em `AGENT_TOKENS` no `.env` da VM.
-2. Aplique a mudança: `docker compose -f docker-compose.prod.yml up -d backend`.
-3. No computador monitorado, configure o `agent/.env` com `INFRAOBSERVER_SERVER_URL=https://<domínio>` e o token novo.
+2. Aplique a mudança: `docker compose -f docker-compose.prod.yml up -d backend`. A versão vem do `IMAGE_TAG` do `.env`, que o CD atualiza a cada deploy.
+3. No computador monitorado (Windows), rode o instalador da release e informe `https://<domínio>` e o token novo ([docs/agent-windows.md](agent-windows.md)). Pelo código-fonte, configure o `agent/.env` com os mesmos valores.
 
 **Backup do banco**
 

@@ -3,6 +3,7 @@ from unittest.mock import Mock
 from src.collectors.system_info import SystemInfo
 from src.config.settings import AgentSettings
 from src.services.registration_service import RegistrationService
+from src.version import __version__
 
 
 def test_registration_service_registers_agent_using_settings_and_system_info():
@@ -42,5 +43,6 @@ def test_registration_service_registers_agent_using_settings_and_system_info():
             "ipAddress": "192.168.1.100",
             "osName": "Windows",
             "osVersion": "11",
+            "agentVersion": __version__,
         },
     )

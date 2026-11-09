@@ -27,6 +27,9 @@ DEFAULT_IGNORED_DIRECTORY_NAMES = (
     ".git",
     "node_modules",
     "__pycache__",
+    # Google Drive para computador: cópias temporárias durante o envio e o download.
+    ".tmp.driveupload",
+    ".tmp.drivedownload",
 )
 
 

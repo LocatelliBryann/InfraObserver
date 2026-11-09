@@ -1,6 +1,6 @@
-pytest==8.4.2
+pytest==9.2.0
 psutil==7.0.0
 watchdog==6.0.0
-requests==2.32.5
+requests==2.34.2
 python-dotenv
 pytest-cov==7.1.0

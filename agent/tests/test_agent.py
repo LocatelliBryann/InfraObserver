@@ -233,3 +233,33 @@ def test_agent_retries_registration_until_server_is_available():
     assert result == "registered"
     assert registration_service.register.call_count == 2
     mock_sleep.assert_called_once_with(60)
+
+
+def test_agent_checks_for_updates_after_sending_metrics():
+    update_service = Mock()
+    agent = Agent(
+        registration_service=Mock(),
+        metrics_service=Mock(),
+        settings=Mock(),
+        update_service=update_service,
+    )
+
+    assert agent.run_cycle() is True
+
+    update_service.check_if_due.assert_called_once_with()
+
+
+def test_agent_skips_update_check_when_metrics_fail():
+    update_service = Mock()
+    metrics_service = Mock()
+    metrics_service.collect_and_send.side_effect = RuntimeError("offline")
+    agent = Agent(
+        registration_service=Mock(),
+        metrics_service=metrics_service,
+        settings=Mock(),
+        update_service=update_service,
+    )
+
+    assert agent.run_cycle() is False
+
+    update_service.check_if_due.assert_not_called()

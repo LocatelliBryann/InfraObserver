@@ -6,16 +6,28 @@ class HttpClient:
         self.server_url = server_url.rstrip("/")
         self.agent_token = agent_token
 
-    def post(self, path: str, payload: dict):
-        url = f"{self.server_url}/{path.lstrip('/')}"
+    def _url(self, path: str) -> str:
+        return f"{self.server_url}/{path.lstrip('/')}"
 
+    def post(self, path: str, payload: dict):
         response = requests.post(
-            url,
+            self._url(path),
             json=payload,
             headers={
                 "Authorization": f"Bearer {self.agent_token}",
                 "Content-Type": "application/json",
             },
+            timeout=10,
+        )
+
+        response.raise_for_status()
+
+        return response
+
+    def get(self, path: str):
+        response = requests.get(
+            self._url(path),
+            headers={"Authorization": f"Bearer {self.agent_token}"},
             timeout=10,
         )
 

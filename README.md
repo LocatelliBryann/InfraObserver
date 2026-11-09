@@ -160,7 +160,9 @@ Por padrão o dashboard consome a API em `http://localhost:3000`. Para outro end
 
 ### 4. Agente
 
-Em cada computador que será monitorado:
+**No Windows (recomendado):** baixe o `InfraObserverAgentSetup-<versão>.exe` na [última release](https://github.com/LocatelliBryann/InfraObserver/releases/latest), rode como administrador e informe o endereço do servidor e o token do agente. O agente vira um serviço do Windows que inicia com o computador e volta sozinho se cair. Instalação silenciosa, logs e desinstalação em [docs/agent-windows.md](docs/agent-windows.md).
+
+**Pelo código-fonte** (desenvolvimento, Windows ou Linux):
 
 ```bash
 cd agent
@@ -188,6 +190,9 @@ python -m src.main
 | `JWT_SECRET` | Segredo que assina a sessão do login (obrigatório em produção, mínimo 32 caracteres) | segredo de desenvolvimento |
 | `SESSION_HOURS` | Duração da sessão do administrador, em horas | `8` |
 | `CORS_ORIGINS` | Origens do dashboard liberadas para chamar a API com o cookie | `http://localhost:5173` |
+| `AGENT_UPDATES_ENABLED` | Liga a atualização automática dos agentes (`false` desliga) | `true` |
+| `AGENT_UPDATE_VERSION` | Fixa a versão que os agentes devem instalar (ex.: `1.5.0`); vazio = última release | — |
+| `AGENT_RELEASES_REPO` | Repositório do GitHub com as releases do instalador | `LocatelliBryann/InfraObserver` |
 
 **Agente** (`agent/.env`)
 
@@ -195,12 +200,15 @@ python -m src.main
 |---|---|---|
 | `INFRAOBSERVER_SERVER_URL` | Endereço do servidor central | — |
 | `INFRAOBSERVER_AGENT_TOKEN` | Token do agente (deve estar em `AGENT_TOKENS`) | — |
-| `INFRAOBSERVER_AGENT_ID` | UUID único do endpoint | — |
+| `INFRAOBSERVER_AGENT_ID` | UUID único do endpoint. Sem ele, o agente gera um e salva em `agent-id` ao lado do `agent.env` (no instalador do Windows é sempre assim) | — |
 | `INFRAOBSERVER_COLLECTION_INTERVAL` | Intervalo de coleta, em segundos | `60` |
 | `INFRAOBSERVER_MONITORED_DIRECTORIES` | Diretórios monitorados, separados por vírgula. Pastas de rede pelo caminho UNC (`\\servidor\pasta`) | Área de Trabalho, Documentos, Downloads e Imagens de cada usuário |
 | `INFRAOBSERVER_IGNORED_PATTERNS` | Padrões extras de arquivos a ignorar (ex.: `*.bak,*.log`) | — |
+| `INFRAOBSERVER_UPDATE_INTERVAL_HOURS` | De quantas em quantas horas o agente instalado no Windows procura uma versão nova (`0` desliga) | `6` |
 
 Para gerar um UUID: `python -c "import uuid; print(uuid.uuid4())"`
+
+No agente instalado pelo `setup.exe`, essas variáveis ficam em `C:\ProgramData\InfraObserver\agent.env`.
 
 </details>
 
@@ -211,6 +219,7 @@ Para gerar um UUID: `python -c "import uuid; print(uuid.uuid4())"`
 | `POST` | `/api/v1/endpoints/register` | Registra ou atualiza um endpoint | Token do agente |
 | `POST` | `/api/v1/metrics` | Envia uma coleta de métricas | Token do agente |
 | `POST` | `/api/v1/file-events` | Envia um evento de sistema de arquivos | Token do agente |
+| `GET` | `/api/v1/agent/update` | Versão que o agente deve instalar (URL do instalador e SHA-256); `204` se não houver | Token do agente |
 | `POST` | `/api/v1/auth/login` | Login do administrador (grava o cookie de sessão) | — |
 | `POST` | `/api/v1/auth/logout` | Encerra a sessão | — |
 | `GET` | `/api/v1/auth/me` | Usuário da sessão atual | Sessão |
@@ -268,7 +277,8 @@ InfraObserver/
 - [x] Deploy em nuvem (Microsoft Azure) com entrega contínua e domínio próprio
 - [x] Observabilidade da aplicação com Prometheus, Grafana e logs estruturados
 - [ ] Configuração remota dos agentes pelo dashboard
-- [ ] Agente como serviço do Windows
+- [x] Instalador do agente para Windows, rodando como serviço
+- [x] Atualização automática dos agentes, com a versão de cada um no dashboard
 - [ ] Telas de gerenciamento de endpoints e configurações
 
 ## Documentação
@@ -276,6 +286,7 @@ InfraObserver/
 - [Wiki](https://github.com/LocatelliBryann/InfraObserver/wiki): instalação do agente, regras de alerta, decisões técnicas e problemas comuns
 - [RFC do projeto (PDF)](docs/RFC-InfraObserver.pdf): visão do produto, requisitos, casos de uso, fluxos, arquitetura C4 e modelo de dados
 - [RFC em Markdown](docs/rfc.md)
+- [Agente no Windows](docs/agent-windows.md): instalador, serviço, instalação silenciosa, logs e build do instalador
 - [Guia de deploy em produção (Azure)](docs/deploy.md): arquitetura de produção, CD, rollback e operação
 - [Observabilidade](docs/observability.md): métricas, logs, alertas e acesso ao Grafana
 - [Segurança](docs/security.md): login do administrador, sessão, proteção contra força bruta, CSRF e XSS

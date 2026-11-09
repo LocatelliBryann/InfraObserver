@@ -1,11 +1,9 @@
 
 import logging
 import os
-
-from dotenv import load_dotenv
-
-# Carrega as variáveis de agent/.env antes de inicializar o agente.
-load_dotenv()
+import platform
+import sys
+from pathlib import Path
 
 from src.collectors.cpu import CpuCollector
 from src.collectors.disk import DiskCollector
@@ -13,16 +11,20 @@ from src.collectors.memory import MemoryCollector
 from src.collectors.metrics import MetricsCollector
 from src.collectors.network import NetworkCollector
 from src.collectors.system_info import SystemInfoCollector
+from src.config.agent_identity import ensure_agent_id
+from src.config.config_file import agent_id_file_for, load_configuration
 from src.config.settings import AgentSettings
 from src.core.agent import Agent
 from src.services.http_client import HttpClient
 from src.services.metrics_service import MetricsService
 from src.services.registration_service import RegistrationService
+from src.services.update_service import UpdateService
 from src.watchers.file_observer_factory import create_file_observer
 from src.services.file_event_service import FileEventService
 from src.services.file_observer_service import FileObserverGroupService
 from src.watchers.default_directories import default_monitored_directories
 from src.watchers.file_filter import FileEventFilter
+from src.version import __version__
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +66,26 @@ def create_file_observers(
     return observers
 
 
-def create_agent() -> Agent:
+def create_update_service(
+    settings: AgentSettings,
+    http_client: HttpClient,
+    data_directory: Path | None,
+) -> UpdateService | None:
+    """Só o agente instalado pelo setup.exe no Windows se atualiza sozinho."""
+    installed = bool(getattr(sys, "frozen", False)) and platform.system() == "Windows"
+
+    if not installed or data_directory is None or settings.update_interval_hours <= 0:
+        return None
+
+    return UpdateService(
+        http_client=http_client,
+        current_version=__version__,
+        download_directory=data_directory / "updates",
+        interval_seconds=settings.update_interval_hours * 3600,
+    )
+
+
+def create_agent(data_directory: Path | None = None) -> Agent:
     settings = AgentSettings.from_environment()
 
     http_client = HttpClient(
@@ -117,17 +138,34 @@ def create_agent() -> Agent:
         metrics_service=metrics_service,
         settings=settings,
         file_observer_service=file_observer_service,
+        update_service=create_update_service(settings, http_client, data_directory),
     )
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> None:
+    args = sys.argv[1:] if argv is None else argv
+
+    if "--version" in args:
+        print(f"InfraObserver Agent {__version__}")
+        return
+
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     )
 
-    agent = create_agent()
-    agent.start()
+    config_path = load_configuration()
+    ensure_agent_id(os.environ, agent_id_file_for(config_path))
+
+    logger.info("InfraObserver Agent %s starting", __version__)
+    agent = create_agent(config_path.parent if config_path else None)
+
+    # O serviço do Windows (WinSW) para o agente com Ctrl+C: o Agent.start
+    # já encerra os observadores no finally, aqui só evita o traceback no log.
+    try:
+        agent.start()
+    except KeyboardInterrupt:
+        logger.info("InfraObserver Agent stopped")
 
 
 if __name__ == "__main__":

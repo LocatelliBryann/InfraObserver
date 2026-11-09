@@ -46,3 +46,17 @@ def test_other_systems_use_the_current_home(tmp_path):
         str(tmp_path / "Documents"),
         str(tmp_path / "Downloads"),
     ]
+
+
+def test_windows_skips_links_to_other_folders(tmp_path):
+    # No Windows em português, "Todos os Usuários" e "Usuário Padrão" são
+    # junções que negam acesso; links e junções nunca são perfis de verdade.
+    users = tmp_path / "Users"
+    users.mkdir()
+    default = make_profile(users, "Default", ["Desktop"])
+    make_profile(users, "maria", ["Desktop"])
+    (users / "Usuário Padrão").symlink_to(default, target_is_directory=True)
+
+    directories = default_monitored_directories(system="Windows", users_root=users)
+
+    assert directories == [str(users / "maria" / "Desktop")]
