@@ -190,6 +190,9 @@ python -m src.main
 | `JWT_SECRET` | Segredo que assina a sessão do login (obrigatório em produção, mínimo 32 caracteres) | segredo de desenvolvimento |
 | `SESSION_HOURS` | Duração da sessão do administrador, em horas | `8` |
 | `CORS_ORIGINS` | Origens do dashboard liberadas para chamar a API com o cookie | `http://localhost:5173` |
+| `AGENT_UPDATES_ENABLED` | Liga a atualização automática dos agentes (`false` desliga) | `true` |
+| `AGENT_UPDATE_VERSION` | Fixa a versão que os agentes devem instalar (ex.: `1.5.0`); vazio = última release | — |
+| `AGENT_RELEASES_REPO` | Repositório do GitHub com as releases do instalador | `LocatelliBryann/InfraObserver` |
 
 **Agente** (`agent/.env`)
 
@@ -201,6 +204,7 @@ python -m src.main
 | `INFRAOBSERVER_COLLECTION_INTERVAL` | Intervalo de coleta, em segundos | `60` |
 | `INFRAOBSERVER_MONITORED_DIRECTORIES` | Diretórios monitorados, separados por vírgula. Pastas de rede pelo caminho UNC (`\\servidor\pasta`) | Área de Trabalho, Documentos, Downloads e Imagens de cada usuário |
 | `INFRAOBSERVER_IGNORED_PATTERNS` | Padrões extras de arquivos a ignorar (ex.: `*.bak,*.log`) | — |
+| `INFRAOBSERVER_UPDATE_INTERVAL_HOURS` | De quantas em quantas horas o agente instalado no Windows procura uma versão nova (`0` desliga) | `6` |
 
 Para gerar um UUID: `python -c "import uuid; print(uuid.uuid4())"`
 
@@ -215,6 +219,7 @@ No agente instalado pelo `setup.exe`, essas variáveis ficam em `C:\ProgramData\
 | `POST` | `/api/v1/endpoints/register` | Registra ou atualiza um endpoint | Token do agente |
 | `POST` | `/api/v1/metrics` | Envia uma coleta de métricas | Token do agente |
 | `POST` | `/api/v1/file-events` | Envia um evento de sistema de arquivos | Token do agente |
+| `GET` | `/api/v1/agent/update` | Versão que o agente deve instalar (URL do instalador e SHA-256); `204` se não houver | Token do agente |
 | `POST` | `/api/v1/auth/login` | Login do administrador (grava o cookie de sessão) | — |
 | `POST` | `/api/v1/auth/logout` | Encerra a sessão | — |
 | `GET` | `/api/v1/auth/me` | Usuário da sessão atual | Sessão |
@@ -273,7 +278,7 @@ InfraObserver/
 - [x] Observabilidade da aplicação com Prometheus, Grafana e logs estruturados
 - [ ] Configuração remota dos agentes pelo dashboard
 - [x] Instalador do agente para Windows, rodando como serviço
-- [ ] Atualização automática dos agentes
+- [x] Atualização automática dos agentes, com a versão de cada um no dashboard
 - [ ] Telas de gerenciamento de endpoints e configurações
 
 ## Documentação
