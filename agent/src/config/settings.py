@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 from uuid import UUID
 
 DEFAULT_COLLECTION_INTERVAL = 60
+DEFAULT_UPDATE_INTERVAL_HOURS = 6
 
 
 def _parse_list(value: str | None) -> list[str]:
@@ -28,6 +29,25 @@ def _parse_collection_interval(value: str | None) -> int:
     return interval
 
 
+def _parse_update_interval(value: str | None) -> float:
+    if value is None or not value.strip():
+        return DEFAULT_UPDATE_INTERVAL_HOURS
+
+    try:
+        hours = float(value.strip())
+    except ValueError as error:
+        raise ValueError(
+            "INFRAOBSERVER_UPDATE_INTERVAL_HOURS must be a number (0 disables updates)"
+        ) from error
+
+    if hours < 0:
+        raise ValueError(
+            "INFRAOBSERVER_UPDATE_INTERVAL_HOURS must be a number (0 disables updates)"
+        )
+
+    return hours
+
+
 @dataclass(frozen=True)
 class AgentSettings:
     server_url: str
@@ -38,6 +58,8 @@ class AgentSettings:
     monitored_directories: list[str] = field(default_factory=list)
     # Padrões extras de arquivos a ignorar, além dos temporários conhecidos.
     ignored_patterns: list[str] = field(default_factory=list)
+    # De quantas em quantas horas procura uma versão nova (0 = nunca).
+    update_interval_hours: float = DEFAULT_UPDATE_INTERVAL_HOURS
 
     @classmethod
     def from_environment(cls) -> "AgentSettings":
@@ -65,6 +87,10 @@ class AgentSettings:
             os.getenv("INFRAOBSERVER_IGNORED_PATTERNS"),
         )
 
+        update_interval_hours = _parse_update_interval(
+            os.getenv("INFRAOBSERVER_UPDATE_INTERVAL_HOURS"),
+        )
+
         return cls(
             server_url=server_url,
             agent_token=agent_token,
@@ -72,4 +98,5 @@ class AgentSettings:
             collection_interval=collection_interval,
             monitored_directories=monitored_directories,
             ignored_patterns=ignored_patterns,
+            update_interval_hours=update_interval_hours,
         )

@@ -207,3 +207,35 @@ def test_main_stops_quietly_on_ctrl_c(caplog):
             main([])
 
     assert "InfraObserver Agent stopped" in caplog.text
+
+
+def make_update_settings(hours=6):
+    settings = Mock()
+    settings.update_interval_hours = hours
+    return settings
+
+
+def test_update_service_only_for_the_installed_windows_agent(tmp_path):
+    from src.main import create_update_service
+
+    http_client = Mock()
+
+    with (
+        patch("src.main.sys.frozen", True, create=True),
+        patch("src.main.platform.system", return_value="Windows"),
+    ):
+        service = create_update_service(make_update_settings(), http_client, tmp_path)
+        disabled = create_update_service(make_update_settings(0), http_client, tmp_path)
+        without_folder = create_update_service(make_update_settings(), http_client, None)
+
+    assert service.download_directory == tmp_path / "updates"
+    assert service.interval_seconds == 6 * 3600
+    assert disabled is None
+    assert without_folder is None
+
+
+def test_no_update_service_when_running_from_source(tmp_path):
+    from src.main import create_update_service
+
+    with patch("src.main.platform.system", return_value="Windows"):
+        assert create_update_service(make_update_settings(), Mock(), tmp_path) is None

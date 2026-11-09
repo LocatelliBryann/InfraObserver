@@ -1,5 +1,6 @@
 from src.collectors.system_info import SystemInfoCollector
 from src.config.settings import AgentSettings
+from src.version import __version__
 
 
 class RegistrationService:
@@ -22,6 +23,7 @@ class RegistrationService:
             "ipAddress": system_info.ip_address,
             "osName": system_info.os_name,
             "osVersion": system_info.os_version,
+            "agentVersion": __version__,
         }
 
         return self.http_client.post(

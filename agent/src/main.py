@@ -1,7 +1,9 @@
 
 import logging
 import os
+import platform
 import sys
+from pathlib import Path
 
 from src.collectors.cpu import CpuCollector
 from src.collectors.disk import DiskCollector
@@ -16,6 +18,7 @@ from src.core.agent import Agent
 from src.services.http_client import HttpClient
 from src.services.metrics_service import MetricsService
 from src.services.registration_service import RegistrationService
+from src.services.update_service import UpdateService
 from src.watchers.file_observer_factory import create_file_observer
 from src.services.file_event_service import FileEventService
 from src.services.file_observer_service import FileObserverGroupService
@@ -63,7 +66,26 @@ def create_file_observers(
     return observers
 
 
-def create_agent() -> Agent:
+def create_update_service(
+    settings: AgentSettings,
+    http_client: HttpClient,
+    data_directory: Path | None,
+) -> UpdateService | None:
+    """Só o agente instalado pelo setup.exe no Windows se atualiza sozinho."""
+    installed = bool(getattr(sys, "frozen", False)) and platform.system() == "Windows"
+
+    if not installed or data_directory is None or settings.update_interval_hours <= 0:
+        return None
+
+    return UpdateService(
+        http_client=http_client,
+        current_version=__version__,
+        download_directory=data_directory / "updates",
+        interval_seconds=settings.update_interval_hours * 3600,
+    )
+
+
+def create_agent(data_directory: Path | None = None) -> Agent:
     settings = AgentSettings.from_environment()
 
     http_client = HttpClient(
@@ -116,6 +138,7 @@ def create_agent() -> Agent:
         metrics_service=metrics_service,
         settings=settings,
         file_observer_service=file_observer_service,
+        update_service=create_update_service(settings, http_client, data_directory),
     )
 
 
@@ -135,7 +158,7 @@ def main(argv: list[str] | None = None) -> None:
     ensure_agent_id(os.environ, agent_id_file_for(config_path))
 
     logger.info("InfraObserver Agent %s starting", __version__)
-    agent = create_agent()
+    agent = create_agent(config_path.parent if config_path else None)
 
     # O serviço do Windows (WinSW) para o agente com Ctrl+C: o Agent.start
     # já encerra os observadores no finally, aqui só evita o traceback no log.

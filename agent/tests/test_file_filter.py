@@ -16,6 +16,8 @@ from src.watchers.file_filter import FileEventFilter
         "D:\\Projetos\\site\\node_modules\\pacote\\index.js",
         "D:\\Projetos\\site\\.git\\HEAD",
         "\\\\servidor\\financeiro\\$RECYCLE.BIN\\S-1-5\\a.xlsx",
+        "C:\\Users\\maria\\Downloads\\.tmp.driveupload\\280520",
+        "C:\\Users\\maria\\Documents\\.tmp.drivedownload\\12\\planilha.xlsx",
     ],
 )
 def test_ignores_temporary_and_system_files(path):

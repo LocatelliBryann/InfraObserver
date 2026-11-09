@@ -329,6 +329,7 @@ begin
   else if CurUninstallStep = usPostUninstall then
   begin
     DelTree(ConfigDir() + '\logs', True, True, True);
+    DelTree(ConfigDir() + '\updates', True, True, True);
 
     { A configuração e o identificador ficam, para uma reinstalação voltar
       como o mesmo endpoint. Na desinstalação manual, o usuário escolhe. }
