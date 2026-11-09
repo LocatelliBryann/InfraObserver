@@ -39,3 +39,4 @@ coverage.xml
 agent/build/
 agent/src/_build_info.py
 agent/agent-id
+agent/outbox.db*

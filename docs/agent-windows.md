@@ -47,12 +47,24 @@ Numa atualização silenciosa sem `/SERVER` e `/TOKEN`, a configuração atual �
 | Configuração | `C:\ProgramData\InfraObserver\agent.env` |
 | Identificador do computador | `C:\ProgramData\InfraObserver\agent-id` |
 | Logs | `C:\ProgramData\InfraObserver\logs` (o agente escreve em `InfraObserverAgent.err.log`; até 5 arquivos de 10 MB) |
+| Fila de envios | `C:\ProgramData\InfraObserver\outbox.db` (eventos e métricas esperando o servidor) |
 
 A pasta `C:\ProgramData\InfraObserver` só pode ser lida por administradores e pelo sistema, porque o `agent.env` guarda o token.
 
 O `agent.env` aceita todas as variáveis do agente (ver o [README](../README.md#4-agente)), por exemplo `INFRAOBSERVER_MONITORED_DIRECTORIES` e `INFRAOBSERVER_IGNORED_PATTERNS`. Depois de editar, reinicie o serviço.
 
 O identificador é gerado na primeira execução e não muda em atualizações nem reinstalações, para o computador continuar sendo o mesmo endpoint no dashboard.
+
+## Sem conexão com o servidor
+
+Eventos de arquivo e métricas não são enviados direto: entram primeiro numa fila no disco (`outbox.db`) e só saem dela depois que o servidor confirma o recebimento. Se a rede cair, ou o servidor estiver fora do ar, o agente continua observando as pastas e guardando tudo. Quando a conexão volta, a fila é enviada na ordem em que as coisas aconteceram, com o horário original de cada evento, e o histórico de métricas não fica com buraco.
+
+- O agente tenta de novo depois de 5 s, 10 s, 20 s... até no máximo 5 minutos entre as tentativas.
+- A fila sobrevive a reinicializações: um evento feito sem rede, com o computador desligado em seguida, chega quando ele voltar a ter conexão.
+- Para não lotar o disco, a fila guarda no máximo 50 mil itens ou 7 dias; acima disso, os mais antigos saem primeiro (com aviso no log).
+- Mesmo iniciando sem rede, o agente já observa as pastas; o registro no servidor e o envio da fila acontecem quando a conexão aparecer.
+
+No log aparecem "Server unreachable, keeping N items queued" quando a conexão cai e "Connection restored, sent N queued items" quando volta.
 
 ## O serviço
 
@@ -100,7 +112,7 @@ Só o agente instalado pelo `setup.exe` se atualiza; rodando pelo código-fonte,
 
 ## Desinstalação
 
-Em **Configurações > Aplicativos**, remova "InfraObserver Agent". O serviço é parado e removido e os logs e os instaladores baixados são apagados. O instalador pergunta se deve apagar também a configuração e o identificador; se ficarem, uma reinstalação volta como o mesmo endpoint.
+Em **Configurações > Aplicativos**, remova "InfraObserver Agent". O serviço é parado e removido e os logs, os instaladores baixados e a fila de envios são apagados. O instalador pergunta se deve apagar também a configuração e o identificador; se ficarem, uma reinstalação volta como o mesmo endpoint.
 
 Sem janelas: `"C:\Program Files\InfraObserver Agent\unins000.exe" /VERYSILENT` (mantém a configuração).
 

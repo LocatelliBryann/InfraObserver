@@ -17,6 +17,7 @@ from src.config.settings import AgentSettings
 from src.core.agent import Agent
 from src.services.http_client import HttpClient
 from src.services.metrics_service import MetricsService
+from src.services.outbox import Outbox, OutboxSender
 from src.services.registration_service import RegistrationService
 from src.services.update_service import UpdateService
 from src.watchers.file_observer_factory import create_file_observer
@@ -85,6 +86,21 @@ def create_update_service(
     )
 
 
+OUTBOX_FILE_NAME = "outbox.db"
+
+
+def resolve_data_directory(config_path: Path | None) -> Path:
+    """Pasta dos dados do agente (fila, instaladores baixados).
+
+    Instalado: ao lado do agent.env, em C:\\ProgramData\\InfraObserver.
+    Do código-fonte: INFRAOBSERVER_DATA_DIR ou a pasta atual.
+    """
+    if config_path is not None:
+        return config_path.parent
+
+    return Path(os.environ.get("INFRAOBSERVER_DATA_DIR", "").strip() or ".")
+
+
 def create_agent(data_directory: Path | None = None) -> Agent:
     settings = AgentSettings.from_environment()
 
@@ -113,15 +129,20 @@ def create_agent(data_directory: Path | None = None) -> Agent:
         network_collector=network_collector,
     )
 
+    data_directory = data_directory or resolve_data_directory(None)
+    outbox = Outbox(data_directory / OUTBOX_FILE_NAME)
+
     metrics_service = MetricsService(
         http_client=http_client,
         settings=settings,
         metrics_collector=metrics_collector,
+        outbox=outbox,
     )
 
     file_event_service = FileEventService(
         http_client=http_client,
         settings=settings,
+        outbox=outbox,
     )
 
     file_observers = create_file_observers(
@@ -139,6 +160,7 @@ def create_agent(data_directory: Path | None = None) -> Agent:
         settings=settings,
         file_observer_service=file_observer_service,
         update_service=create_update_service(settings, http_client, data_directory),
+        outbox_sender=OutboxSender(outbox, http_client),
     )
 
 
@@ -158,7 +180,7 @@ def main(argv: list[str] | None = None) -> None:
     ensure_agent_id(os.environ, agent_id_file_for(config_path))
 
     logger.info("InfraObserver Agent %s starting", __version__)
-    agent = create_agent(config_path.parent if config_path else None)
+    agent = create_agent(resolve_data_directory(config_path))
 
     # O serviço do Windows (WinSW) para o agente com Ctrl+C: o Agent.start
     # já encerra os observadores no finally, aqui só evita o traceback no log.

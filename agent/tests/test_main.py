@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 from unittest.mock import ANY, Mock, patch
 
 from src.core.agent import Agent
@@ -31,6 +32,8 @@ def test_create_agent_builds_agent_with_required_dependencies():
         patch("src.main.NetworkCollector") as mock_network_collector,
         patch("src.main.MetricsCollector") as mock_metrics_collector,
         patch("src.main.MetricsService") as mock_metrics_service,
+        patch("src.main.Outbox") as mock_outbox,
+        patch("src.main.OutboxSender") as mock_outbox_sender,
     ):
         agent = create_agent()
 
@@ -58,7 +61,15 @@ def test_create_agent_builds_agent_with_required_dependencies():
             http_client=mock_http_client.return_value,
             settings=settings,
             metrics_collector=mock_metrics_collector.return_value,
+            outbox=mock_outbox.return_value,
         )
+
+        mock_outbox.assert_called_once_with(Path(".") / "outbox.db")
+        mock_outbox_sender.assert_called_once_with(
+            mock_outbox.return_value,
+            mock_http_client.return_value,
+        )
+        assert agent.outbox_sender is mock_outbox_sender.return_value
 
         assert isinstance(agent, Agent)
 
@@ -152,6 +163,8 @@ def test_create_agent_configures_file_monitoring():
         patch("src.main.NetworkCollector"),
         patch("src.main.MetricsCollector"),
         patch("src.main.MetricsService"),
+        patch("src.main.Outbox"),
+        patch("src.main.OutboxSender"),
         patch("src.main.FileEventService") as mock_file_event_service,
         patch(
             "src.main.FileObserverGroupService"
@@ -239,3 +252,15 @@ def test_no_update_service_when_running_from_source(tmp_path):
 
     with patch("src.main.platform.system", return_value="Windows"):
         assert create_update_service(make_update_settings(), Mock(), tmp_path) is None
+
+
+def test_data_directory_is_next_to_the_config_file(tmp_path, monkeypatch):
+    from src.main import resolve_data_directory
+
+    monkeypatch.setenv("INFRAOBSERVER_DATA_DIR", "/data/agent")
+
+    assert resolve_data_directory(tmp_path / "agent.env") == tmp_path
+    assert resolve_data_directory(None) == Path("/data/agent")
+
+    monkeypatch.delenv("INFRAOBSERVER_DATA_DIR")
+    assert resolve_data_directory(None) == Path(".")
