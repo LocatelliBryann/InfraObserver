@@ -11,11 +11,13 @@ class Agent:
         metrics_service,
         settings,
         file_observer_service=None,
+        update_service=None,
     ):
         self.registration_service = registration_service
         self.metrics_service = metrics_service
         self.settings = settings
         self.file_observer_service = file_observer_service
+        self.update_service = update_service
 
     def start(self):
         self.register_with_retry()
@@ -52,6 +54,9 @@ class Agent:
         except Exception:
             logger.exception("Failed to collect or send metrics")
             return False
+
+        if self.update_service is not None:
+            self.update_service.check_if_due()
 
         return True
 

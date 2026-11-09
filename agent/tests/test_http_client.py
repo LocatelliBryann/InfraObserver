@@ -48,3 +48,16 @@ def test_http_client_raises_when_server_returns_http_error():
                 "/api/v1/endpoints/register",
                 {"agentId": "550e8400-e29b-41d4-a716-446655440000"},
             )
+
+def test_http_client_sends_get_request_with_bearer_token():
+    client = HttpClient(server_url="http://localhost:3000/", agent_token="test-token")
+
+    with patch("src.services.http_client.requests.get") as mock_get:
+        client.get("/api/v1/agent/update")
+
+    mock_get.assert_called_once_with(
+        "http://localhost:3000/api/v1/agent/update",
+        headers={"Authorization": "Bearer test-token"},
+        timeout=10,
+    )
+    mock_get.return_value.raise_for_status.assert_called_once_with()

@@ -77,9 +77,30 @@ O serviço é executado pelo [WinSW](https://github.com/winsw/winsw) 2.12: o `In
 
 O serviço roda como LocalSystem, que não enxerga as unidades mapeadas dos usuários (`Z:` etc.). Para monitorar uma pasta de rede, use o caminho UNC (`\\servidor\pasta`); o acesso é feito pela conta do computador (`DOMINIO\COMPUTADOR$`), que precisa de permissão de leitura no compartilhamento. Para auditar um servidor de arquivos, o melhor é instalar o agente no próprio servidor e monitorar as pastas locais dele.
 
+## Atualização automática
+
+O agente instalado se atualiza sozinho. Ao iniciar e depois a cada 6 horas, ele pergunta ao servidor qual versão deve estar instalada (`GET /api/v1/agent/update`):
+
+1. O servidor consulta as [releases do GitHub](https://github.com/LocatelliBryann/InfraObserver/releases) e responde com a versão, o endereço do instalador e o SHA-256 dele. A resposta fica guardada por uma hora, para não consultar o GitHub a cada agente.
+2. Se a versão for mais nova que a instalada, o agente baixa o instalador para `C:\ProgramData\InfraObserver\updates` e confere o SHA-256. Se não conferir, descarta o arquivo e não instala nada.
+3. O agente roda o instalador em modo silencioso, fora do processo do serviço. O instalador para o serviço, troca os arquivos, mantém a configuração e o identificador e inicia a versão nova. O log da instalação fica em `updates\install.log`.
+
+A versão de cada agente aparece no dashboard, no detalhe do endpoint.
+
+No servidor (`.env` da VM):
+
+| Variável | Para quê |
+|---|---|
+| `AGENT_UPDATE_VERSION=1.5.0` | Fixa a versão que os agentes devem instalar. Para voltar a uma versão anterior, coloque a anterior: o agente só instala versões mais novas que a dele, então a volta vale para quem ainda não atualizou e para instalações novas pelo instalador antigo |
+| `AGENT_UPDATES_ENABLED=false` | Desliga a atualização automática para todos os agentes |
+
+Num computador específico, `INFRAOBSERVER_UPDATE_INTERVAL_HOURS=0` no `agent.env` desliga a atualização só nele.
+
+Só o agente instalado pelo `setup.exe` se atualiza; rodando pelo código-fonte, a atualização fica desligada.
+
 ## Desinstalação
 
-Em **Configurações > Aplicativos**, remova "InfraObserver Agent". O serviço é parado e removido e os logs são apagados. O instalador pergunta se deve apagar também a configuração e o identificador; se ficarem, uma reinstalação volta como o mesmo endpoint.
+Em **Configurações > Aplicativos**, remova "InfraObserver Agent". O serviço é parado e removido e os logs e os instaladores baixados são apagados. O instalador pergunta se deve apagar também a configuração e o identificador; se ficarem, uma reinstalação volta como o mesmo endpoint.
 
 Sem janelas: `"C:\Program Files\InfraObserver Agent\unins000.exe" /VERYSILENT` (mantém a configuração).
 
@@ -106,4 +127,4 @@ O resultado fica em `agent\build\windows\output`.
 
 ## Assinatura
 
-O instalador não tem assinatura de código (Authenticode), que exige um certificado pago. Por isso o SmartScreen mostra o aviso na primeira execução. A integridade pode ser conferida pelo SHA-256 publicado na release, e a atualização automática (próxima etapa) vai conferir esse valor antes de instalar.
+O instalador não tem assinatura de código (Authenticode), que exige um certificado pago. Por isso o SmartScreen mostra o aviso na primeira execução. A integridade pode ser conferida pelo SHA-256 publicado na release, e a atualização automática confere esse valor antes de instalar.

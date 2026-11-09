@@ -30,7 +30,7 @@ services:
     # Sem "ports": o banco só é acessível pela rede interna do Docker.
 
   backend:
-    image: ${REGISTRY:-ghcr.io/locatellibryann}/infraobserver-backend:${IMAGE_TAG:-latest}
+    image: ${REGISTRY:-ghcr.io/locatellibryann}/infraobserver-backend:${IMAGE_TAG:?defina IMAGE_TAG no .env (o CD grava a versão publicada)}
     logging: *default-logging
     restart: unless-stopped
     environment:
@@ -44,13 +44,16 @@ services:
       SESSION_HOURS: ${SESSION_HOURS:-8}
       # Atrás do Caddy: o limite de tentativas de login usa o IP real do cliente.
       TRUST_PROXY: "true"
+      # Atualização automática dos agentes (docs/agent-windows.md).
+      AGENT_UPDATES_ENABLED: ${AGENT_UPDATES_ENABLED:-true}
+      AGENT_UPDATE_VERSION: ${AGENT_UPDATE_VERSION:-}
     depends_on:
       postgres:
         condition: service_healthy
     # Sem "ports": a API é publicada pelo Caddy (serviço web).
 
   web:
-    image: ${REGISTRY:-ghcr.io/locatellibryann}/infraobserver-web:${IMAGE_TAG:-latest}
+    image: ${REGISTRY:-ghcr.io/locatellibryann}/infraobserver-web:${IMAGE_TAG:?defina IMAGE_TAG no .env (o CD grava a versão publicada)}
     logging: *default-logging
     restart: unless-stopped
     environment:
@@ -67,7 +70,7 @@ services:
         condition: service_healthy
 
   agent:
-    image: ${REGISTRY:-ghcr.io/locatellibryann}/infraobserver-agent:${IMAGE_TAG:-latest}
+    image: ${REGISTRY:-ghcr.io/locatellibryann}/infraobserver-agent:${IMAGE_TAG:?defina IMAGE_TAG no .env (o CD grava a versão publicada)}
     logging: *default-logging
     restart: unless-stopped
     hostname: ${DEMO_AGENT_HOSTNAME:-AZURE-SERVIDOR-01}

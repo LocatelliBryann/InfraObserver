@@ -5,6 +5,10 @@ export interface Endpoint {
   hostname: string;
   ipAddress?: string;
   operatingSystem?: string;
+  osName?: string | null;
+  osVersion?: string | null;
+  // Versão do agente instalado; agentes antigos não informam.
+  agentVersion?: string | null;
   status: string;
 }
 

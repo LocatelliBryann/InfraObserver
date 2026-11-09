@@ -31,6 +31,11 @@ import {
   metricsRegistry,
   registerDomainMetrics,
 } from "../observability/metrics";
+import { AgentUpdateController } from "../controllers/agent-update.controller";
+import { GitHubAgentReleaseSource } from "../services/agent-release.source";
+import { AgentUpdateService } from "../services/agent-update.service";
+import { getAgentUpdateConfig } from "./agent-update";
+import { logger } from "./logger";
 
 const userRepository = new PrismaUserRepository();
 export const authService = new AuthService(userRepository);
@@ -88,4 +93,18 @@ const fileEventService = new FileEventService(fileEventRepository);
 
 export const fileEventController = new FileEventController(
   fileEventService,
+);
+
+const agentUpdateConfig = getAgentUpdateConfig();
+const agentUpdateService = new AgentUpdateService(
+  new GitHubAgentReleaseSource(agentUpdateConfig.repository),
+  {
+    enabled: agentUpdateConfig.enabled,
+    pinnedVersion: agentUpdateConfig.pinnedVersion,
+    logger,
+  },
+);
+
+export const agentUpdateController = new AgentUpdateController(
+  agentUpdateService,
 );
