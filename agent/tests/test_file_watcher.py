@@ -282,10 +282,16 @@ def test_reports_real_writes_and_skips_reads_on_a_real_folder(tmp_path, handler)
     month_ago = real_time.time() - 30 * 24 * 3600
     os.utime(old, (month_ago, month_ago))
 
+    # No Windows a pasta temporária do pytest fica dentro de AppData, que o
+    # filtro padrão ignora; aqui só interessa a data de modificação.
+    accept_all = Mock()
+    accept_all.should_ignore.return_value = False
+
     watcher = FileWatcher(
         directory=str(tmp_path),
         event_handler=handler,
         username_provider=lambda: "maria",
+        event_filter=accept_all,
     )
     watcher.on_modified(make_event(str(written)))
     watcher.on_modified(make_event(str(old)))
