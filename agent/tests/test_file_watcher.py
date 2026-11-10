@@ -40,6 +40,7 @@ def watcher(handler, clock):
         event_handler=handler,
         username_provider=lambda: "maria",
         clock=clock,
+        modified_time=lambda path: None,
     )
 
 
@@ -219,3 +220,80 @@ def test_forgets_old_paths_when_too_many_are_tracked(watcher, handler, clock, mo
     watcher.on_modified(make_event("D:/a.txt"))
 
     assert len(emitted(handler)) == 4
+
+
+def make_noise_watcher(handler, clock, modified_at):
+    return FileWatcher(
+        directory="C:/Users/test/Desktop",
+        event_handler=handler,
+        username_provider=lambda: "maria",
+        clock=clock,
+        modified_time=lambda path: modified_at,
+        wall_clock=lambda: 1_000_000.0,
+    )
+
+
+def test_ignores_files_that_were_only_read(handler, clock):
+    # Atalho da Steam criado em julho e só lido agora: o Windows avisa, mas
+    # a data de modificação continua a antiga.
+    watcher = make_noise_watcher(handler, clock, modified_at=1_000_000.0 - 90 * 24 * 3600)
+
+    watcher.on_modified(make_event("C:/Users/test/Desktop/Jogo.url"))
+
+    handler.assert_not_called()
+
+
+def test_reports_files_whose_content_just_changed(handler, clock):
+    watcher = make_noise_watcher(handler, clock, modified_at=1_000_000.0 - 1)
+
+    watcher.on_modified(make_event("C:/Users/test/Desktop/planilha.xlsx"))
+
+    assert [event.event_type for event in emitted(handler)] == [FileEventType.MODIFY]
+
+
+def test_tolerates_a_file_server_with_a_different_clock(handler, clock):
+    ahead = make_noise_watcher(handler, clock, modified_at=1_000_000.0 + 30)
+    behind = make_noise_watcher(handler, clock, modified_at=1_000_000.0 - 45)
+
+    ahead.on_modified(make_event("//servidor/financeiro/a.xlsx"))
+    behind.on_modified(make_event("//servidor/financeiro/b.xlsx"))
+
+    assert len(emitted(handler)) == 2
+
+
+def test_reads_the_modification_time_from_disk(tmp_path):
+    from src.watchers.file_watcher import read_modified_time
+
+    file = tmp_path / "nota.txt"
+    file.write_text("x", encoding="utf-8")
+
+    assert read_modified_time(str(file)) == file.stat().st_mtime
+    assert read_modified_time(str(tmp_path / "apagado.txt")) is None
+
+
+def test_reports_real_writes_and_skips_reads_on_a_real_folder(tmp_path, handler):
+    import os
+    import time as real_time
+
+    written = tmp_path / "escrito.txt"
+    written.write_text("novo", encoding="utf-8")
+    old = tmp_path / "antigo.txt"
+    old.write_text("velho", encoding="utf-8")
+    month_ago = real_time.time() - 30 * 24 * 3600
+    os.utime(old, (month_ago, month_ago))
+
+    # No Windows a pasta temporária do pytest fica dentro de AppData, que o
+    # filtro padrão ignora; aqui só interessa a data de modificação.
+    accept_all = Mock()
+    accept_all.should_ignore.return_value = False
+
+    watcher = FileWatcher(
+        directory=str(tmp_path),
+        event_handler=handler,
+        username_provider=lambda: "maria",
+        event_filter=accept_all,
+    )
+    watcher.on_modified(make_event(str(written)))
+    watcher.on_modified(make_event(str(old)))
+
+    assert [event.file_path for event in emitted(handler)] == [str(written)]
