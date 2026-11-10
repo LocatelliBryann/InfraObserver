@@ -1,3 +1,4 @@
+import os
 import time
 from datetime import datetime, timezone
 from pathlib import Path, PureWindowsPath
@@ -13,8 +14,22 @@ from src.watchers.file_filter import FileEventFilter
 # intervalo, alterações no mesmo arquivo viram um evento só.
 DEFAULT_MODIFY_DEBOUNCE_SECONDS = 2.0
 
+# O Windows também avisa quando um arquivo só é lido ou tem atributos trocados
+# (antivírus, indexador, miniaturas, sincronização do Drive/OneDrive, a Steam
+# relendo atalhos). Se a data de modificação do arquivo é mais antiga que isto,
+# o conteúdo não mudou e o aviso é ignorado. A folga cobre relógios diferentes
+# entre o computador e um servidor de arquivos.
+DEFAULT_MODIFY_MAX_AGE_SECONDS = 60.0
+
 # Limite de caminhos lembrados para o agrupamento, para a memória não crescer.
 MAX_TRACKED_PATHS = 2000
+
+
+def read_modified_time(path: str) -> float | None:
+    try:
+        return os.stat(path).st_mtime
+    except OSError:
+        return None
 
 
 class FileWatcher(FileSystemEventHandler):
@@ -26,6 +41,9 @@ class FileWatcher(FileSystemEventHandler):
         event_filter: FileEventFilter | None = None,
         modify_debounce_seconds: float = DEFAULT_MODIFY_DEBOUNCE_SECONDS,
         clock: Callable[[], float] = time.monotonic,
+        modified_time: Callable[[str], float | None] = read_modified_time,
+        wall_clock: Callable[[], float] = time.time,
+        modify_max_age_seconds: float = DEFAULT_MODIFY_MAX_AGE_SECONDS,
     ):
         self.directory = Path(directory)
         self.event_handler = event_handler
@@ -33,6 +51,9 @@ class FileWatcher(FileSystemEventHandler):
         self.event_filter = event_filter or FileEventFilter()
         self.modify_debounce_seconds = modify_debounce_seconds
         self.clock = clock
+        self.modified_time = modified_time
+        self.wall_clock = wall_clock
+        self.modify_max_age_seconds = modify_max_age_seconds
         self._last_change_at: dict[str, float] = {}
 
     def _emit(
@@ -67,6 +88,16 @@ class FileWatcher(FileSystemEventHandler):
             and self.clock() - last_change < self.modify_debounce_seconds
         )
 
+    def _content_changed(self, path: str) -> bool:
+        modified_at = self.modified_time(path)
+
+        # Sem conseguir ler a data (arquivo já apagado, sem permissão), vale o
+        # aviso do sistema.
+        if modified_at is None:
+            return True
+
+        return self.wall_clock() - modified_at <= self.modify_max_age_seconds
+
     def on_created(self, event) -> None:
         if self.event_filter.should_ignore(event.src_path):
             return
@@ -81,6 +112,9 @@ class FileWatcher(FileSystemEventHandler):
             return
 
         if self._changed_recently(event.src_path):
+            return
+
+        if not self._content_changed(event.src_path):
             return
 
         self._remember_change(event.src_path)
