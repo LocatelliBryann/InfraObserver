@@ -42,6 +42,7 @@ describe("FileEventService", () => {
       eventType: input.eventType,
       filePath: input.filePath,
       isDirectory: false,
+      audited: false,
       occurredAt: input.occurredAt,
       receivedAt: expect.any(Date),
     });

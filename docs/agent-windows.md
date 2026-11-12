@@ -98,6 +98,30 @@ O serviço é executado pelo [WinSW](https://github.com/winsw/winsw) 2.12: o `In
 
 O serviço roda como LocalSystem, que não enxerga as unidades mapeadas dos usuários (`Z:` etc.). Para monitorar uma pasta de rede, use o caminho UNC (`\\servidor\pasta`); o acesso é feito pela conta do computador (`DOMINIO\COMPUTADOR$`), que precisa de permissão de leitura no compartilhamento. Para auditar um servidor de arquivos, o melhor é instalar o agente no próprio servidor e monitorar as pastas locais dele.
 
+## Quem fez a ação (auditoria do Windows)
+
+O watchdog avisa que um arquivo mudou, mas não diz quem mudou: sem auditoria, o evento leva o usuário com sessão aberta no computador. Para registrar quem fez de verdade (inclusive pela rede), o agente usa a auditoria do próprio Windows:
+
+1. **Liga a política de auditoria** das subcategorias "Sistema de Arquivos" e "Compartilhamento de Arquivos Detalhado" (`auditpol`, pelo GUID, que não muda com o idioma do Windows). Só o "Êxito"; o que já estava ligado continua como estava.
+2. **Coloca uma regra de auditoria (SACL)** em cada pasta monitorada, herdada pelos arquivos e subpastas: para qualquer usuário, registrar quem cria, altera ou apaga. Leitura não é auditada, para não encher o log.
+3. **Lê o log de Segurança** a cada segundo, pela API do Windows (`wevtapi`, via pywin32), só os eventos novos:
+
+| Evento | O que traz | Usado para |
+|---|---|---|
+| 4663 | Caminho, usuário, programa e tipo de acesso | Quem criou, alterou, renomeou ou apagou |
+| 4660 | Confirmação de exclusão (pelo handle do 4663) | Confirmar exclusões |
+| 5145 | Caminho e IP de quem acessou pelo compartilhamento | O IP de origem (`Origem 192.168.0.50` no dashboard) |
+
+4. **Completa o evento de arquivo**: cada evento espera 3 segundos antes de ir para a fila, tempo para o Windows gravar a auditoria. Se encontrar a ação no mesmo arquivo (ou, em arquivos novos, na pasta pai), troca o usuário pelo auditado e acrescenta o programa e o IP. No dashboard o evento aparece com o selo **Auditado**; sem auditoria, com "Usuário da sessão".
+
+Tudo isso roda em segundo plano: se a auditoria não puder ser ligada (sem permissão, log de Segurança desligado por política do domínio), os eventos continuam saindo como antes. O log do serviço mostra `Windows file auditing enabled on N folder(s)` ou o motivo da falha.
+
+O que o agente mudou fica guardado em `C:\ProgramData\InfraObserver\audit-state.json`. A desinstalação roda `infraobserver-agent.exe --remove-audit`, que tira as regras das pastas e volta a política ao que era antes (só o que o agente ligou).
+
+Para desligar num computador: `INFRAOBSERVER_WINDOWS_AUDIT=false` no `agent.env` e reiniciar o serviço. A política e as regras continuam até a desinstalação.
+
+Volume: o Windows registra uma linha no log de Segurança para cada alteração nas pastas monitoradas. Em servidores de arquivos muito movimentados, vale aumentar o tamanho do log de Segurança (o padrão é 20 MB; ele sobrescreve os mais antigos quando enche).
+
 ## Atualização automática
 
 O agente instalado se atualiza sozinho. Ao iniciar e depois a cada 6 horas, ele pergunta ao servidor qual versão deve estar instalada (`GET /api/v1/agent/update`):
@@ -121,7 +145,7 @@ Só o agente instalado pelo `setup.exe` se atualiza; rodando pelo código-fonte,
 
 ## Desinstalação
 
-Em **Configurações > Aplicativos**, remova "InfraObserver Agent". O serviço é parado e removido e os logs, os instaladores baixados e a fila de envios são apagados. O instalador pergunta se deve apagar também a configuração e o identificador; se ficarem, uma reinstalação volta como o mesmo endpoint.
+Em **Configurações > Aplicativos**, remova "InfraObserver Agent". O serviço é parado e removido, a auditoria do Windows que o agente ligou é desfeita e os logs, os instaladores baixados e a fila de envios são apagados. O instalador pergunta se deve apagar também a configuração e o identificador; se ficarem, uma reinstalação volta como o mesmo endpoint.
 
 Sem janelas: `"C:\Program Files\InfraObserver Agent\unins000.exe" /VERYSILENT` (mantém a configuração).
 
@@ -133,7 +157,7 @@ O workflow [`agent-windows.yml`](../.github/workflows/agent-windows.yml) roda nu
 2. gera o executável com o PyInstaller (versão gravada em `src/_build_info.py`);
 3. baixa o WinSW e confere o SHA-256;
 4. compila o instalador com o Inno Setup;
-5. testa o instalador de verdade ([`smoke-test.ps1`](../agent/packaging/windows/smoke-test.ps1)): instalação silenciosa, serviço rodando, permissão da pasta, reinício depois de matar o processo, atualização mantendo a configuração e o identificador, e desinstalação.
+5. testa o instalador de verdade ([`smoke-test.ps1`](../agent/packaging/windows/smoke-test.ps1)): instalação silenciosa, serviço rodando, permissão da pasta, auditoria ligada (regra na pasta, política e evento 4663 no log ao apagar um arquivo), reinício depois de matar o processo, atualização mantendo a configuração e o identificador, e desinstalação desfazendo a auditoria.
 
 Em PRs que mexem no agente e em execuções manuais (**Actions > Agent Windows Installer > Run workflow**), o instalador fica disponível como artefato da execução, com versão `0.0.0-dev.<número>`. Quando uma release é publicada, ele é gerado com a versão da tag e anexado à release junto com o `.sha256`.
 

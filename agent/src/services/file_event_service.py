@@ -33,6 +33,15 @@ class FileEventService:
         if event.previous_path:
             payload["previousPath"] = event.previous_path
 
+        if event.audited:
+            payload["audited"] = True
+
+        if event.process_name:
+            payload["processName"] = event.process_name
+
+        if event.source_ip:
+            payload["sourceIp"] = event.source_ip
+
         # Roda dentro da thread do watchdog: uma exceção aqui derrubaria
         # o monitoramento do diretório, então o erro é só registrado.
         try:

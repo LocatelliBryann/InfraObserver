@@ -10,6 +10,8 @@ import {
   Globe,
   PenLine,
   Search,
+  ShieldCheck,
+  SquareTerminal,
   Trash2,
   User,
   X,
@@ -178,7 +180,7 @@ export function FileEventsSection({
             value={searchText}
             onChange={(event) => setSearchText(event.target.value)}
             aria-label="Buscar por arquivo, pasta ou usuário"
-            placeholder="Buscar por arquivo, pasta ou usuário"
+            placeholder="Buscar por arquivo, pasta, usuário, programa ou IP"
             className="w-full rounded-lg border border-slate-700 bg-slate-950 py-2 pl-9 pr-9 text-sm text-slate-100 outline-none transition-colors placeholder:text-slate-600 focus:border-cyan-500 [&::-webkit-search-cancel-button]:appearance-none"
           />
 
@@ -291,10 +293,34 @@ function FileEventItem({ event }: { event: FileEvent }) {
           {event.username}
         </span>
 
+        {event.processName && (
+          <span className="inline-flex items-center gap-1">
+            <SquareTerminal size={12} aria-hidden="true" />
+            via {event.processName}
+          </span>
+        )}
+
         {event.sourceIp && (
           <span className="inline-flex items-center gap-1">
             <Globe size={12} aria-hidden="true" />
             Origem {event.sourceIp}
+          </span>
+        )}
+
+        {event.audited ? (
+          <span
+            className="inline-flex items-center gap-1 text-emerald-400"
+            title="Usuário, programa e IP confirmados pela auditoria do Windows"
+          >
+            <ShieldCheck size={12} aria-hidden="true" />
+            Auditado
+          </span>
+        ) : (
+          <span
+            className="text-slate-600"
+            title="Usuário com sessão aberta no computador na hora do evento (sem auditoria do Windows)"
+          >
+            Usuário da sessão
           </span>
         )}
       </div>

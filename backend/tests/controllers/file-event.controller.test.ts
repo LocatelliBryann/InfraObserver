@@ -45,6 +45,7 @@ describe("FileEventController", () => {
       eventType: "CREATE",
       filePath: "C:\\Users\\Bryann\\Documents\\test.txt",
       isDirectory: false,
+      audited: false,
       occurredAt: expect.any(Date),
     });
 

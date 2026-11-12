@@ -22,3 +22,7 @@ class FileEvent:
     # Caminho anterior, em RENAME e MOVE.
     previous_path: str | None = None
     is_directory: bool = False
+    # Preenchidos pela auditoria do Windows (quem fez de fato a ação).
+    process_name: str | None = None
+    source_ip: str | None = None
+    audited: bool = False

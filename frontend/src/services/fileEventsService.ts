@@ -20,6 +20,11 @@ export interface FileEvent {
   previousPath?: string | null;
   isDirectory?: boolean;
   sourceIp?: string | null;
+  // Programa que fez a ação (auditoria do Windows).
+  processName?: string | null;
+  // true: usuário confirmado pela auditoria do Windows; false: usuário com
+  // sessão aberta no computador na hora do evento.
+  audited?: boolean;
   occurredAt: string;
   receivedAt: string;
   endpoint: {
