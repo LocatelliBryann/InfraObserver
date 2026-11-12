@@ -72,3 +72,36 @@ def test_creates_the_file_when_it_does_not_exist(tmp_path):
 def test_refuses_unsafe_tokens(tmp_path, token):
     with pytest.raises(ValueError):
         save_agent_token(tmp_path / "agent.env", token)
+
+
+def test_refuses_files_that_are_not_the_agent_configuration(tmp_path):
+    with pytest.raises(ValueError):
+        save_agent_token(tmp_path / "hosts", "ioa_credencial")
+
+    assert not (tmp_path / "hosts").exists()
+
+
+def test_accepts_the_dotenv_of_the_source_code(tmp_path):
+    config = tmp_path / ".env"
+
+    save_agent_token(config, "ioa_credencial")
+
+    assert dotenv_values(config, encoding="utf-8-sig") == {
+        "INFRAOBSERVER_AGENT_TOKEN": "ioa_credencial",
+    }
+
+
+def test_follows_links_and_refuses_when_the_real_file_is_not_a_configuration(tmp_path):
+    target = tmp_path / "outro-arquivo.txt"
+    target.write_text("conteúdo importante\n", encoding="utf-8")
+    link = tmp_path / "agent.env"
+
+    try:
+        link.symlink_to(target)
+    except OSError:
+        pytest.skip("criar link simbólico exige permissão neste sistema")
+
+    with pytest.raises(ValueError):
+        save_agent_token(link, "ioa_credencial")
+
+    assert target.read_text(encoding="utf-8") == "conteúdo importante\n"
