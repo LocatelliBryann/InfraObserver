@@ -1,7 +1,10 @@
 import { Router } from "express";
 
-import { metricController, requireAuth } from "../config/dependencies";
-import { authenticateAgent } from "../middlewares/agent-auth.middleware";
+import {
+  authenticateAgent,
+  metricController,
+  requireAuth,
+} from "../config/dependencies";
 
 const metricRouter = Router();
 

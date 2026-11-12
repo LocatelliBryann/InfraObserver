@@ -21,11 +21,55 @@ model Endpoint {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
+  // Cliente dono do PC. Nulo nos agentes antigos, que usam a lista AGENT_TOKENS.
+  clientId            Int?
+  // Hash SHA-256 da credencial própria do agente (recebida na instalação).
+  credentialHash      String?   @unique
+  credentialIssuedAt  DateTime?
+  // Preenchido quando o acesso do PC é revogado pelo dashboard.
+  credentialRevokedAt DateTime?
+
+  client     Client?     @relation(fields: [clientId], references: [id], onDelete: SetNull)
   metrics    Metric[]
   fileEvents FileEvent[]
   alerts     Alert[]
 
+  @@index([clientId])
   @@map("endpoint")
+}
+
+// Empresa atendida. Os PCs dela entram com um token de instalação do cliente.
+model Client {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  endpoints        Endpoint[]
+  enrollmentTokens EnrollmentToken[]
+
+  @@map("client")
+}
+
+// Token de instalação: serve para vários PCs do mesmo cliente e é trocado,
+// na primeira conexão, por uma credencial própria de cada agente.
+// Só o hash fica no banco; o token aparece uma única vez no dashboard.
+model EnrollmentToken {
+  id         Int       @id @default(autoincrement())
+  clientId   Int
+  tokenHash  String    @unique
+  // Começo do token (ex.: ioe_AbC1), para reconhecer na lista sem revelar o resto.
+  prefix     String
+  createdAt  DateTime  @default(now())
+  expiresAt  DateTime?
+  revokedAt  DateTime?
+  lastUsedAt DateTime?
+  usageCount Int       @default(0)
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@map("enrollment_token")
 }
 
 model Metric {
@@ -90,7 +134,7 @@ model Alert {
 }
 
 // Usuário do dashboard. Hoje só existe o papel ADMIN; o multi-cliente
-// acrescenta o papel CLIENT e a ligação com o cliente.
+// acrescenta o papel CLIENT e a ligação com o cliente (model Client).
 model User {
   id           Int       @id @default(autoincrement())
   email        String    @unique

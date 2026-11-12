@@ -56,7 +56,7 @@ Expostas pelo backend em `GET /metrics` com a biblioteca [prom-client](https://g
 
 O rótulo `route` usa o padrão da rota (`/api/v1/alerts/:id`), nunca a URL real, para não criar uma série nova a cada id. Rotas que não existem ficam agrupadas como `unmatched`.
 
-As coletas dos agentes aparecem como `POST /api/v1/metrics` com status `201`. Um aumento de `401` nessa rota indica agente com token errado.
+As coletas dos agentes aparecem como `POST /api/v1/metrics` com status `201`. Um aumento de `401` nessa rota indica agente com token errado ou com acesso revogado (o log do backend registra `Revoked agent credential used`); `403` indica uma credencial usada para outro `agentId`.
 
 ### Servidor (VM)
 

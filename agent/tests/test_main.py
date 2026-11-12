@@ -48,6 +48,7 @@ def test_create_agent_builds_agent_with_required_dependencies():
             http_client=mock_http_client.return_value,
             settings=settings,
             system_info_collector=mock_system_info_collector.return_value,
+            save_token=None,
         )
 
         mock_metrics_collector.assert_called_once_with(
@@ -72,6 +73,30 @@ def test_create_agent_builds_agent_with_required_dependencies():
         assert agent.outbox_sender is mock_outbox_sender.return_value
 
         assert isinstance(agent, Agent)
+
+
+def test_create_agent_saves_the_credential_next_to_the_configuration(tmp_path):
+    settings = Mock()
+    settings.server_url = "http://localhost:3000"
+    settings.agent_token = "ioe_token"
+    settings.monitored_directories = []
+    settings.ignored_patterns = []
+    config_path = tmp_path / "agent.env"
+
+    with (
+        patch("src.main.default_monitored_directories", return_value=[]),
+        patch("src.main.AgentSettings.from_environment", return_value=settings),
+        patch("src.main.HttpClient"),
+        patch("src.main.RegistrationService") as mock_registration_service,
+        patch("src.main.Outbox"),
+        patch("src.main.save_agent_token") as mock_save_agent_token,
+    ):
+        create_agent(tmp_path, config_path)
+
+        save_token = mock_registration_service.call_args.kwargs["save_token"]
+        save_token("ioa_credencial")
+
+    mock_save_agent_token.assert_called_once_with(config_path, "ioa_credencial")
 
 
 def test_create_file_observers_for_configured_directories():
@@ -203,6 +228,7 @@ def test_main_loads_configuration_and_starts_agent(tmp_path):
         main([])
 
     mock_ensure_agent_id.assert_called_once_with(ANY, tmp_path / "agent-id")
+    mock_create_agent.assert_called_once_with(tmp_path, config_path)
     mock_create_agent.return_value.start.assert_called_once_with()
 
 

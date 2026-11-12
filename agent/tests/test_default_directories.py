@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 from src.watchers.default_directories import default_monitored_directories
@@ -10,6 +11,16 @@ def make_profile(root: Path, name: str, folders: list[str]) -> Path:
         (profile / folder).mkdir()
     return profile
 
+def make_link(link: Path, target: Path) -> None:
+    # No Windows, link simbólico exige administrador ou o modo de
+    # desenvolvedor; a junção (que é o caso real de C:\Users) não exige.
+    if os.name == "nt":
+        import _winapi
+
+        _winapi.CreateJunction(str(target), str(link))
+        return
+
+    link.symlink_to(target, target_is_directory=True)
 
 def test_windows_lists_the_folders_of_every_user_profile(tmp_path):
     users = tmp_path / "Users"
@@ -55,8 +66,7 @@ def test_windows_skips_links_to_other_folders(tmp_path):
     users.mkdir()
     default = make_profile(users, "Default", ["Desktop"])
     make_profile(users, "maria", ["Desktop"])
-    (users / "Usuário Padrão").symlink_to(default, target_is_directory=True)
-
+    make_link(users / "Usuário Padrão", default)
     directories = default_monitored_directories(system="Windows", users_root=users)
 
     assert directories == [str(users / "maria" / "Desktop")]

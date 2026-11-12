@@ -1,6 +1,19 @@
 const API_BASE_URL =
   import.meta.env.VITE_API_URL ?? "http://localhost:3000";
 
+// Endereço que o agente usa para falar com o servidor (/SERVER do instalador).
+// Em produção a API fica no mesmo domínio do dashboard.
+export function getServerUrl(): string {
+  let url = API_BASE_URL || globalThis.location.origin;
+
+  // Tira as barras do fim sem expressão regular (evita backtracking).
+  while (url.endsWith("/")) {
+    url = url.slice(0, -1);
+  }
+
+  return url;
+}
+
 type RequestOptions = RequestInit;
 
 export class ApiError extends Error {

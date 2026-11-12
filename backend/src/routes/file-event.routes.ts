@@ -1,7 +1,10 @@
 import { Router } from "express";
 
-import { fileEventController, requireAuth } from "../config/dependencies";
-import { authenticateAgent } from "../middlewares/agent-auth.middleware";
+import {
+  authenticateAgent,
+  fileEventController,
+  requireAuth,
+} from "../config/dependencies";
 
 const fileEventRouter = Router();
 

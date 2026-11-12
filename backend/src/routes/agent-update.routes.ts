@@ -1,7 +1,9 @@
 import { Router } from "express";
 
-import { agentUpdateController } from "../config/dependencies";
-import { authenticateAgent } from "../middlewares/agent-auth.middleware";
+import {
+  agentUpdateController,
+  authenticateAgent,
+} from "../config/dependencies";
 
 const agentUpdateRouter = Router();
 

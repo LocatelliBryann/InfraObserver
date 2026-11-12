@@ -13,6 +13,7 @@ from src.collectors.network import NetworkCollector
 from src.collectors.system_info import SystemInfoCollector
 from src.config.agent_identity import ensure_agent_id
 from src.config.config_file import agent_id_file_for, load_configuration
+from src.config.credential_store import save_agent_token
 from src.config.settings import AgentSettings
 from src.core.agent import Agent
 from src.services.http_client import HttpClient
@@ -101,7 +102,10 @@ def resolve_data_directory(config_path: Path | None) -> Path:
     return Path(os.environ.get("INFRAOBSERVER_DATA_DIR", "").strip() or ".")
 
 
-def create_agent(data_directory: Path | None = None) -> Agent:
+def create_agent(
+    data_directory: Path | None = None,
+    config_path: Path | None = None,
+) -> Agent:
     settings = AgentSettings.from_environment()
 
     http_client = HttpClient(
@@ -115,6 +119,11 @@ def create_agent(data_directory: Path | None = None) -> Agent:
         http_client=http_client,
         settings=settings,
         system_info_collector=system_info_collector,
+        save_token=(
+            None
+            if config_path is None
+            else lambda token: save_agent_token(config_path, token)
+        ),
     )
 
     cpu_collector = CpuCollector()
@@ -180,7 +189,7 @@ def main(argv: list[str] | None = None) -> None:
     ensure_agent_id(os.environ, agent_id_file_for(config_path))
 
     logger.info("InfraObserver Agent %s starting", __version__)
-    agent = create_agent(resolve_data_directory(config_path))
+    agent = create_agent(resolve_data_directory(config_path), config_path)
 
     # O serviço do Windows (WinSW) para o agente com Ctrl+C: o Agent.start
     # já encerra os observadores no finally, aqui só evita o traceback no log.

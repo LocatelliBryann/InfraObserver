@@ -4,6 +4,9 @@
 ;
 ; Instalação silenciosa (ex.: em vários computadores):
 ;   InfraObserverAgentSetup-1.5.0.exe /VERYSILENT /SERVER=https://infraobserver.com.br /TOKEN=<token>
+; O /TOKEN é o token de instalação do cliente (ioe_..., gerado em Clientes no
+; dashboard). Na primeira conexão o agente troca esse token por uma credencial
+; só deste computador e grava a credencial no agent.env.
 ; Parâmetros opcionais: /DIRS="C:\Pasta1,\\servidor\pasta" (pastas monitoradas).
 ; Numa atualização silenciosa sem /SERVER e /TOKEN, a configuração atual é mantida.
 
@@ -245,10 +248,10 @@ begin
   ServerPage := CreateInputQueryPage(wpWelcome,
     'Conexão com o servidor',
     'Para onde este computador envia os dados?',
-    'Informe o endereço do InfraObserver e o token do agente, fornecido pelo administrador. ' +
+    'Informe o endereço do InfraObserver e o token de instalação do cliente, gerado na área Clientes do dashboard. ' +
     'Numa atualização, os valores atuais já vêm preenchidos.');
   ServerPage.Add('Endereço do servidor (ex.: https://infraobserver.com.br):', False);
-  ServerPage.Add('Token do agente:', True);
+  ServerPage.Add('Token de instalação:', True);
 
   { Atualização: preenche com o que já está configurado. }
   if LoadStringsFromFile(ConfigFile(), Lines) then
@@ -279,7 +282,7 @@ begin
   end
   else if AgentToken = '' then
   begin
-    SuppressibleMsgBox('Informe o token do agente.', mbError, MB_OK, IDOK);
+    SuppressibleMsgBox('Informe o token de instalação.', mbError, MB_OK, IDOK);
     Result := False;
   end
   else if not IsSafeValue(AgentToken) then
