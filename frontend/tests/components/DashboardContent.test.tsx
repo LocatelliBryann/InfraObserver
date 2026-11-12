@@ -59,6 +59,69 @@ describe("DashboardContent", () => {
     ).toBeTruthy();
   });
 
+  it("mostra o seletor de cliente e o cliente de cada PC", async () => {
+    const user = userEvent.setup();
+    const onClientFilterChange = vi.fn();
+
+    render(
+      <DashboardContent
+        {...defaultProps}
+        endpoints={[{ ...endpoints[0], client: { id: 4, name: "1RIJOINVILLE" } }]}
+        endpointHealth={[
+          {
+            endpointId: 1,
+            hostname: "server-01",
+            status: "ONLINE",
+            activeAlerts: 0,
+            isOnline: true,
+            isStale: false,
+            latestMetric: null,
+          },
+        ]}
+        clients={[{ id: 4, name: "1RIJOINVILLE", createdAt: "", endpointCount: 1, activeTokenCount: 1 }]}
+        onClientFilterChange={onClientFilterChange}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: /server-01.*1RIJOINVILLE/ }),
+    ).toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText("Cliente"), "1RIJOINVILLE");
+
+    expect(onClientFilterChange).toHaveBeenCalledWith(4);
+  });
+
+  it("não repete o cliente nos PCs quando o painel já está filtrado", () => {
+    render(
+      <DashboardContent
+        {...defaultProps}
+        endpoints={[{ ...endpoints[0], client: { id: 4, name: "1RIJOINVILLE" } }]}
+        endpointHealth={[
+          {
+            endpointId: 1,
+            hostname: "server-01",
+            status: "ONLINE",
+            activeAlerts: 0,
+            isOnline: true,
+            isStale: false,
+            latestMetric: null,
+          },
+        ]}
+        clientFilter={4}
+        onClientFilterChange={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: /^server-01\s*Online$/ })).toBeInTheDocument();
+  });
+
+  it("não mostra o seletor sem a função de troca", () => {
+    render(<DashboardContent {...defaultProps} />);
+
+    expect(screen.queryByLabelText("Cliente")).not.toBeInTheDocument();
+  });
+
   it("exibe estado vazio quando não existem métricas", () => {
     render(<DashboardContent {...defaultProps} />);
 

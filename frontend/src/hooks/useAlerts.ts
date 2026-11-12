@@ -6,6 +6,7 @@ import {
   getActiveAlerts,
   type Alert,
 } from "../services/alertsService";
+import type { ClientFilter } from "../services/clientFilter";
 
 
 interface UseAlertsResult {
@@ -15,7 +16,7 @@ interface UseAlertsResult {
   refresh: () => Promise<void>;
 }
 
-export function useAlerts(): UseAlertsResult {
+export function useAlerts(clientFilter?: ClientFilter): UseAlertsResult {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,7 +26,7 @@ export function useAlerts(): UseAlertsResult {
     setError(null);
 
     try {
-      const result = await getActiveAlerts();
+      const result = await getActiveAlerts(clientFilter);
       setAlerts(result);
     } catch {
       setError("Não foi possível carregar os alertas.");
@@ -33,7 +34,7 @@ export function useAlerts(): UseAlertsResult {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [clientFilter]);
 
   useEffect(() => {
     void refresh();

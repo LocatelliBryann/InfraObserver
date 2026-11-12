@@ -1,4 +1,5 @@
 import { apiClient } from "./apiClient";
+import { withClientFilter, type ClientFilter } from "./clientFilter";
 import type { Metric } from "./metricsService";
 
 export type EndpointStatus = "ONLINE" | "OFFLINE" | "ALERT";
@@ -17,9 +18,11 @@ interface EndpointHealthResponse {
   data: EndpointHealth[];
 }
 
-export async function getEndpointHealth(): Promise<EndpointHealth[]> {
+export async function getEndpointHealth(
+  clientFilter?: ClientFilter,
+): Promise<EndpointHealth[]> {
   const response = await apiClient.get<EndpointHealthResponse>(
-    "/api/v1/endpoints/health",
+    withClientFilter("/api/v1/endpoints/health", clientFilter),
   );
 
   return response.data;
