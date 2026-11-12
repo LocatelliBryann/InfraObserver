@@ -68,6 +68,7 @@ function createService() {
     findByHash: vi.fn().mockResolvedValue(enrollmentToken()),
     findById: vi.fn(),
     findByClientId: vi.fn(),
+    findEncryptedToken: vi.fn(),
     revoke: vi.fn(),
     registerUse: vi.fn(),
   };

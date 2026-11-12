@@ -5,7 +5,10 @@ import {
   Monitor,
 } from "lucide-react";
 
+import { useEffect } from "react";
+
 import { AlertsSection } from "./AlertsSection";
+import { ClientFilterSelect } from "./ClientFilterSelect";
 import { EmptyState } from "./EmptyState";
 import { EndpointHealthSection } from "./EndpointHealthSection";
 import { EndpointStatusList } from "./EndpointStatusList";
@@ -19,6 +22,8 @@ import {
   type MetricPeriodKey,
 } from "../config/metricPeriods";
 import type { Alert } from "../services/alertsService";
+import type { ClientFilter } from "../services/clientFilter";
+import type { Client } from "../services/clientsService";
 import type {
   EndpointHealth,
   EndpointStatus,
@@ -65,8 +70,24 @@ interface DashboardContentProps {
   fileEventFilters?: FileEventFilters;
   onFileEventFiltersChange?: (filters: FileEventFilters) => void;
   onRevokeEndpoint?: (endpointId: number) => Promise<void>;
-  // Seções extras no fim da página (ex.: Clientes).
-  children?: React.ReactNode;
+  // Filtro por cliente no topo; sem onClientFilterChange, o seletor não aparece.
+  clients?: Client[];
+  clientFilter?: ClientFilter;
+  onClientFilterChange?: (filter: ClientFilter | undefined) => void;
+}
+
+const NO_CLIENTS: Client[] = [];
+const NO_CLIENT_LABEL = "Sem cliente";
+
+// Vindo de outra página (/#alertas), rola até a seção depois de montar.
+function useScrollToHash() {
+  useEffect(() => {
+    const id = globalThis.location?.hash.replace("#", "");
+
+    if (id) {
+      document.getElementById(id)?.scrollIntoView?.();
+    }
+  }, []);
 }
 
 const NO_FILE_EVENT_FILTERS: FileEventFilters = { eventTypes: [], search: "" };
@@ -103,8 +124,23 @@ export function DashboardContent({
   fileEventFilters = NO_FILE_EVENT_FILTERS,
   onFileEventFiltersChange = ignoreFilterChange,
   onRevokeEndpoint,
-  children,
+  clients = NO_CLIENTS,
+  clientFilter,
+  onClientFilterChange,
 }: DashboardContentProps) {
+  useScrollToHash();
+
+  // Com todos os clientes na tela, cada PC mostra de qual cliente é.
+  const clientNames =
+    clientFilter === undefined
+      ? new Map(
+          endpoints.map((endpoint) => [
+            Number(endpoint.id),
+            endpoint.client?.name ?? NO_CLIENT_LABEL,
+          ]),
+        )
+      : undefined;
+
   const monitoredEndpointsValue = loading
     ? "—"
     : String(endpoints.length);
@@ -136,7 +172,7 @@ export function DashboardContent({
         aria-labelledby="overview-heading"
         className="min-w-0 scroll-mt-6"
       >
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h3
             id="overview-heading"
             className="text-lg font-semibold text-slate-100"
@@ -144,10 +180,18 @@ export function DashboardContent({
             Indicadores principais
           </h3>
 
-          <Activity
-            className="shrink-0 text-slate-500"
-            size={20}
-          />
+          {onClientFilterChange ? (
+            <ClientFilterSelect
+              clients={clients}
+              value={clientFilter}
+              onChange={onClientFilterChange}
+            />
+          ) : (
+            <Activity
+              className="shrink-0 text-slate-500"
+              size={20}
+            />
+          )}
         </div>
 
         <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -355,6 +399,7 @@ export function DashboardContent({
           health={endpointHealth}
           activeEndpointId={activeEndpointId}
           onSelect={(endpointId) => setSelectedEndpointId(endpointId)}
+          clientNames={clientNames}
         />
 
         <EndpointHealthSection
@@ -387,8 +432,6 @@ export function DashboardContent({
         filters={fileEventFilters}
         onFiltersChange={onFileEventFiltersChange}
       />
-
-      {children}
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { apiClient } from "./apiClient";
+import { withClientFilter, type ClientFilter } from "./clientFilter";
 
 export interface Alert {
   id: number;
@@ -11,13 +12,18 @@ export interface Alert {
   resolvedAt: string | null;
 }
 
-export async function getActiveAlerts(): Promise<Alert[]> {
-  return apiClient.get<Alert[]>("/api/v1/alerts");
+export async function getActiveAlerts(
+  clientFilter?: ClientFilter,
+): Promise<Alert[]> {
+  return apiClient.get<Alert[]>(withClientFilter("/api/v1/alerts", clientFilter));
 }
 
 // RF12: alertas já resolvidos, do mais recente para o mais antigo.
-export async function getAlertHistory(limit = 50): Promise<Alert[]> {
+export async function getAlertHistory(
+  limit = 50,
+  clientFilter?: ClientFilter,
+): Promise<Alert[]> {
   return apiClient.get<Alert[]>(
-    `/api/v1/alerts?status=resolved&limit=${limit}`,
+    withClientFilter(`/api/v1/alerts?status=resolved&limit=${limit}`, clientFilter),
   );
 }

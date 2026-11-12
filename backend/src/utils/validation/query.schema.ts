@@ -3,6 +3,34 @@ import { z } from "zod";
 import { FILE_EVENT_TYPES } from "./file-event.schema";
 
 const optionalEndpointId = z.coerce.number().int().positive().optional();
+
+// Filtro por cliente: ?clientId=3 (PCs do cliente 3) ou ?clientId=none (PCs
+// sem cliente: o agente demo e os instalados antes da v1.7.0).
+export const CLIENT_FILTER_NONE = "none";
+
+const optionalClientFilter = z
+  .union([
+    z.literal(CLIENT_FILTER_NONE),
+    z.coerce.number().int().positive(),
+  ])
+  .optional();
+
+export type ClientFilter = number | typeof CLIENT_FILTER_NONE;
+
+// Condição do Prisma para o campo clientId do endpoint.
+export function clientIdCondition(
+  clientId: ClientFilter | undefined,
+): { clientId?: number | null } {
+  if (clientId === undefined) {
+    return {};
+  }
+
+  return { clientId: clientId === CLIENT_FILTER_NONE ? null : clientId };
+}
+
+export const endpointListQuerySchema = z.object({
+  clientId: optionalClientFilter,
+});
 const optionalDate = z.coerce.date().optional();
 
 interface PeriodQuery {
@@ -59,9 +87,11 @@ export type AlertStatusFilter = (typeof ALERT_STATUS_FILTERS)[number];
 export const alertQuerySchema = z.object({
   status: z.enum(ALERT_STATUS_FILTERS).default("active"),
   endpointId: optionalEndpointId,
+  clientId: optionalClientFilter,
   limit: z.coerce.number().int().positive().max(200).default(50),
 });
 
 export type MetricHistoryQuery = z.infer<typeof metricHistoryQuerySchema>;
 export type FileEventQuery = z.infer<typeof fileEventQuerySchema>;
 export type AlertQuery = z.infer<typeof alertQuerySchema>;
+export type EndpointListQuery = z.infer<typeof endpointListQuerySchema>;

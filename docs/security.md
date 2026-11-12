@@ -48,7 +48,7 @@ sequenceDiagram
     participant A as API
     participant G as Agente (PC do cliente)
     D->>A: POST /api/v1/clients/:id/enrollment-tokens
-    A-->>D: token de instalação ioe_... (mostrado uma vez)
+    A-->>D: token de instalação ioe_... (pode ser copiado de novo enquanto ativo)
     Note over G: instalador recebe o ioe_... (/TOKEN=)
     G->>A: POST /api/v1/agents/enroll (Bearer ioe_..., dados do PC)
     A->>A: confere o hash, a validade e se não foi revogado
@@ -60,10 +60,12 @@ sequenceDiagram
 | Item | Como funciona | Onde está |
 |---|---|---|
 | Geração | 32 bytes aleatórios (`crypto.randomBytes`) em base64url, com prefixo `ioe_` (instalação) ou `ioa_` (agente) | `security/agent-tokens.ts` |
-| Armazenamento | Só o hash SHA-256 vai para o banco. O token de instalação aparece uma única vez no dashboard; a lista mostra só o começo (`ioe_AbCdEfGh…`) | `services/client.service.ts` |
+| Armazenamento | O token é conferido pelo hash SHA-256. Para o administrador poder copiar de novo o token de instalação, ele também fica cifrado com AES-256-GCM, com uma chave derivada do `JWT_SECRET` por HKDF (chave separada da que assina as sessões). A lista mostra só o começo (`ioe_AbCdEfGh…`) | `services/client.service.ts`, `security/token-encryption.ts` |
+| Copiar de novo | Botões **Copiar token** e **Copiar comando** na lista, só para tokens ativos. O valor é buscado no clique (`POST .../reveal`, com sessão, checagem de origem e `Cache-Control: no-store`), vai direto para a área de transferência e cada cópia fica no log com o usuário. Ao revogar, o valor cifrado é apagado. A credencial `ioa_` dos PCs nunca é guardada, só o hash | `controllers/client.controller.ts` |
+| Trocar o `JWT_SECRET` | Os tokens continuam funcionando na instalação (o hash não muda), mas não podem mais ser copiados; o dashboard mostra "Não pode ser copiado" e é só gerar um token novo | `security/token-encryption.ts` |
 | Token de instalação | Vale para vários PCs do mesmo cliente. Pode ter validade (7, 30 ou 90 dias) e ser revogado; revogar impede novas instalações, mas não derruba os PCs que já entraram | `services/agent-credential.service.ts` |
 | Credencial do agente | Uma por PC. Só vale para o `agentId` daquele PC: usada com outro `agentId`, a resposta é 403 | `middlewares/agent-auth.middleware.ts` |
-| Revogar um PC | "Revogar acesso" na saúde do endpoint. A credencial passa a responder 401 (`Agent access revoked`) e o token compartilhado também é recusado para aquele PC. O histórico continua | `POST /api/v1/endpoints/:id/revoke` |
+| Revogar um PC | "Revogar acesso" na saúde do endpoint ou na lista de PCs da página Clientes. A credencial passa a responder 401 (`Agent access revoked`) e o token compartilhado também é recusado para aquele PC. O histórico continua | `POST /api/v1/endpoints/:id/revoke` |
 | Reinstalar | Instalar de novo com um token de instalação válido gera outra credencial e invalida a anterior (inclusive depois de uma revogação) | `agent-credential.service.ts`, `enroll` |
 | Trocar de cliente | Um PC de um cliente não pode entrar com o token de outro (409) | `agent-credential.service.ts` |
 | Agentes antigos | A lista `AGENT_TOKENS` continua valendo para PCs que ainda não têm credencial (e para o agente demo). Um PC que já recebeu credencial não pode voltar ao token compartilhado | `agent-auth.middleware.ts` |
@@ -104,5 +106,5 @@ A senha é pedida no terminal, sem aparecer na tela nem ficar no histórico do s
 
 ## Próximos passos
 
-- **Multi-cliente:** a tabela de clientes e a ligação de cada PC com o cliente já existem. Falta o papel `CLIENT` no usuário e o filtro por cliente nas consultas, para cada cliente ver só os próprios PCs.
+- **Multi-cliente:** a tabela de clientes, a ligação de cada PC com o cliente e o filtro `clientId` nas consultas já existem. Falta o papel `CLIENT` no usuário, para que cada cliente faça login e veja só os próprios PCs (o filtro passa a vir da sessão, e não da URL).
 - **MFA (TOTP)** para o administrador.

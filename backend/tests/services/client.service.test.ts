@@ -5,6 +5,7 @@ import {
   ClientNotFoundError,
   ClientService,
   EnrollmentTokenNotFoundError,
+  EnrollmentTokenNotRevealableError,
 } from "../../src/services/client.service";
 import { hashToken } from "../../src/security/agent-tokens";
 
@@ -37,6 +38,7 @@ function createService() {
     findByHash: vi.fn(),
     findById: vi.fn().mockResolvedValue(tokenRecord()),
     findByClientId: vi.fn().mockResolvedValue([tokenRecord()]),
+    findEncryptedToken: vi.fn().mockResolvedValue("cifrado:ioe_valor"),
     revoke: vi
       .fn()
       .mockImplementation(async (_id, revokedAt) => tokenRecord({ revokedAt })),
@@ -46,7 +48,13 @@ function createService() {
   return {
     clients,
     tokens,
-    service: new ClientService(clients, tokens, () => NOW),
+    service: new ClientService(
+      clients,
+      tokens,
+      () => NOW,
+      (token) => `cifrado:${token}`,
+      (value) => (value.startsWith("cifrado:") ? value.slice(8) : null),
+    ),
   };
 }
 
@@ -85,7 +93,7 @@ describe("ClientService", () => {
     );
   });
 
-  it("generates an enrollment token and stores only its hash", async () => {
+  it("generates an enrollment token and stores the hash and the encrypted value", async () => {
     const { tokens, service } = createService();
 
     const { token, enrollmentToken } = await service.createEnrollmentToken(1);
@@ -95,6 +103,7 @@ describe("ClientService", () => {
       clientId: 1,
       tokenHash: hashToken(token),
       prefix: token.slice(0, 12),
+      encryptedToken: `cifrado:${token}`,
       expiresAt: undefined,
     });
     expect(enrollmentToken).not.toHaveProperty("tokenHash", token);
@@ -156,6 +165,49 @@ describe("ClientService", () => {
     tokens.findById.mockResolvedValue(tokenRecord({ clientId: 2 }));
 
     await expect(service.revokeEnrollmentToken(1, 5)).rejects.toBeInstanceOf(
+      EnrollmentTokenNotFoundError,
+    );
+  });
+
+  it("shows an active token again", async () => {
+    const { tokens, service } = createService();
+
+    await expect(service.revealEnrollmentToken(1, 5)).resolves.toBe("ioe_valor");
+    expect(tokens.findEncryptedToken).toHaveBeenCalledWith(5);
+  });
+
+  it.each([
+    ["revoked", { revokedAt: new Date("2026-11-09") }],
+    ["expired", { expiresAt: NOW }],
+  ])("does not show a %s token again", async (_label, overrides) => {
+    const { tokens, service } = createService();
+    tokens.findById.mockResolvedValue(tokenRecord(overrides));
+
+    await expect(service.revealEnrollmentToken(1, 5)).rejects.toBeInstanceOf(
+      EnrollmentTokenNotRevealableError,
+    );
+    expect(tokens.findEncryptedToken).not.toHaveBeenCalled();
+  });
+
+  it("does not show tokens created before the encryption or with another secret", async () => {
+    const { tokens, service } = createService();
+
+    tokens.findEncryptedToken.mockResolvedValue(null);
+    await expect(service.revealEnrollmentToken(1, 5)).rejects.toBeInstanceOf(
+      EnrollmentTokenNotRevealableError,
+    );
+
+    tokens.findEncryptedToken.mockResolvedValue("outro-segredo");
+    await expect(service.revealEnrollmentToken(1, 5)).rejects.toBeInstanceOf(
+      EnrollmentTokenNotRevealableError,
+    );
+  });
+
+  it("does not show a token of another client", async () => {
+    const { tokens, service } = createService();
+    tokens.findById.mockResolvedValue(tokenRecord({ clientId: 2 }));
+
+    await expect(service.revealEnrollmentToken(1, 5)).rejects.toBeInstanceOf(
       EnrollmentTokenNotFoundError,
     );
   });

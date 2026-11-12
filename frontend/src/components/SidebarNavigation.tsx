@@ -1,8 +1,10 @@
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Link, useLocation } from "react-router";
 
 import {
   NAVIGATION_ITEMS,
   NAVIGATION_SECTION_IDS,
+  ROUTES,
   type NavigationItem,
 } from "../config/navigation";
 import { useActiveSection } from "../hooks/useActiveSection";
@@ -24,6 +26,8 @@ export function SidebarNavigation({
   const { activeSection, setActiveSection } = useActiveSection(
     NAVIGATION_SECTION_IDS,
   );
+  const { pathname } = useLocation();
+  const onDashboard = pathname === ROUTES.dashboard;
 
   return (
     <div className="space-y-5">
@@ -60,12 +64,20 @@ export function SidebarNavigation({
         <ul className="space-y-2">
           {items.map((item) => (
             <li key={item.label}>
-              {item.sectionId ? (
+              {item.path ? (
+                <NavigationLink
+                  item={item}
+                  to={item.path}
+                  collapsed={collapsed}
+                  active={pathname === item.path}
+                />
+              ) : item.sectionId ? (
                 <SectionLink
                   item={item}
                   sectionId={item.sectionId}
                   collapsed={collapsed}
-                  active={activeSection === item.sectionId}
+                  active={onDashboard && activeSection === item.sectionId}
+                  onDashboard={onDashboard}
                   onSelect={setActiveSection}
                 />
               ) : (
@@ -79,38 +91,21 @@ export function SidebarNavigation({
   );
 }
 
-interface SectionLinkProps {
-  item: NavigationItem;
-  sectionId: string;
-  collapsed: boolean;
-  active: boolean;
-  onSelect: (sectionId: string) => void;
+function linkClassName(collapsed: boolean, active: boolean): string {
+  return `${itemLayout} gap-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/50 ${
+    collapsed ? "justify-center" : ""
+  } ${
+    active
+      ? "bg-cyan-500/10 text-cyan-400"
+      : "text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+  }`;
 }
 
-function SectionLink({
-  item,
-  sectionId,
-  collapsed,
-  active,
-  onSelect,
-}: SectionLinkProps) {
+function LinkContent({ item, collapsed }: { item: NavigationItem; collapsed: boolean }) {
   const Icon = item.icon;
 
   return (
-    <a
-      href={`#${sectionId}`}
-      onClick={() => onSelect(sectionId)}
-      title={collapsed ? item.label : undefined}
-      aria-label={collapsed ? item.label : undefined}
-      aria-current={active ? "location" : undefined}
-      className={`${itemLayout} gap-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/50 ${
-        collapsed ? "justify-center" : ""
-      } ${
-        active
-          ? "bg-cyan-500/10 text-cyan-400"
-          : "text-slate-400 hover:bg-slate-800 hover:text-slate-200"
-      }`}
-    >
+    <>
       <Icon
         size={19}
         aria-hidden="true"
@@ -122,7 +117,70 @@ function SectionLink({
           {item.label}
         </span>
       )}
+    </>
+  );
+}
+
+interface SectionLinkProps {
+  item: NavigationItem;
+  sectionId: string;
+  collapsed: boolean;
+  active: boolean;
+  onDashboard: boolean;
+  onSelect: (sectionId: string) => void;
+}
+
+// Seção do dashboard. No próprio dashboard é uma âncora (mantém o filtro
+// de cliente da URL); em outra página, volta para o dashboard naquela seção.
+function SectionLink({
+  item,
+  sectionId,
+  collapsed,
+  active,
+  onDashboard,
+  onSelect,
+}: SectionLinkProps) {
+  const common = {
+    title: collapsed ? item.label : undefined,
+    "aria-label": collapsed ? item.label : undefined,
+    "aria-current": active ? ("location" as const) : undefined,
+    className: linkClassName(collapsed, active),
+  };
+
+  if (!onDashboard) {
+    return (
+      <Link to={`${ROUTES.dashboard}#${sectionId}`} {...common}>
+        <LinkContent item={item} collapsed={collapsed} />
+      </Link>
+    );
+  }
+
+  return (
+    <a href={`#${sectionId}`} onClick={() => onSelect(sectionId)} {...common}>
+      <LinkContent item={item} collapsed={collapsed} />
     </a>
+  );
+}
+
+interface NavigationLinkProps {
+  item: NavigationItem;
+  to: string;
+  collapsed: boolean;
+  active: boolean;
+}
+
+// Página própria (ex.: Clientes).
+function NavigationLink({ item, to, collapsed, active }: NavigationLinkProps) {
+  return (
+    <Link
+      to={to}
+      title={collapsed ? item.label : undefined}
+      aria-label={collapsed ? item.label : undefined}
+      aria-current={active ? "page" : undefined}
+      className={linkClassName(collapsed, active)}
+    >
+      <LinkContent item={item} collapsed={collapsed} />
+    </Link>
   );
 }
 

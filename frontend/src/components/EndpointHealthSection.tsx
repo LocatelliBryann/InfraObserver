@@ -143,7 +143,7 @@ interface RevokeAccessButtonProps {
 }
 
 // Em dois passos, para não revogar um PC com um clique acidental.
-function RevokeAccessButton({ hostname, onConfirm }: RevokeAccessButtonProps) {
+export function RevokeAccessButton({ hostname, onConfirm }: RevokeAccessButtonProps) {
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);

@@ -61,6 +61,20 @@ describe("EndpointStatusList", () => {
     expect(onSelect).toHaveBeenCalledWith(7);
   });
 
+  it("mostra o cliente de cada endpoint quando recebe os nomes", () => {
+    render(
+      <EndpointStatusList
+        health={[health(1, "PC-001", "ONLINE"), health(2, "PC-002", "OFFLINE")]}
+        activeEndpointId={1}
+        onSelect={vi.fn()}
+        clientNames={new Map([[1, "1RIJOINVILLE"], [2, "Sem cliente"]])}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: /PC-001.*1RIJOINVILLE/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /PC-002.*Sem cliente/ })).toBeInTheDocument();
+  });
+
   it("não renderiza nada sem endpoints", () => {
     const { container } = render(
       <EndpointStatusList

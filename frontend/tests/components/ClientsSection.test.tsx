@@ -1,5 +1,6 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import "@testing-library/jest-dom/vitest";
@@ -21,6 +22,7 @@ vi.mock("../../src/services/clientsService", async (importOriginal) => {
       getEnrollmentTokens: vi.fn(),
       createEnrollmentToken: vi.fn(),
       revokeEnrollmentToken: vi.fn(),
+      revealEnrollmentToken: vi.fn(),
     },
   };
 });
@@ -51,6 +53,7 @@ const activeToken = {
   revokedAt: null,
   lastUsedAt: "2026-11-06T12:00:00Z",
   usageCount: 3,
+  revealable: true,
 };
 
 const revokedToken = {
@@ -59,6 +62,7 @@ const revokedToken = {
   prefix: "ioe_Antigo12",
   revokedAt: "2026-11-04T12:00:00Z",
   usageCount: 1,
+  revealable: false,
 };
 
 function renderSection(overrides: Partial<Parameters<typeof ClientsSection>[0]> = {}) {
@@ -146,7 +150,7 @@ describe("ClientsSection", () => {
     );
   });
 
-  it("gera um token e mostra o valor completo uma vez", async () => {
+  it("gera um token e mostra o valor completo", async () => {
     const user = userEvent.setup();
     const token = "ioe_TokenCompletoGeradoAgora";
     vi.mocked(clientsService.createEnrollmentToken).mockResolvedValue({
@@ -165,7 +169,7 @@ describe("ClientsSection", () => {
 
     expect(within(notice).getByText(token)).toBeInTheDocument();
     expect(within(notice).getByText(/\/VERYSILENT \/SERVER=.+ \/TOKEN=ioe_TokenCompleto/)).toBeInTheDocument();
-    expect(notice).toHaveTextContent("não será mostrado de novo");
+    expect(notice).toHaveTextContent("pode ser copiado de novo pela lista");
     expect(props.onChanged).toHaveBeenCalled();
   });
 
@@ -205,6 +209,58 @@ describe("ClientsSection", () => {
 
     expect(clientsService.revokeEnrollmentToken).toHaveBeenCalledWith(1, 10);
     await waitFor(() => expect(props.onChanged).toHaveBeenCalled());
+  });
+
+  it("copia de novo o token e o comando de um token ativo", async () => {
+    const user = userEvent.setup();
+    const writeText = vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue();
+    vi.mocked(clientsService.revealEnrollmentToken).mockResolvedValue("ioe_TokenDeNovo");
+    renderSection();
+
+    await user.click(
+      await screen.findByRole("button", { name: "Copiar o token ioe_AbCdEfGh" }),
+    );
+
+    expect(clientsService.revealEnrollmentToken).toHaveBeenCalledWith(1, 10);
+    expect(writeText).toHaveBeenLastCalledWith("ioe_TokenDeNovo");
+    expect(await screen.findByText("Copiado")).toBeInTheDocument();
+    // O valor é copiado, mas não aparece na tela.
+    expect(screen.queryByText("ioe_TokenDeNovo")).not.toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Copiar o comando de instalação do token ioe_AbCdEfGh",
+      }),
+    );
+
+    expect(writeText).toHaveBeenLastCalledWith(
+      expect.stringMatching(/\/VERYSILENT \/SERVER=.+ \/TOKEN=ioe_TokenDeNovo$/),
+    );
+  });
+
+  it("avisa quando não consegue copiar", async () => {
+    const user = userEvent.setup();
+    vi.mocked(clientsService.revealEnrollmentToken).mockRejectedValue(new Error("409"));
+    renderSection();
+
+    await user.click(
+      await screen.findByRole("button", { name: "Copiar o token ioe_AbCdEfGh" }),
+    );
+
+    expect(await screen.findByText("Falhou, tente de novo")).toBeInTheDocument();
+  });
+
+  it("explica quando um token antigo não pode ser copiado", async () => {
+    vi.mocked(clientsService.getEnrollmentTokens).mockResolvedValue([
+      { ...activeToken, revealable: false },
+    ]);
+    renderSection();
+
+    expect(await screen.findByText("Não pode ser copiado")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Copiar o token ioe_AbCdEfGh" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Revogar o token ioe_AbCdEfGh" })).toBeInTheDocument();
   });
 
   it("não oferece revogar um token já revogado", async () => {
@@ -247,5 +303,113 @@ describe("silentInstallCommand", () => {
     expect(silentInstallCommand("https://infraobserver.com.br", "ioe_x")).toBe(
       "InfraObserverAgentSetup.exe /VERYSILENT /SERVER=https://infraobserver.com.br /TOKEN=ioe_x",
     );
+  });
+});
+
+describe("ClientsSection PCs do cliente", () => {
+  const endpoints = [
+    {
+      id: "7",
+      hostname: "Dell-C4J46Q3",
+      ipAddress: "192.168.0.209",
+      agentVersion: "1.7.0",
+      lastSeenAt: "2026-11-12T11:00:00Z",
+      status: "ONLINE",
+      client: { id: 1, name: "Contabilidade Silva" },
+    },
+    {
+      id: "8",
+      hostname: "PC-REVOGADO",
+      status: "OFFLINE",
+      client: { id: 1, name: "Contabilidade Silva" },
+      credentialRevokedAt: "2026-11-10T12:00:00Z",
+    },
+    {
+      id: "9",
+      hostname: "PC-DE-OUTRO",
+      status: "ONLINE",
+      client: { id: 2, name: "Escritório Souza" },
+    },
+  ];
+
+  const health = [
+    { endpointId: 7, hostname: "Dell-C4J46Q3", status: "ALERT" as const, activeAlerts: 1, isOnline: true, isStale: false, latestMetric: null },
+  ];
+
+  beforeEach(() => {
+    vi.mocked(clientsService.getEnrollmentTokens).mockResolvedValue([]);
+  });
+
+  function renderWithEndpoints(onRevokeEndpoint = vi.fn().mockResolvedValue(undefined)) {
+    render(
+      <MemoryRouter>
+        <ClientsSection
+          clients={clients}
+          loading={false}
+          error={null}
+          onCreateClient={vi.fn()}
+          onChanged={vi.fn()}
+          endpoints={endpoints}
+          health={health}
+          onRevokeEndpoint={onRevokeEndpoint}
+        />
+      </MemoryRouter>,
+    );
+
+    return onRevokeEndpoint;
+  }
+
+  it("lista só os PCs do cliente selecionado, com status e versão", () => {
+    renderWithEndpoints();
+
+    const list = screen.getByRole("list", { name: "PCs do cliente Contabilidade Silva" });
+
+    expect(within(list).getByText("Dell-C4J46Q3")).toBeInTheDocument();
+    expect(within(list).getByText("Alerta")).toBeInTheDocument();
+    expect(within(list).getByText(/192\.168\.0\.209 · Agente 1\.7\.0 · Visto em/)).toBeInTheDocument();
+    expect(within(list).getByText(/Acesso revogado em 10\/11\/2026/)).toBeInTheDocument();
+    expect(within(list).queryByText("PC-DE-OUTRO")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Ver no painel" })).toHaveAttribute(
+      "href",
+      "/?cliente=1",
+    );
+  });
+
+  it("revoga o acesso de um PC pela página do cliente", async () => {
+    const user = userEvent.setup();
+    const onRevoke = renderWithEndpoints();
+
+    await user.click(screen.getByRole("button", { name: "Revogar acesso" }));
+    await user.click(screen.getByRole("button", { name: "Confirmar revogação" }));
+
+    expect(onRevoke).toHaveBeenCalledWith(7);
+  });
+
+  it("troca a lista de PCs ao selecionar outro cliente", async () => {
+    const user = userEvent.setup();
+    renderWithEndpoints();
+
+    await user.click(screen.getByRole("button", { name: /Escritório Souza/ }));
+
+    expect(screen.getByText("PC-DE-OUTRO")).toBeInTheDocument();
+    expect(screen.queryByText("Dell-C4J46Q3")).not.toBeInTheDocument();
+  });
+
+  it("mostra o estado vazio quando o cliente não tem PCs", () => {
+    render(
+      <MemoryRouter>
+        <ClientsSection
+          clients={clients}
+          loading={false}
+          error={null}
+          onCreateClient={vi.fn()}
+          onChanged={vi.fn()}
+          endpoints={[]}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("Nenhum PC instalado")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Ver no painel" })).not.toBeInTheDocument();
   });
 });

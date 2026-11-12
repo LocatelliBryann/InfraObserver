@@ -8,6 +8,7 @@ import {
 } from "../services/endpointHealthService";
 
 import type { Endpoint } from "../services/endpointsService";
+import type { ClientFilter } from "../services/clientFilter";
 
 
 interface UseEndpointHealthResult {
@@ -22,6 +23,7 @@ interface UseEndpointHealthResult {
 
 export function useEndpointHealth(
   endpoints: Endpoint[],
+  clientFilter?: ClientFilter,
 ): UseEndpointHealthResult {
   const [health, setHealth] = useState<EndpointHealth[]>([]);
   const [loading, setLoading] = useState(false);
@@ -41,7 +43,7 @@ export function useEndpointHealth(
     setError(null);
 
     try {
-      const result = await getEndpointHealth();
+      const result = await getEndpointHealth(clientFilter);
       setHealth(result);
     } catch {
       setError("Não foi possível carregar a saúde dos endpoints.");
@@ -49,7 +51,7 @@ export function useEndpointHealth(
     } finally {
       setLoading(false);
     }
-  }, [hasEndpoints]);
+  }, [hasEndpoints, clientFilter]);
 
   useEffect(() => {
     void refresh();

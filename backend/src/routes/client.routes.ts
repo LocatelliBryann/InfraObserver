@@ -25,6 +25,14 @@ clientRouter.post("/:clientId/enrollment-tokens", requireSameOrigin, (req, res) 
 });
 
 clientRouter.post(
+  "/:clientId/enrollment-tokens/:tokenId/reveal",
+  requireSameOrigin,
+  (req, res) => {
+    void clientController.revealEnrollmentToken(req, res);
+  },
+);
+
+clientRouter.post(
   "/:clientId/enrollment-tokens/:tokenId/revoke",
   requireSameOrigin,
   (req, res) => {

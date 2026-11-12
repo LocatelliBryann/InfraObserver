@@ -1,13 +1,14 @@
 import type { EndpointRepository } from "../repositories/endpoint.repository";
 import type { RegisterEndpointInput } from "../utils/validation/endpoint.schema";
+import type { ClientFilter } from "../utils/validation/query.schema";
 
 export class EndpointService {
   constructor(
     private readonly repository: EndpointRepository,
   ) {}
 
-  async findAll() {
-    return this.repository.findAll();
+  async findAll(clientId?: ClientFilter) {
+    return this.repository.findAll(clientId);
   }
 
   async register(input: RegisterEndpointInput) {
