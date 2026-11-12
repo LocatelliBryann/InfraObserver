@@ -4,9 +4,11 @@ import express from "express";
 import helmet from "helmet";
 
 import { getAllowedOrigins } from "./config/auth";
+import agentEnrollmentRouter from "./routes/agent-enrollment.routes";
 import agentUpdateRouter from "./routes/agent-update.routes";
 import alertRouter from "./routes/alert.routes";
 import authRouter from "./routes/auth.routes";
+import clientRouter from "./routes/client.routes";
 import endpointRouter from "./routes/endpoint.routes";
 import fileEventRouter from "./routes/file-event.routes";
 import metricRouter from "./routes/metric.routes";
@@ -46,6 +48,8 @@ app.use("/api/v1/metrics", metricRouter);
 app.use("/api/v1/file-events", fileEventRouter);
 app.use("/api/v1/alerts", alertRouter);
 app.use("/api/v1/agent/update", agentUpdateRouter);
+app.use("/api/v1/agents/enroll", agentEnrollmentRouter);
+app.use("/api/v1/clients", clientRouter);
 
 app.use((_req, res) => {
   res.status(404).json({

@@ -15,4 +15,10 @@ const adapter = new PrismaPg({
 
 export const prisma = new PrismaClient({
   adapter,
+  // O hash da credencial do agente nunca sai nas consultas comuns (nem na API).
+  omit: {
+    endpoint: {
+      credentialHash: true,
+    },
+  },
 });
