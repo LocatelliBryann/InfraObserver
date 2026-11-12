@@ -369,8 +369,30 @@ def test_main_removes_the_audit_when_asked(tmp_path):
         patch("src.main.WindowsAuditConfigurator") as mock_configurator,
         patch("src.main.create_agent") as mock_create_agent,
     ):
+        mock_configurator.return_value.disable.return_value = True
         main(["--remove-audit"])
 
     mock_configurator.assert_called_once_with(tmp_path)
     mock_configurator.return_value.disable.assert_called_once_with()
     mock_create_agent.assert_not_called()
+    assert "Windows file auditing removed" in (tmp_path / "audit-removal.log").read_text(
+        encoding="utf-8"
+    )
+
+
+def test_main_fails_when_the_audit_is_only_partly_removed(tmp_path):
+    import pytest
+
+    from src.main import main
+
+    with (
+        patch("src.main.load_configuration", return_value=tmp_path / "agent.env"),
+        patch("src.main.WindowsAuditConfigurator") as mock_configurator,
+    ):
+        mock_configurator.return_value.disable.return_value = False
+
+        with pytest.raises(SystemExit) as exit_info:
+            main(["--remove-audit"])
+
+    assert exit_info.value.code == 1
+    assert "only partly removed" in (tmp_path / "audit-removal.log").read_text(encoding="utf-8")

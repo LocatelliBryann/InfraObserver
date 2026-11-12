@@ -331,6 +331,7 @@ begin
 
     { Desfaz a auditoria do Windows que o agente ligou: as regras nas pastas
       monitoradas e a política (só o que estava desligado antes). }
+    { O resultado fica em audit-removal.log, ao lado da configuração. }
     RunHidden(ExpandConstant('{app}\agent\infraobserver-agent.exe'), '--remove-audit');
   end
   else if CurUninstallStep = usPostUninstall then

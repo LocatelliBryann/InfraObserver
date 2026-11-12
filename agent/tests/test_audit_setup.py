@@ -140,7 +140,7 @@ def test_disable_undoes_only_what_the_agent_changed(tmp_path):
     configurator.enable([r"C:\pasta"])
     windows.calls.clear()
 
-    configurator.disable()
+    assert configurator.disable() is True
 
     (sacl,) = windows.commands("powershell.exe")
     removal_env = [kwargs["env"] for args, kwargs in windows.calls if args == sacl][0]
@@ -159,6 +159,19 @@ def test_disable_without_state_does_nothing(tmp_path):
     assert windows.calls == []
 
 
+def test_disable_keeps_the_state_of_what_could_not_be_removed(tmp_path, caplog):
+    configurator = WindowsAuditConfigurator(tmp_path, run=FakeWindows())
+    configurator.save_state({"enabledSubcategories": [FILE_SYSTEM], "directories": [r"C:\pasta"]})
+    windows = FakeWindows()
+    windows.powershell_fails = True
+    configurator.run = windows
+
+    assert configurator.disable() is False
+
+    assert configurator.load_state() == {"enabledSubcategories": [], "directories": [r"C:\pasta"]}
+    assert "Could not run the script" in caplog.text
+
+
 def test_disable_keeps_going_when_a_step_fails(tmp_path, caplog):
     configurator = WindowsAuditConfigurator(tmp_path, run=FakeWindows(sacl_status="error"))
     configurator.save_state({"enabledSubcategories": [FILE_SYSTEM], "directories": [r"C:\pasta"]})
@@ -169,7 +182,7 @@ def test_disable_keeps_going_when_a_step_fails(tmp_path, caplog):
         return FakeWindows(sacl_status="error")(args, **kwargs)
 
     configurator.run = failing
-    configurator.disable()
+    assert configurator.disable() is False
 
     assert "Could not remove file auditing" in caplog.text
     assert "Could not restore audit policy" in caplog.text

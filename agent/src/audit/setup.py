@@ -241,12 +241,27 @@ class WindowsAuditConfigurator:
 
         return audited
 
-    def disable(self) -> None:
-        """Desfaz o que o agente ligou (usado na desinstalação)."""
-        state = self.load_state()
+    def disable(self) -> bool:
+        """Desfaz o que o agente ligou (usado na desinstalação).
 
-        for item in self.apply_sacl(state["directories"], "remove"):
+        Cada passo segue mesmo se outro falhar. Devolve False se algo ficou
+        para trás; nesse caso o audit-state.json fica, com o que faltou.
+        """
+        state = self.load_state()
+        remaining_directories: list[str] = []
+        remaining_subcategories: list[str] = []
+
+        try:
+            results = self.apply_sacl(state["directories"], "remove")
+        except Exception:
+            logger.exception("Could not run the script that removes file auditing")
+            results = [{"path": path, "status": "error"} for path in state["directories"]]
+
+        for item in results:
+            logger.info("File auditing on %s: %s", item.get("path"), item.get("status"))
+
             if item.get("status") == "error":
+                remaining_directories.append(item.get("path"))
                 logger.warning(
                     "Could not remove file auditing from %s: %s",
                     item.get("path"),
@@ -257,9 +272,21 @@ class WindowsAuditConfigurator:
             try:
                 self.set_success(subcategory, False)
             except (OSError, subprocess.SubprocessError):
+                remaining_subcategories.append(subcategory)
                 logger.exception("Could not restore audit policy %s", subcategory)
+
+        if remaining_directories or remaining_subcategories:
+            self.save_state(
+                {
+                    "enabledSubcategories": remaining_subcategories,
+                    "directories": remaining_directories,
+                }
+            )
+            return False
 
         try:
             self.state_path.unlink()
         except OSError:
             pass
+
+        return True

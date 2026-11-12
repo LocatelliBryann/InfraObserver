@@ -25,6 +25,8 @@ $IdFile = Join-Path $DataDir "agent-id"
 $LogDir = Join-Path $DataDir "logs"
 $Uninstaller = Join-Path $env:ProgramFiles "InfraObserver Agent\unins000.exe"
 $SetupLog = Join-Path $env:RUNNER_TEMP "infraobserver-setup.log"
+$UninstallLog = Join-Path $env:RUNNER_TEMP "infraobserver-uninstall.log"
+$AuditRemovalLog = Join-Path $DataDir "audit-removal.log"
 # Pasta monitorada no teste, para conferir a auditoria do Windows.
 $AuditDir = Join-Path $env:RUNNER_TEMP "pasta-auditada"
 $AuditState = Join-Path $DataDir "audit-state.json"
@@ -133,12 +135,12 @@ try {
     Assert-True (Wait-Until { Test-AgentRunning } 30) "serviço rodando depois de atualizar"
 
     # 5. Desinstalação
-    Start-Process -FilePath $Uninstaller -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART" -Wait
+    Start-Process -FilePath $Uninstaller -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/LOG=$UninstallLog" -Wait
     Assert-True (Wait-Until { -not (Get-Service $ServiceName -ErrorAction SilentlyContinue) } 60) "serviço removido"
     Assert-True (-not (Get-Process $ProcessName -ErrorAction SilentlyContinue)) "agente parado"
     Assert-True (Wait-Until { -not (Test-Path $LogDir) } 30) "logs removidos"
     Assert-True ((Test-Path $ConfigFile) -and (Test-Path $IdFile)) "configuração e identificador mantidos para reinstalar"
-    Assert-True (-not (Test-AuditRule $AuditDir)) "regra de auditoria removida da pasta"
+    Assert-True (Wait-Until { -not (Test-AuditRule $AuditDir) } 30) "regra de auditoria removida da pasta"
     Assert-True ((Get-AuditSetting $FileSystemPolicy) -eq $policyBefore) "política de auditoria volta ao que era antes"
     Assert-True (-not (Test-Path $AuditState)) "estado da auditoria removido"
 
@@ -147,6 +149,10 @@ try {
 catch {
     Write-Host "::group::Log do instalador"
     Get-Content $SetupLog -ErrorAction SilentlyContinue
+    Write-Host "::endgroup::"
+    Write-Host "::group::Log do desinstalador e da remoção da auditoria"
+    Get-Content $UninstallLog -ErrorAction SilentlyContinue | Select-String -Pattern "remove-audit|Exec|->" | ForEach-Object { Write-Host $_.Line }
+    Get-Content $AuditRemovalLog -ErrorAction SilentlyContinue
     Write-Host "::endgroup::"
     Write-Host "::group::Auditoria do Windows (linhas do log do agente)"
     Get-ChildItem $LogDir -Filter "*.log" -ErrorAction SilentlyContinue |

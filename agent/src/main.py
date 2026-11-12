@@ -224,10 +224,45 @@ def create_agent(
     )
 
 
-def remove_audit(config_path: Path | None) -> None:
-    """--remove-audit: chamado pelo desinstalador para desfazer a auditoria."""
-    WindowsAuditConfigurator(resolve_data_directory(config_path)).disable()
-    logger.info("Windows file auditing removed")
+AUDIT_REMOVAL_LOG = "audit-removal.log"
+
+
+def remove_audit(config_path: Path | None) -> bool:
+    """--remove-audit: chamado pelo desinstalador para desfazer a auditoria.
+
+    O desinstalador roda sem janela e apaga a pasta de logs, então o resultado
+    fica em audit-removal.log, ao lado da configuração.
+    """
+    data_directory = resolve_data_directory(config_path)
+    handler = None
+
+    try:
+        data_directory.mkdir(parents=True, exist_ok=True)
+        handler = logging.FileHandler(
+            data_directory / AUDIT_REMOVAL_LOG,
+            mode="w",
+            encoding="utf-8",
+        )
+        handler.setFormatter(
+            logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+        )
+        root = logging.getLogger()
+        root.addHandler(handler)
+        root.setLevel(min(root.level or logging.INFO, logging.INFO))
+    except OSError:
+        handler = None
+
+    try:
+        removed = WindowsAuditConfigurator(data_directory).disable()
+        if removed:
+            logger.info("Windows file auditing removed")
+        else:
+            logger.error("Windows file auditing was only partly removed")
+        return removed
+    finally:
+        if handler is not None:
+            logging.getLogger().removeHandler(handler)
+            handler.close()
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -245,7 +280,8 @@ def main(argv: list[str] | None = None) -> None:
     config_path = load_configuration()
 
     if "--remove-audit" in args:
-        remove_audit(config_path)
+        if not remove_audit(config_path):
+            raise SystemExit(1)
         return
 
     ensure_agent_id(os.environ, agent_id_file_for(config_path))
