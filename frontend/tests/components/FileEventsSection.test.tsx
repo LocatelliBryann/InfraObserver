@@ -96,6 +96,36 @@ describe("FileEventsSection", () => {
     expect(screen.getByText("Origem 10.0.0.25")).toBeTruthy();
   });
 
+  it("mostra quem fez a ação segundo a auditoria do Windows", () => {
+    renderSection({
+      events: [
+        makeEvent({
+          eventType: "DELETE",
+          username: "CARTORIO\\joao",
+          processName: "explorer.exe",
+          sourceIp: "192.168.0.50",
+          audited: true,
+        }),
+      ],
+    });
+
+    expect(screen.getByText("CARTORIO\\joao")).toBeTruthy();
+    expect(screen.getByText("via explorer.exe")).toBeTruthy();
+    expect(screen.getByText("Origem 192.168.0.50")).toBeTruthy();
+    expect(screen.getByText("Auditado").getAttribute("title")).toContain(
+      "auditoria do Windows",
+    );
+    expect(screen.queryByText("Usuário da sessão")).toBeNull();
+  });
+
+  it("indica quando o usuário é só o da sessão aberta", () => {
+    renderSection({ events: [makeEvent()] });
+
+    expect(screen.getByText("Usuário da sessão")).toBeTruthy();
+    expect(screen.queryByText("Auditado")).toBeNull();
+    expect(screen.queryByText(/^via /)).toBeNull();
+  });
+
   it("mostra o tipo original quando o evento vem de um agente antigo", () => {
     renderSection({ events: [makeEvent({ eventType: "created" as FileEvent["eventType"] })] });
 
