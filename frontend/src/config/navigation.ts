@@ -16,6 +16,7 @@ export const DASHBOARD_SECTIONS = {
   metrics: "metricas",
   endpoints: "endpoints",
   events: "eventos",
+  clients: "clientes",
 } as const;
 
 export type DashboardSectionId =
@@ -59,7 +60,7 @@ export const NAVIGATION_ITEMS: NavigationItem[] = [
   {
     label: "Clientes",
     icon: Users,
-    comingSoonDescription: "Cadastro de clientes e usuários (em breve)",
+    sectionId: DASHBOARD_SECTIONS.clients,
   },
 ];
 

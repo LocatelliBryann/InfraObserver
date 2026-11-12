@@ -3,12 +3,27 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import "@testing-library/jest-dom/vitest";
 
-import { SidebarNavigation } from "../../src/components/SidebarNavigation";
+import { Users } from "lucide-react";
 
-function renderSidebar(collapsed = false) {
+import { SidebarNavigation } from "../../src/components/SidebarNavigation";
+import { NAVIGATION_ITEMS, type NavigationItem } from "../../src/config/navigation";
+
+// Item ainda não disponível, para testar o "Em breve".
+const WITH_COMING_SOON: NavigationItem[] = [
+  ...NAVIGATION_ITEMS,
+  {
+    label: "Usuários",
+    icon: Users,
+    comingSoonDescription: "Usuários dos clientes (em breve)",
+  },
+];
+
+function renderSidebar(collapsed = false, items?: NavigationItem[]) {
   const onToggle = vi.fn();
 
-  render(<SidebarNavigation collapsed={collapsed} onToggle={onToggle} />);
+  render(
+    <SidebarNavigation collapsed={collapsed} onToggle={onToggle} items={items} />,
+  );
 
   return {
     onToggle,
@@ -30,6 +45,7 @@ describe("SidebarNavigation", () => {
       Métricas: "#metricas",
       Endpoints: "#endpoints",
       Eventos: "#eventos",
+      Clientes: "#clientes",
     };
 
     for (const [label, href] of Object.entries(expected)) {
@@ -39,23 +55,24 @@ describe("SidebarNavigation", () => {
     }
   });
 
-  it("should show Clientes as disabled and coming soon", () => {
-    const { nav } = renderSidebar();
+  it("should show an item without section as disabled and coming soon", () => {
+    const { nav } = renderSidebar(false, WITH_COMING_SOON);
 
     expect(
-      within(nav).queryByRole("link", { name: /Clientes/ }),
+      within(nav).queryByRole("link", { name: /Usuários/ }),
     ).not.toBeInTheDocument();
 
-    const clientes = within(nav).getByText("Clientes").closest(
-      "[aria-disabled]",
-    );
+    const item = within(nav).getByText("Usuários").closest("[aria-disabled]");
 
-    expect(clientes).toHaveAttribute("aria-disabled", "true");
-    expect(clientes).toHaveAttribute(
-      "title",
-      "Cadastro de clientes e usuários (em breve)",
-    );
+    expect(item).toHaveAttribute("aria-disabled", "true");
+    expect(item).toHaveAttribute("title", "Usuários dos clientes (em breve)");
     expect(within(nav).getByText("Em breve")).toBeInTheDocument();
+  });
+
+  it("should not show any coming soon item in the dashboard menu", () => {
+    const { nav } = renderSidebar();
+
+    expect(within(nav).queryByText("Em breve")).not.toBeInTheDocument();
   });
 
   it("should mark Dashboard as the current section by default", () => {
@@ -80,14 +97,14 @@ describe("SidebarNavigation", () => {
   });
 
   it("should keep links accessible by name when collapsed", () => {
-    const { nav } = renderSidebar(true);
+    const { nav } = renderSidebar(true, WITH_COMING_SOON);
 
     expect(
       within(nav).getByRole("link", { name: "Métricas" }),
     ).toHaveAttribute("title", "Métricas");
     expect(within(nav).queryByText("Em breve")).not.toBeInTheDocument();
     expect(
-      within(nav).getByLabelText("Cadastro de clientes e usuários (em breve)"),
+      within(nav).getByLabelText("Usuários dos clientes (em breve)"),
     ).toHaveAttribute("aria-disabled", "true");
   });
 

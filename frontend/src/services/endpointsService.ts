@@ -10,6 +10,11 @@ export interface Endpoint {
   // Versão do agente instalado; agentes antigos não informam.
   agentVersion?: string | null;
   status: string;
+  // Cliente dono do PC; nulo nos agentes que usam o token compartilhado.
+  client?: { id: number; name: string } | null;
+  // Quando o PC recebeu a credencial própria e quando o acesso foi revogado.
+  credentialIssuedAt?: string | null;
+  credentialRevokedAt?: string | null;
 }
 
 interface EndpointsResponse {
@@ -23,5 +28,10 @@ export const endpointsService = {
     );
 
     return response.data;
+  },
+
+  // Corta o acesso do agente deste PC (o histórico continua no dashboard).
+  async revokeEndpoint(id: number): Promise<Endpoint> {
+    return apiClient.post<Endpoint>(`/api/v1/endpoints/${id}/revoke`);
   },
 };

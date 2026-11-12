@@ -58,6 +58,17 @@ vi.mock("../src/hooks/useMetrics", () => ({
   }),
 }));
 
+vi.mock("../src/hooks/useClients", () => ({
+  describeClientError: () => "",
+  useClients: () => ({
+    clients: [],
+    loading: false,
+    error: null,
+    refresh: vi.fn(),
+    createClient: vi.fn(),
+  }),
+}));
+
 describe("App", () => {
   it("deve renderizar o dashboard", () => {
     render(<App />);
@@ -75,5 +86,14 @@ describe("App", () => {
     ).toBeInTheDocument();
 
     expect(screen.getByText("2")).toBeInTheDocument();
+  });
+
+  it("deve exibir a área de clientes", () => {
+    render(<App />);
+
+    expect(
+      screen.getByRole("heading", { name: "Clientes" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Nenhum cliente cadastrado")).toBeInTheDocument();
   });
 });
