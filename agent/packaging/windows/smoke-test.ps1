@@ -25,6 +25,10 @@ $IdFile = Join-Path $DataDir "agent-id"
 $LogDir = Join-Path $DataDir "logs"
 $Uninstaller = Join-Path $env:ProgramFiles "InfraObserver Agent\unins000.exe"
 $SetupLog = Join-Path $env:RUNNER_TEMP "infraobserver-setup.log"
+# Pasta monitorada no teste, para conferir a auditoria do Windows.
+$AuditDir = Join-Path $env:RUNNER_TEMP "pasta-auditada"
+$AuditState = Join-Path $DataDir "audit-state.json"
+$FileSystemPolicy = "{0CCE921D-69AE-11D9-BED3-505054503030}"
 
 function Assert-True([bool]$Condition, [string]$Message) {
     if (-not $Condition) { throw "FALHOU: $Message" }
@@ -45,6 +49,24 @@ function Invoke-Setup([string[]]$Arguments) {
     return (Start-Process -FilePath $Setup -ArgumentList $all -Wait -PassThru).ExitCode
 }
 
+# Regra de auditoria (SACL) para Todos (S-1-1-0) na pasta.
+function Test-AuditRule([string]$Path) {
+    $rules = (Get-Acl -LiteralPath $Path -Audit).Audit
+    return [bool]($rules | Where-Object {
+        $_.IdentityReference.Translate([System.Security.Principal.SecurityIdentifier]).Value -eq "S-1-1-0"
+    })
+}
+
+# Valor numérico da subcategoria (0 nada, 1 êxito, 3 êxito e falha).
+function Get-AuditSetting([string]$Guid) {
+    $backup = Join-Path $env:RUNNER_TEMP "auditpol-$([guid]::NewGuid()).csv"
+    & (Join-Path $env:SystemRoot "System32\auditpol.exe") /backup "/file:$backup" | Out-Null
+    $row = Import-Csv $backup | Where-Object { $_.'Subcategory GUID' -eq $Guid }
+    Remove-Item $backup -Force
+    if ($row) { return [int]$row.'Setting Value' }
+    return 0
+}
+
 function Test-AgentRunning {
     (Get-Service $ServiceName -ErrorAction SilentlyContinue).Status -eq "Running" -and
         [bool](Get-Process $ProcessName -ErrorAction SilentlyContinue)
@@ -57,7 +79,9 @@ try {
     Assert-True (-not (Get-Service $ServiceName -ErrorAction SilentlyContinue)) "nenhum serviço criado"
 
     # 2. Instalação
-    $code = Invoke-Setup @("/SERVER=http://127.0.0.1:9/", "/TOKEN=token-do-smoke-test")
+    New-Item -ItemType Directory -Force -Path $AuditDir | Out-Null
+    $policyBefore = Get-AuditSetting $FileSystemPolicy
+    $code = Invoke-Setup @("/SERVER=http://127.0.0.1:9/", "/TOKEN=token-do-smoke-test", "/DIRS=$AuditDir")
     Assert-True ($code -eq 0) "instalação silenciosa termina sem erro"
 
     $service = Get-Service $ServiceName
@@ -83,6 +107,19 @@ try {
             Select-String -SimpleMatch "InfraObserver Agent $Version starting" -Quiet
     } 30) "log do serviço mostra a versão $Version"
 
+    # Auditoria do Windows: regra na pasta, política ligada e evento 4663 no log
+    Assert-True (Wait-Until { Test-AuditRule $AuditDir } 120) "regra de auditoria na pasta monitorada"
+    Assert-True (((Get-AuditSetting $FileSystemPolicy) -band 1) -eq 1) "auditoria de Sistema de Arquivos ligada"
+    Assert-True (Test-Path $AuditState) "estado da auditoria guardado para a desinstalação"
+
+    $auditedFile = Join-Path $AuditDir "arquivo-auditado.txt"
+    Set-Content -Path $auditedFile -Value "teste"
+    Remove-Item $auditedFile
+    Assert-True (Wait-Until {
+        [bool](Get-WinEvent -FilterHashtable @{ LogName = "Security"; Id = 4663 } -MaxEvents 200 -ErrorAction SilentlyContinue |
+            Where-Object { $_.Properties[6].Value -like "*arquivo-auditado.txt" })
+    } 30) "Windows registrou quem apagou o arquivo (evento 4663)"
+
     # 3. Reinício automático se o agente cair
     Stop-Process -Name $ProcessName -Force
     Start-Sleep -Seconds 3
@@ -101,6 +138,9 @@ try {
     Assert-True (-not (Get-Process $ProcessName -ErrorAction SilentlyContinue)) "agente parado"
     Assert-True (Wait-Until { -not (Test-Path $LogDir) } 30) "logs removidos"
     Assert-True ((Test-Path $ConfigFile) -and (Test-Path $IdFile)) "configuração e identificador mantidos para reinstalar"
+    Assert-True (-not (Test-AuditRule $AuditDir)) "regra de auditoria removida da pasta"
+    Assert-True ((Get-AuditSetting $FileSystemPolicy) -eq $policyBefore) "política de auditoria volta ao que era antes"
+    Assert-True (-not (Test-Path $AuditState)) "estado da auditoria removido"
 
     Write-Host "Todos os testes do instalador passaram."
 }

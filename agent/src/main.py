@@ -26,6 +26,12 @@ from src.services.file_event_service import FileEventService
 from src.services.file_observer_service import FileObserverGroupService
 from src.watchers.default_directories import default_monitored_directories
 from src.watchers.file_filter import FileEventFilter
+from src.audit.actor_index import AuditIndex
+from src.audit.enricher import AuditEnricher
+from src.audit.event_log import SecurityEventLog
+from src.audit.poller import AuditPoller
+from src.audit.service import WindowsAuditService
+from src.audit.setup import WindowsAuditConfigurator
 from src.version import __version__
 
 logger = logging.getLogger(__name__)
@@ -52,11 +58,15 @@ def resolve_monitored_directories(settings: AgentSettings) -> list[str]:
 def create_file_observers(
     settings: AgentSettings,
     event_handler,
+    directories: list[str] | None = None,
 ):
     event_filter = FileEventFilter(extra_patterns=settings.ignored_patterns)
     observers = []
 
-    for directory in resolve_monitored_directories(settings):
+    if directories is None:
+        directories = resolve_monitored_directories(settings)
+
+    for directory in directories:
         observer = create_file_observer(
             directory=directory,
             event_handler=event_handler,
@@ -74,9 +84,7 @@ def create_update_service(
     data_directory: Path | None,
 ) -> UpdateService | None:
     """Só o agente instalado pelo setup.exe no Windows se atualiza sozinho."""
-    installed = bool(getattr(sys, "frozen", False)) and platform.system() == "Windows"
-
-    if not installed or data_directory is None or settings.update_interval_hours <= 0:
+    if not is_installed_on_windows() or data_directory is None or settings.update_interval_hours <= 0:
         return None
 
     return UpdateService(
@@ -84,6 +92,37 @@ def create_update_service(
         current_version=__version__,
         download_directory=data_directory / "updates",
         interval_seconds=settings.update_interval_hours * 3600,
+    )
+
+
+def is_installed_on_windows() -> bool:
+    return bool(getattr(sys, "frozen", False)) and platform.system() == "Windows"
+
+
+def create_audit_service(
+    settings: AgentSettings,
+    send,
+    directories: list[str],
+    data_directory: Path,
+) -> WindowsAuditService | None:
+    """Auditoria do Windows: só no agente instalado (serviço, conta SYSTEM),
+    que tem permissão para ligar a política e ler o log de Segurança."""
+    if not settings.windows_audit or not is_installed_on_windows():
+        return None
+
+    try:
+        event_log = SecurityEventLog()
+    except ImportError:
+        logger.warning("pywin32 is not available; Windows file auditing disabled")
+        return None
+
+    index = AuditIndex(computer_name=os.environ.get("COMPUTERNAME"))
+
+    return WindowsAuditService(
+        configurator=WindowsAuditConfigurator(data_directory),
+        poller=AuditPoller(event_log, index),
+        enricher=AuditEnricher(index, send),
+        directories=directories,
     )
 
 
@@ -154,9 +193,20 @@ def create_agent(
         outbox=outbox,
     )
 
+    directories = resolve_monitored_directories(settings)
+    audit_service = create_audit_service(
+        settings,
+        file_event_service.send,
+        directories,
+        data_directory,
+    )
+
     file_observers = create_file_observers(
         settings=settings,
-        event_handler=file_event_service.send,
+        event_handler=(
+            file_event_service.send if audit_service is None else audit_service.handle
+        ),
+        directories=directories,
     )
 
     file_observer_service = FileObserverGroupService(
@@ -170,7 +220,14 @@ def create_agent(
         file_observer_service=file_observer_service,
         update_service=create_update_service(settings, http_client, data_directory),
         outbox_sender=OutboxSender(outbox, http_client),
+        audit_service=audit_service,
     )
+
+
+def remove_audit(config_path: Path | None) -> None:
+    """--remove-audit: chamado pelo desinstalador para desfazer a auditoria."""
+    WindowsAuditConfigurator(resolve_data_directory(config_path)).disable()
+    logger.info("Windows file auditing removed")
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -186,6 +243,11 @@ def main(argv: list[str] | None = None) -> None:
     )
 
     config_path = load_configuration()
+
+    if "--remove-audit" in args:
+        remove_audit(config_path)
+        return
+
     ensure_agent_id(os.environ, agent_id_file_for(config_path))
 
     logger.info("InfraObserver Agent %s starting", __version__)

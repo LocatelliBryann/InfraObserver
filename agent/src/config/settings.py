@@ -48,6 +48,21 @@ def _parse_update_interval(value: str | None) -> float:
     return hours
 
 
+def _parse_bool(value: str | None, default: bool) -> bool:
+    if value is None or not value.strip():
+        return default
+
+    normalized = value.strip().lower()
+
+    if normalized in ("1", "true", "yes", "sim", "on"):
+        return True
+
+    if normalized in ("0", "false", "no", "nao", "não", "off"):
+        return False
+
+    raise ValueError("INFRAOBSERVER_WINDOWS_AUDIT must be true or false")
+
+
 @dataclass(frozen=True)
 class AgentSettings:
     server_url: str
@@ -60,6 +75,8 @@ class AgentSettings:
     ignored_patterns: list[str] = field(default_factory=list)
     # De quantas em quantas horas procura uma versão nova (0 = nunca).
     update_interval_hours: float = DEFAULT_UPDATE_INTERVAL_HOURS
+    # Auditoria do Windows (quem fez cada ação); só vale no agente instalado.
+    windows_audit: bool = True
 
     @classmethod
     def from_environment(cls) -> "AgentSettings":
@@ -91,6 +108,11 @@ class AgentSettings:
             os.getenv("INFRAOBSERVER_UPDATE_INTERVAL_HOURS"),
         )
 
+        windows_audit = _parse_bool(
+            os.getenv("INFRAOBSERVER_WINDOWS_AUDIT"),
+            default=True,
+        )
+
         return cls(
             server_url=server_url,
             agent_token=agent_token,
@@ -99,4 +121,5 @@ class AgentSettings:
             monitored_directories=monitored_directories,
             ignored_patterns=ignored_patterns,
             update_interval_hours=update_interval_hours,
+            windows_audit=windows_audit,
         )

@@ -288,3 +288,27 @@ def test_agent_with_queue_watches_folders_before_the_server_answers():
     assert calls == ["watch", "register", "send queue"]
     file_observer_service.stop.assert_called_once_with()
     outbox_sender.stop.assert_called_once_with()
+
+
+def test_agent_starts_the_audit_first_and_stops_it_after_the_folders():
+    calls = []
+    file_observer_service = Mock()
+    file_observer_service.start.side_effect = lambda: calls.append("watch")
+    file_observer_service.stop.side_effect = lambda: calls.append("stop watch")
+    audit_service = Mock()
+    audit_service.start.side_effect = lambda: calls.append("audit")
+    audit_service.stop.side_effect = lambda: calls.append("stop audit")
+
+    agent = Agent(
+        registration_service=Mock(),
+        metrics_service=Mock(),
+        settings=Mock(),
+        file_observer_service=file_observer_service,
+        outbox_sender=Mock(),
+        audit_service=audit_service,
+    )
+
+    with patch.object(agent, "run"):
+        agent.start()
+
+    assert calls == ["audit", "watch", "stop watch", "stop audit"]

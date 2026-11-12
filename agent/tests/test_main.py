@@ -290,3 +290,87 @@ def test_data_directory_is_next_to_the_config_file(tmp_path, monkeypatch):
 
     monkeypatch.delenv("INFRAOBSERVER_DATA_DIR")
     assert resolve_data_directory(None) == Path(".")
+
+
+def test_audit_service_only_on_the_installed_windows_agent(tmp_path):
+    from src.main import create_audit_service
+
+    settings = Mock()
+    settings.windows_audit = True
+    send = Mock()
+
+    with patch("src.main.is_installed_on_windows", return_value=False):
+        assert create_audit_service(settings, send, ["C:/pasta"], tmp_path) is None
+
+    settings.windows_audit = False
+    with patch("src.main.is_installed_on_windows", return_value=True):
+        assert create_audit_service(settings, send, ["C:/pasta"], tmp_path) is None
+
+
+def test_audit_service_is_built_on_windows(tmp_path):
+    from src.main import create_audit_service
+
+    settings = Mock()
+    settings.windows_audit = True
+
+    with (
+        patch("src.main.is_installed_on_windows", return_value=True),
+        patch("src.main.SecurityEventLog") as mock_log,
+    ):
+        service = create_audit_service(settings, Mock(), ["C:/pasta"], tmp_path)
+
+    mock_log.assert_called_once_with()
+    assert service.directories == ["C:/pasta"]
+    assert service.configurator.data_directory == tmp_path
+
+
+def test_audit_service_is_skipped_without_pywin32(tmp_path, caplog):
+    from src.main import create_audit_service
+
+    settings = Mock()
+    settings.windows_audit = True
+
+    with (
+        patch("src.main.is_installed_on_windows", return_value=True),
+        patch("src.main.SecurityEventLog", side_effect=ImportError("win32evtlog")),
+    ):
+        assert create_audit_service(settings, Mock(), [], tmp_path) is None
+
+    assert "pywin32 is not available" in caplog.text
+
+
+def test_create_agent_sends_file_events_through_the_audit(tmp_path):
+    settings = Mock()
+    settings.server_url = "http://localhost:3000"
+    settings.agent_token = "token"
+    settings.monitored_directories = []
+    settings.ignored_patterns = []
+    audit_service = Mock()
+
+    with (
+        patch("src.main.default_monitored_directories", return_value=[]),
+        patch("src.main.AgentSettings.from_environment", return_value=settings),
+        patch("src.main.HttpClient"),
+        patch("src.main.Outbox"),
+        patch("src.main.create_audit_service", return_value=audit_service),
+        patch("src.main.create_file_observers") as mock_create_observers,
+    ):
+        agent = create_agent(tmp_path)
+
+    assert mock_create_observers.call_args.kwargs["event_handler"] is audit_service.handle
+    assert agent.audit_service is audit_service
+
+
+def test_main_removes_the_audit_when_asked(tmp_path):
+    from src.main import main
+
+    with (
+        patch("src.main.load_configuration", return_value=tmp_path / "agent.env"),
+        patch("src.main.WindowsAuditConfigurator") as mock_configurator,
+        patch("src.main.create_agent") as mock_create_agent,
+    ):
+        main(["--remove-audit"])
+
+    mock_configurator.assert_called_once_with(tmp_path)
+    mock_configurator.return_value.disable.assert_called_once_with()
+    mock_create_agent.assert_not_called()
