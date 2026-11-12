@@ -34,6 +34,7 @@ class FakeWindows:
         self.policy = {FILE_SYSTEM: policy[0], DETAILED_FILE_SHARE: policy[1]}
         self.sacl_status = sacl_status
         self.encoding = encoding
+        self.powershell_fails = False
         self.calls = []
 
     def __call__(self, args, **kwargs):
@@ -59,7 +60,12 @@ class FakeWindows:
                 {"path": path, "status": status(path) if callable(status) else status}
                 for path in paths
             ]
-            return subprocess.CompletedProcess(args, 0, json.dumps(output).encode("utf-8"), b"")
+            if self.powershell_fails:
+                return subprocess.CompletedProcess(args, 1, b"", "Acesso negado".encode("utf-8"))
+            Path(kwargs["env"]["INFRAOBSERVER_AUDIT_RESULT"]).write_text(
+                json.dumps(output), encoding="utf-8"
+            )
+            return subprocess.CompletedProcess(args, 0, b"", b"")
 
         raise AssertionError(f"comando inesperado: {args}")
 
@@ -182,3 +188,22 @@ def test_no_command_for_an_empty_folder_list(tmp_path):
 
     assert WindowsAuditConfigurator(tmp_path, run=windows).apply_sacl([], "add") == []
     assert windows.commands("powershell.exe") == []
+
+
+def test_powershell_failure_is_reported_with_its_error(tmp_path):
+    windows = FakeWindows()
+    windows.powershell_fails = True
+
+    with pytest.raises(RuntimeError, match="Acesso negado"):
+        WindowsAuditConfigurator(tmp_path, run=windows).apply_sacl([r"C:\pasta"], "add")
+
+
+def test_the_result_file_is_removed_after_reading(tmp_path):
+    WindowsAuditConfigurator(tmp_path, run=FakeWindows()).apply_sacl([r"C:\pasta"], "add")
+
+    assert not (tmp_path / "audit-sacl-result.json").exists()
+
+
+def test_script_does_not_touch_the_console_encoding():
+    assert "Console" not in SACL_SCRIPT
+    assert "INFRAOBSERVER_AUDIT_RESULT" in SACL_SCRIPT

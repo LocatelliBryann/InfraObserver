@@ -60,6 +60,7 @@ try {
         --onedir --console --noconfirm --clean `
         --paths . `
         --collect-submodules watchdog.observers `
+        --hidden-import win32evtlog `
         --icon (Join-Path $PackagingDir "infraobserver.ico") `
         --distpath (Join-Path $BuildDir "dist") `
         --workpath (Join-Path $BuildDir "work") `

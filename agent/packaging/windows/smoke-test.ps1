@@ -148,6 +148,12 @@ catch {
     Write-Host "::group::Log do instalador"
     Get-Content $SetupLog -ErrorAction SilentlyContinue
     Write-Host "::endgroup::"
+    Write-Host "::group::Auditoria do Windows (linhas do log do agente)"
+    Get-ChildItem $LogDir -Filter "*.log" -ErrorAction SilentlyContinue |
+        Select-String -Pattern "audit|pywin32|win32|Monitoring directory|starting" |
+        ForEach-Object { Write-Host $_.Line }
+    if (Test-Path $AuditState) { Get-Content $AuditState }
+    Write-Host "::endgroup::"
     Write-Host "::group::Logs do serviço"
     Get-ChildItem $LogDir -Filter "*.log" -ErrorAction SilentlyContinue | ForEach-Object {
         Write-Host "--- $($_.Name)"

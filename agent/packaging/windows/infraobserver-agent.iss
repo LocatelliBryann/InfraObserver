@@ -341,6 +341,7 @@ begin
     DeleteFile(ConfigDir() + '\outbox.db');
     DeleteFile(ConfigDir() + '\outbox.db-journal');
     DeleteFile(ConfigDir() + '\audit-sacl.ps1');
+    DeleteFile(ConfigDir() + '\audit-sacl-result.json');
 
     { A configuração e o identificador ficam, para uma reinstalação voltar
       como o mesmo endpoint. Na desinstalação manual, o usuário escolhe. }

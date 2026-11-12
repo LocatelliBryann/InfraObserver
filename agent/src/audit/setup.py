@@ -21,6 +21,7 @@ SUCCESS_BIT = 1
 
 STATE_FILE_NAME = "audit-state.json"
 SCRIPT_FILE_NAME = "audit-sacl.ps1"
+RESULT_FILE_NAME = "audit-sacl-result.json"
 SACL_TIMEOUT_SECONDS = 900
 COMMAND_TIMEOUT_SECONDS = 60
 
@@ -30,7 +31,6 @@ COMMAND_TIMEOUT_SECONDS = 60
 # As pastas vêm por variável de ambiente (JSON), nunca montadas no comando.
 SACL_SCRIPT = r"""
 $ErrorActionPreference = 'Stop'
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $paths = @(ConvertFrom-Json $env:INFRAOBSERVER_AUDIT_PATHS)
 $action = $env:INFRAOBSERVER_AUDIT_ACTION
 $sid = New-Object System.Security.Principal.SecurityIdentifier('S-1-1-0')
@@ -59,7 +59,10 @@ foreach ($path in $paths) {
     $results += @{ path = $path; status = 'error'; message = $_.Exception.Message }
   }
 }
-ConvertTo-Json -InputObject @($results) -Compress
+# O resultado vai para um arquivo, não para a saída: no serviço do Windows
+# não há console, e mexer na codificação do console falha.
+$json = ConvertTo-Json -InputObject @($results) -Compress
+[System.IO.File]::WriteAllText($env:INFRAOBSERVER_AUDIT_RESULT, $json, (New-Object System.Text.UTF8Encoding($false)))
 """
 
 Runner = Callable[..., subprocess.CompletedProcess]
@@ -157,15 +160,22 @@ class WindowsAuditConfigurator:
             return []
 
         script = self.data_directory / SCRIPT_FILE_NAME
+        result_file = self.data_directory / RESULT_FILE_NAME
         self.data_directory.mkdir(parents=True, exist_ok=True)
         script.write_text(SACL_SCRIPT, encoding="utf-8-sig")
+
+        try:
+            result_file.unlink()
+        except OSError:
+            pass
 
         env = {
             **os.environ,
             "INFRAOBSERVER_AUDIT_PATHS": json.dumps(directories),
             "INFRAOBSERVER_AUDIT_ACTION": action,
+            "INFRAOBSERVER_AUDIT_RESULT": str(result_file),
         }
-        result = self.run(
+        completed = self.run(
             [
                 _system_tool("WindowsPowerShell", "v1.0", "powershell.exe"),
                 "-NoProfile",
@@ -177,11 +187,18 @@ class WindowsAuditConfigurator:
             ],
             capture_output=True,
             timeout=SACL_TIMEOUT_SECONDS,
-            check=True,
+            check=False,
             env=env,
         )
 
-        output = _decode(result.stdout or b"").strip()
+        if completed.returncode != 0 or not result_file.exists():
+            errors = _decode(completed.stderr or b"").strip()
+            raise RuntimeError(
+                f"PowerShell failed with code {completed.returncode}: {errors[-2000:]}"
+            )
+
+        output = _decode(result_file.read_bytes()).strip()
+        result_file.unlink()
         results = json.loads(output) if output else []
 
         return results if isinstance(results, list) else [results]

@@ -35,6 +35,11 @@ class WindowsAuditService:
         return self.enricher.handle
 
     def _setup(self) -> None:
+        logger.info(
+            "Enabling Windows file auditing on %s folder(s)",
+            len(self.directories),
+        )
+
         try:
             audited = self.configurator.enable(self.directories)
             logger.info("Windows file auditing enabled on %s folder(s)", len(audited))
