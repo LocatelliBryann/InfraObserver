@@ -56,7 +56,8 @@ O **InfraObserver** é uma alternativa leve e sem custo: um **agente** instalado
 | 🟢 **Status por endpoint** | Online, Alerta ou Offline, com a quantidade de alertas ativos |
 | 📈 **Histórico** | Gráficos em tempo real ou dos últimos 1 h, 6 h e 24 h; histórico de alertas resolvidos com duração |
 | 🔑 **Login de administrador** | Dashboard e consultas da API protegidos por login, com sessão em cookie `httpOnly`, bloqueio após 5 tentativas erradas e proteção contra CSRF |
-| 🔐 **Autenticação dos agentes** | Token Bearer por agente, validado em tempo constante |
+| 🔐 **Autenticação dos agentes** | Token de instalação por cliente, trocado por uma credencial própria de cada PC; o acesso de um PC pode ser revogado pelo dashboard |
+| 🏢 **Clientes** | Página de clientes com os PCs, os tokens de instalação e a revogação de cada um; no dashboard, filtro por cliente que vale para indicadores, alertas e PCs |
 | 🔁 **Agente resiliente** | Sem conexão com o servidor, guarda eventos e métricas numa fila em disco e envia tudo, na ordem e com o horário original, quando a conexão volta |
 
 <details>
@@ -224,16 +225,17 @@ No agente instalado pelo `setup.exe`, essas variáveis ficam em `C:\ProgramData\
 | `POST` | `/api/v1/auth/login` | Login do administrador (grava o cookie de sessão) | — |
 | `POST` | `/api/v1/auth/logout` | Encerra a sessão | — |
 | `GET` | `/api/v1/auth/me` | Usuário da sessão atual | Sessão |
-| `GET` | `/api/v1/endpoints` | Lista os endpoints registrados | Sessão |
-| `GET` | `/api/v1/endpoints/health` | Status (online, alerta, offline) e última coleta de cada endpoint | Sessão |
+| `GET` | `/api/v1/endpoints` | Lista os endpoints registrados, com o cliente · `clientId` (id ou `none`) | Sessão |
+| `GET` | `/api/v1/endpoints/health` | Status (online, alerta, offline) e última coleta de cada endpoint · `clientId` | Sessão |
 | `GET` | `/api/v1/metrics` | Histórico de métricas · `endpointId`, `from`, `to`, `limit` | Sessão |
 | `GET` | `/api/v1/file-events` | Eventos de arquivos · `endpointId`, `eventType` (ex.: `DELETE,MOVE`), `search`, `from`, `to`, `limit` | Sessão |
-| `GET` | `/api/v1/alerts` | Alertas · `status=active\|resolved\|all`, `endpointId`, `limit` | Sessão |
+| `GET` | `/api/v1/alerts` | Alertas · `status=active\|resolved\|all`, `endpointId`, `clientId`, `limit` | Sessão |
 | `POST` | `/api/v1/endpoints/:id/revoke` | Revoga o acesso do agente de um PC | Sessão |
 | `GET` | `/api/v1/clients` | Clientes, com o número de PCs e de tokens ativos | Sessão |
 | `POST` | `/api/v1/clients` | Cadastra um cliente (`name`) | Sessão |
 | `GET` | `/api/v1/clients/:id/enrollment-tokens` | Tokens de instalação do cliente (só o começo de cada um) | Sessão |
-| `POST` | `/api/v1/clients/:id/enrollment-tokens` | Gera um token de instalação (`expiresInDays` opcional); o valor completo vem só nesta resposta | Sessão |
+| `POST` | `/api/v1/clients/:id/enrollment-tokens` | Gera um token de instalação (`expiresInDays` opcional) | Sessão |
+| `POST` | `/api/v1/clients/:id/enrollment-tokens/:tokenId/reveal` | Devolve de novo um token de instalação ativo, para copiar | Sessão |
 | `POST` | `/api/v1/clients/:id/enrollment-tokens/:tokenId/revoke` | Revoga um token de instalação | Sessão |
 | `GET` | `/health` | Verificação de saúde da API | — |
 
@@ -286,6 +288,7 @@ InfraObserver/
 - [ ] Configuração remota dos agentes pelo dashboard
 - [x] Instalador do agente para Windows, rodando como serviço
 - [x] Atualização automática dos agentes, com a versão de cada um no dashboard
+- [x] Clientes com token de instalação, credencial por PC e filtro por cliente no dashboard
 - [ ] Telas de gerenciamento de endpoints e configurações
 
 ## Documentação
