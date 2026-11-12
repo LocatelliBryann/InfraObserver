@@ -328,6 +328,11 @@ begin
     StopService();
     if ServiceExists() then
       RunHidden(ExpandConstant('{app}\InfraObserverAgent.exe'), 'uninstall');
+
+    { Desfaz a auditoria do Windows que o agente ligou: as regras nas pastas
+      monitoradas e a política (só o que estava desligado antes). }
+    { O resultado fica em audit-removal.log, ao lado da configuração. }
+    RunHidden(ExpandConstant('{app}\agent\infraobserver-agent.exe'), '--remove-audit');
   end
   else if CurUninstallStep = usPostUninstall then
   begin
@@ -336,6 +341,8 @@ begin
     { Fila de envios pendentes: sem o agente, ela não seria mais enviada. }
     DeleteFile(ConfigDir() + '\outbox.db');
     DeleteFile(ConfigDir() + '\outbox.db-journal');
+    DeleteFile(ConfigDir() + '\audit-sacl.ps1');
+    DeleteFile(ConfigDir() + '\audit-sacl-result.json');
 
     { A configuração e o identificador ficam, para uma reinstalação voltar
       como o mesmo endpoint. Na desinstalação manual, o usuário escolhe. }

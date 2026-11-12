@@ -4,3 +4,4 @@ watchdog==6.0.0
 requests==2.34.2
 python-dotenv
 pytest-cov==7.1.0
+pywin32==311; sys_platform == "win32"

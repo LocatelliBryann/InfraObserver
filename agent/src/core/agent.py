@@ -13,6 +13,7 @@ class Agent:
         file_observer_service=None,
         update_service=None,
         outbox_sender=None,
+        audit_service=None,
     ):
         self.registration_service = registration_service
         self.metrics_service = metrics_service
@@ -20,8 +21,13 @@ class Agent:
         self.file_observer_service = file_observer_service
         self.update_service = update_service
         self.outbox_sender = outbox_sender
+        self.audit_service = audit_service
 
     def start(self):
+        # A auditoria começa antes das pastas, para não perder os primeiros eventos.
+        if self.audit_service is not None:
+            self.audit_service.start()
+
         # Com a fila, as pastas são observadas desde já, mesmo que o servidor
         # esteja fora do ar: os eventos esperam na fila até o registro.
         if self.outbox_sender is not None and self.file_observer_service is not None:
@@ -44,6 +50,10 @@ class Agent:
     def stop(self):
         if self.file_observer_service is not None:
             self.file_observer_service.stop()
+
+        # Depois das pastas: entrega os eventos que ainda esperavam a auditoria.
+        if self.audit_service is not None:
+            self.audit_service.stop()
 
         if self.outbox_sender is not None:
             self.outbox_sender.stop()

@@ -51,6 +51,7 @@ O **InfraObserver** é uma alternativa leve e sem custo: um **agente** instalado
 |---|---|
 | 📊 **Métricas de desempenho** | CPU, memória, disco e rede de cada endpoint, coletadas em intervalo configurável |
 | 📁 **Eventos de arquivos** | Criação, modificação, exclusão, renomeação e movimentação de arquivos e pastas, com caminho anterior, usuário e filtros por tipo e busca no dashboard. Temporários do Office e do Windows são ignorados |
+| 🕵️ **Quem fez a ação** | No Windows, o agente liga a auditoria nas pastas monitoradas e lê o log de Segurança (eventos 4663, 4660 e 5145): cada evento traz o usuário que fez a ação, o programa e, pela rede, o IP de origem |
 | 🚨 **Alertas automáticos** | CPU ou memória acima de 80% e disco acima de 90%; o alerta é resolvido após duas coletas normais seguidas |
 | 📴 **Detecção de indisponibilidade** | Endpoint sem dados por 3 ciclos de coleta vira **offline** e gera alerta; ao voltar, é reativado sozinho |
 | 🟢 **Status por endpoint** | Online, Alerta ou Offline, com a quantidade de alertas ativos |
@@ -206,6 +207,7 @@ python -m src.main
 | `INFRAOBSERVER_MONITORED_DIRECTORIES` | Diretórios monitorados, separados por vírgula. Pastas de rede pelo caminho UNC (`\\servidor\pasta`) | Área de Trabalho, Documentos, Downloads e Imagens de cada usuário |
 | `INFRAOBSERVER_IGNORED_PATTERNS` | Padrões extras de arquivos a ignorar (ex.: `*.bak,*.log`) | — |
 | `INFRAOBSERVER_UPDATE_INTERVAL_HOURS` | De quantas em quantas horas o agente instalado no Windows procura uma versão nova (`0` desliga) | `6` |
+| `INFRAOBSERVER_WINDOWS_AUDIT` | Auditoria do Windows: quem fez cada ação nos arquivos (usuário, programa, IP pela rede). Só no agente instalado | `true` |
 
 Para gerar um UUID: `python -c "import uuid; print(uuid.uuid4())"`
 
@@ -228,7 +230,7 @@ No agente instalado pelo `setup.exe`, essas variáveis ficam em `C:\ProgramData\
 | `GET` | `/api/v1/endpoints` | Lista os endpoints registrados, com o cliente · `clientId` (id ou `none`) | Sessão |
 | `GET` | `/api/v1/endpoints/health` | Status (online, alerta, offline) e última coleta de cada endpoint · `clientId` | Sessão |
 | `GET` | `/api/v1/metrics` | Histórico de métricas · `endpointId`, `from`, `to`, `limit` | Sessão |
-| `GET` | `/api/v1/file-events` | Eventos de arquivos · `endpointId`, `eventType` (ex.: `DELETE,MOVE`), `search`, `from`, `to`, `limit` | Sessão |
+| `GET` | `/api/v1/file-events` | Eventos de arquivos · `endpointId`, `eventType` (ex.: `DELETE,MOVE`), `search` (caminho, usuário, programa ou IP), `from`, `to`, `limit` | Sessão |
 | `GET` | `/api/v1/alerts` | Alertas · `status=active\|resolved\|all`, `endpointId`, `clientId`, `limit` | Sessão |
 | `POST` | `/api/v1/endpoints/:id/revoke` | Revoga o acesso do agente de um PC | Sessão |
 | `GET` | `/api/v1/clients` | Clientes, com o número de PCs e de tokens ativos | Sessão |
@@ -280,6 +282,7 @@ InfraObserver/
 ## Roadmap
 
 - [x] Agente com coleta de métricas, eventos de arquivos e resiliência a falhas de rede
+- [x] Auditoria do Windows: usuário, programa e IP de quem fez cada ação nos arquivos
 - [x] API com autenticação dos agentes, alertas e detecção de endpoints offline
 - [x] Dashboard com status por endpoint, histórico por período e histórico de alertas
 - [x] CI com testes, cobertura e análise estática (SonarQube Cloud)

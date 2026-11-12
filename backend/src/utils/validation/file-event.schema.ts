@@ -30,6 +30,11 @@ export const createFileEventSchema = z.object({
 
   sourceIp: z.union([z.ipv4(), z.ipv6()]).optional(),
 
+  // Preenchidos pela auditoria do Windows (agente 1.9.0 em diante).
+  processName: z.string().trim().min(1).max(260).optional(),
+
+  audited: z.boolean().default(false),
+
   occurredAt: z.coerce.date(),
 });
 

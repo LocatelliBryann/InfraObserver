@@ -73,6 +73,19 @@ sequenceDiagram
 
 O SHA-256 basta para o hash porque o token é aleatório e longo: não há senha fraca para quebrar por dicionário, e a busca pelo hash é direta (bcrypt não permite buscar).
 
+## Auditoria do Windows no agente
+
+O agente instalado (serviço, conta LocalSystem) liga a auditoria de arquivos do Windows nas pastas monitoradas e lê o log de Segurança. Os cuidados:
+
+| Item | Como funciona | Onde está |
+|---|---|---|
+| Comandos | `auditpol.exe` e `powershell.exe` chamados pelo caminho completo em `System32`, sem shell | `agent/src/audit/setup.py` |
+| Pastas no PowerShell | Passadas por variável de ambiente (JSON) e lidas pelo script; nunca montadas no texto do comando, então um nome de pasta não vira comando | `setup.py`, `SACL_SCRIPT` |
+| Script | Gravado na pasta do agente (`ProgramData\InfraObserver`), que só administradores e o sistema podem alterar | `setup.py` |
+| Desfazer | O que o agente ligou fica em `audit-state.json`; a desinstalação tira só isso (uma auditoria que o administrador já tinha continua) | `setup.py`, `disable` |
+| Leitura do log | Pela API do Windows (pywin32), só eventos 4663, 4660 e 5145 depois do último lido; contas de computador (`PC$`) são ignoradas | `agent/src/audit/event_log.py`, `events.py` |
+| Privacidade | Só eventos das pastas monitoradas (onde está a regra); leituras não são auditadas. O agente envia usuário, programa e IP do evento, nada mais do log | `setup.py`, `enricher.py` |
+
 ## Ataques considerados
 
 | Ataque | Proteção |

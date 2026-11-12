@@ -112,3 +112,28 @@ def test_file_event_goes_to_the_queue_when_there_is_one():
     assert path == "/api/v1/file-events"
     assert payload["eventType"] == "DELETE"
     assert payload["occurredAt"] == "2026-11-07T12:00:00+00:00"
+
+
+def test_file_event_service_sends_the_audited_actor():
+    http_client = Mock()
+    settings = Mock(spec=AgentSettings)
+    settings.agent_id = "550e8400-e29b-41d4-a716-446655440000"
+    occurred_at = datetime.now(timezone.utc)
+
+    FileEventService(http_client=http_client, settings=settings).send(
+        FileEvent(
+            event_type=FileEventType.DELETE,
+            file_path=r"C:\Compartilhado\planilha.xlsx",
+            username=r"CARTORIO\joao",
+            occurred_at=occurred_at,
+            process_name="explorer.exe",
+            source_ip="192.168.0.50",
+            audited=True,
+        )
+    )
+
+    payload = http_client.post.call_args.args[1]
+    assert payload["username"] == r"CARTORIO\joao"
+    assert payload["audited"] is True
+    assert payload["processName"] == "explorer.exe"
+    assert payload["sourceIp"] == "192.168.0.50"

@@ -198,3 +198,19 @@ def test_rejects_invalid_update_interval(monkeypatch):
 
         with pytest.raises(ValueError, match="UPDATE_INTERVAL_HOURS"):
             AgentSettings.from_environment()
+
+
+def test_windows_audit_is_on_by_default_and_can_be_turned_off(monkeypatch):
+    import pytest
+
+    set_required_environment(monkeypatch)
+
+    assert AgentSettings.from_environment().windows_audit is True
+
+    for value, expected in (("false", False), ("0", False), ("não", False), ("sim", True), ("TRUE", True)):
+        monkeypatch.setenv("INFRAOBSERVER_WINDOWS_AUDIT", value)
+        assert AgentSettings.from_environment().windows_audit is expected
+
+    monkeypatch.setenv("INFRAOBSERVER_WINDOWS_AUDIT", "talvez")
+    with pytest.raises(ValueError):
+        AgentSettings.from_environment()
