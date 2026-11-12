@@ -18,6 +18,8 @@ export interface FileEventRecord {
   previousPath: string | null;
   isDirectory: boolean;
   sourceIp: string | null;
+  processName: string | null;
+  audited: boolean;
   occurredAt: Date;
   receivedAt: Date;
 }
@@ -30,6 +32,8 @@ export interface NewFileEvent {
   previousPath?: string;
   isDirectory: boolean;
   sourceIp?: string;
+  processName?: string;
+  audited?: boolean;
   occurredAt: Date;
   receivedAt: Date;
 }
@@ -96,7 +100,7 @@ export class PrismaFileEventRepository
         ...(eventTypes?.length ? { eventType: { in: eventTypes } } : {}),
         ...(search
           ? {
-              // Mesmo texto buscado no caminho atual, no anterior e no usuário.
+              // Mesmo texto buscado nos caminhos, no usuário, no programa e no IP.
               OR: [
                 { filePath: { contains: pattern, mode: "insensitive" as const } },
                 {
@@ -106,6 +110,8 @@ export class PrismaFileEventRepository
                   },
                 },
                 { username: { contains: pattern, mode: "insensitive" as const } },
+                { processName: { contains: pattern, mode: "insensitive" as const } },
+                { sourceIp: { contains: pattern } },
               ],
             }
           : {}),

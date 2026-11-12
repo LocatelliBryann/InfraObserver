@@ -11,6 +11,8 @@ export interface CreateFileEventInput {
   previousPath?: string;
   isDirectory?: boolean;
   sourceIp?: string;
+  processName?: string;
+  audited?: boolean;
   occurredAt: Date;
 }
 
@@ -37,6 +39,8 @@ export class FileEventService {
       previousPath: input.previousPath,
       isDirectory: input.isDirectory ?? false,
       sourceIp: input.sourceIp,
+      processName: input.processName,
+      audited: input.audited ?? false,
       occurredAt: input.occurredAt,
       receivedAt: new Date(),
     });

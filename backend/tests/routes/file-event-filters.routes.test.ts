@@ -49,6 +49,14 @@ describe("GET /api/v1/file-events filters", () => {
         username: "maria",
       },
       { eventType: "DELETE", filePath: "D:\\Juridico\\2025", username: "joao.silva", isDirectory: true },
+      {
+        eventType: "MODIFY",
+        filePath: "D:\\Compartilhado\\ata.docx",
+        username: "CARTORIO\\ana",
+        processName: "WINWORD.EXE",
+        sourceIp: "192.168.0.77",
+        audited: true,
+      },
     ];
 
     await prisma.fileEvent.createMany({
@@ -84,6 +92,15 @@ describe("GET /api/v1/file-events filters", () => {
 
     const byUser = await list({ search: "JOAO" });
     expect(byUser.body).toHaveLength(2);
+  });
+
+  it("should search by program and by source IP", async () => {
+    const byProgram = await list({ search: "winword" });
+    expect(byProgram.body).toHaveLength(1);
+    expect(byProgram.body[0]).toMatchObject({ processName: "WINWORD.EXE", audited: true });
+
+    const byIp = await list({ search: "192.168.0.77" });
+    expect(byIp.body).toHaveLength(1);
   });
 
   it("should return directory events with their flag", async () => {
