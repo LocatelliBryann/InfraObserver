@@ -39,6 +39,48 @@ def resolve_config_path(
     return None
 
 
+_QUOTES = ('"', "'")
+
+
+def parse_config_file(text: str) -> dict[str, str]:
+    """Lê o agent.env sem interpretar barras invertidas.
+
+    O python-dotenv trata "\\a", "\\n" e "\\t" entre aspas duplas como
+    caracteres especiais, o que estraga caminhos do Windows: "D:\\a\\pasta"
+    virava "D:<bell>\\pasta" e "C:\\Users\\nome" ganhava uma quebra de linha.
+    O instalador grava KEY="valor" sem aspas dentro do valor, então aqui o
+    valor é usado como está, só sem as aspas de fora.
+    """
+    values: dict[str, str] = {}
+
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+
+        if not line or line.startswith("#"):
+            continue
+
+        if line.startswith("export "):
+            line = line[len("export "):].lstrip()
+
+        key, separator, value = line.partition("=")
+        key = key.strip()
+
+        if not separator or not key:
+            continue
+
+        value = value.strip()
+
+        if len(value) >= 2 and value[0] in _QUOTES and value[-1] == value[0]:
+            value = value[1:-1]
+        else:
+            # Sem aspas, " #" começa um comentário.
+            value = value.split(" #", 1)[0].rstrip()
+
+        values[key] = value
+
+    return values
+
+
 def load_configuration(
     environ: MutableMapping[str, str] = os.environ,
     frozen: bool | None = None,
@@ -61,14 +103,14 @@ def load_configuration(
         return None
 
     if config_path.is_file():
-        # utf-8-sig: o instalador grava o arquivo em UTF-8 com BOM.
-        # interpolate=False: um token com "$" não pode virar outra coisa.
-        load_dotenv(
-            config_path,
-            override=False,
-            interpolate=False,
-            encoding="utf-8-sig",
-        )
+        # utf-8-sig: o instalador grava o arquivo em UTF-8 com BOM. Os valores
+        # são usados como estão: sem "$" virando variável nem "\\" virando escape.
+        text = config_path.read_text(encoding="utf-8-sig")
+
+        for key, value in parse_config_file(text).items():
+            # Variáveis já definidas (ex.: pelo serviço) têm prioridade.
+            environ.setdefault(key, value)
+
         logger.info("Configuration loaded from %s", config_path)
     else:
         logger.warning("Configuration file not found: %s", config_path)

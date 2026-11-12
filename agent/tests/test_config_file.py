@@ -5,6 +5,7 @@ from unittest.mock import patch
 from src.config.config_file import (
     agent_id_file_for,
     load_configuration,
+    parse_config_file,
     resolve_config_path,
 )
 
@@ -108,3 +109,39 @@ def test_load_configuration_detects_platform_by_default():
 def test_agent_id_file_sits_next_to_config(tmp_path):
     assert agent_id_file_for(tmp_path / "agent.env") == tmp_path / "agent-id"
     assert agent_id_file_for(None) == Path("agent-id")
+
+
+def test_windows_paths_keep_their_backslashes(tmp_path):
+    # Antes, "\a" e "\n" entre aspas viravam caracteres especiais.
+    config = tmp_path / "agent.env"
+    config.write_text(
+        'INFRAOBSERVER_MONITORED_DIRECTORIES="D:\\a\\_temp\\pasta,C:\\Users\\nome\\Área de Trabalho,\\\\servidor\\financeiro"\r\n',
+        encoding="utf-8-sig",
+    )
+    environ = {"INFRAOBSERVER_CONFIG": str(config)}
+
+    load_configuration(environ, frozen=False, system="Linux")
+
+    assert environ["INFRAOBSERVER_MONITORED_DIRECTORIES"] == (
+        "D:\\a\\_temp\\pasta,C:\\Users\\nome\\Área de Trabalho,\\\\servidor\\financeiro"
+    )
+
+
+def test_parse_config_file_formats():
+    text = (
+        "# comentário\n"
+        "\n"
+        "export INFRAOBSERVER_A = 'simples'\n"
+        "INFRAOBSERVER_B=sem-aspas # comentário\n"
+        'INFRAOBSERVER_C=""\n'
+        "linha sem igual\n"
+        "=sem chave\n"
+        'INFRAOBSERVER_D="tem # dentro"\n'
+    )
+
+    assert parse_config_file(text) == {
+        "INFRAOBSERVER_A": "simples",
+        "INFRAOBSERVER_B": "sem-aspas",
+        "INFRAOBSERVER_C": "",
+        "INFRAOBSERVER_D": "tem # dentro",
+    }
