@@ -6,6 +6,7 @@ import {
 } from "../utils/validation/endpoint.schema";
 
 import type { EndpointService } from "../services/endpoint.service";
+import { endpointListQuerySchema } from "../utils/validation/query.schema";
 
 export class EndpointController {
   constructor(
@@ -15,12 +16,24 @@ export class EndpointController {
     >,
   ) {}
 
+  // GET /api/v1/endpoints?clientId=3 (ou clientId=none)
   async findAll(
-    _req: Request,
+    req: Request,
     res: Response,
   ): Promise<void> {
+    const query = endpointListQuerySchema.safeParse(req.query ?? {});
+
+    if (!query.success) {
+      res.status(400).json({
+        message: "Invalid query parameters",
+        errors: query.error.issues,
+      });
+
+      return;
+    }
+
     try {
-      const endpoints = await this.service.findAll();
+      const endpoints = await this.service.findAll(query.data.clientId);
 
       res.status(200).json({
         data: endpoints,

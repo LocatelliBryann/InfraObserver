@@ -14,7 +14,7 @@ export function generateToken(prefix: string): string {
   return `${prefix}${randomBytes(TOKEN_BYTES).toString("base64url")}`;
 }
 
-// Só o hash vai para o banco. SHA-256 basta aqui (sem bcrypt), porque o token
+// O hash é o que confere o token. SHA-256 basta aqui (sem bcrypt), porque o token
 // é aleatório e longo: não há senha fraca para quebrar por dicionário.
 export function hashToken(token: string): string {
   return createHash("sha256").update(token, "utf8").digest("hex");

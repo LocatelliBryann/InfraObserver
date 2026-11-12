@@ -1,4 +1,8 @@
 import { prisma } from "../database/prisma";
+import {
+  clientIdCondition,
+  type ClientFilter,
+} from "../utils/validation/query.schema";
 
 // Endpoint como sai do banco. O hash da credencial fica de fora (omit no
 // PrismaClient) e só é usado nas buscas por credencial.
@@ -51,7 +55,8 @@ export interface EndpointUpdateData {
 }
 
 export interface EndpointRepository {
-  findAll(): Promise<EndpointWithClient[]>;
+  // Sem filtro, todos os endpoints; com filtro, só os do cliente (ou sem cliente).
+  findAll(clientId?: ClientFilter): Promise<EndpointWithClient[]>;
 
   findById(id: number): Promise<EndpointRecord | null>;
 
@@ -69,8 +74,9 @@ export interface EndpointRepository {
 export class PrismaEndpointRepository
   implements EndpointRepository
 {
-  async findAll() {
+  async findAll(clientId?: ClientFilter) {
     return prisma.endpoint.findMany({
+      where: clientIdCondition(clientId),
       include: {
         client: {
           select: {

@@ -11,6 +11,7 @@ import {
   generateToken,
   hashToken,
 } from "../security/agent-tokens";
+import { decryptToken, encryptToken } from "../security/token-encryption";
 
 export class ClientNameTakenError extends Error {
   constructor() {
@@ -33,6 +34,13 @@ export class EnrollmentTokenNotFoundError extends Error {
   }
 }
 
+export class EnrollmentTokenNotRevealableError extends Error {
+  constructor() {
+    super("Enrollment token cannot be shown again");
+    this.name = "EnrollmentTokenNotRevealableError";
+  }
+}
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 function isUniqueViolation(error: unknown): boolean {
@@ -49,6 +57,8 @@ export class ClientService {
     private readonly clients: ClientRepository,
     private readonly tokens: EnrollmentTokenRepository,
     private readonly now: () => Date = () => new Date(),
+    private readonly encrypt: (token: string) => string = encryptToken,
+    private readonly decrypt: (value: string) => string | null = decryptToken,
   ) {}
 
   async findAll() {
@@ -78,8 +88,9 @@ export class ClientService {
     return this.tokens.findByClientId(clientId);
   }
 
-  // Gera um token de instalação. O valor completo só existe nesta resposta:
-  // o banco guarda o hash e o começo do token.
+  // Gera um token de instalação. O banco guarda o hash (para conferir na
+  // instalação), o começo do token (para a lista) e o token cifrado (para o
+  // administrador copiar de novo enquanto o token estiver ativo).
   async createEnrollmentToken(
     clientId: number,
     options: { expiresInDays?: number } = {},
@@ -96,10 +107,37 @@ export class ClientService {
       clientId,
       tokenHash: hashToken(token),
       prefix: displayPrefix(token),
+      encryptedToken: this.encrypt(token),
       expiresAt,
     });
 
     return { token, enrollmentToken };
+  }
+
+  // Devolve o token completo de novo, para instalar mais PCs do cliente.
+  // Só para tokens ativos e gerados depois desta versão (com valor cifrado).
+  async revealEnrollmentToken(clientId: number, tokenId: number) {
+    const token = await this.tokens.findById(tokenId);
+
+    if (!token || token.clientId !== clientId) {
+      throw new EnrollmentTokenNotFoundError();
+    }
+
+    const now = this.now();
+    const inactive =
+      token.revokedAt !== null ||
+      (token.expiresAt !== null && token.expiresAt <= now);
+
+    const encrypted = inactive
+      ? null
+      : await this.tokens.findEncryptedToken(tokenId);
+    const value = encrypted ? this.decrypt(encrypted) : null;
+
+    if (!value) {
+      throw new EnrollmentTokenNotRevealableError();
+    }
+
+    return value;
   }
 
   // Revogar o token impede novas instalações. Os PCs já instalados continuam,

@@ -157,6 +157,75 @@ describe("enrollment tokens", () => {
   });
 });
 
+describe("copying an enrollment token again", () => {
+  function reveal(clientId: number, tokenId: number) {
+    return request(app)
+      .post(`/api/v1/clients/${clientId}/enrollment-tokens/${tokenId}/reveal`)
+      .set("Cookie", cookie);
+  }
+
+  it("returns the same token while it is active", async () => {
+    const client = await createClient();
+    const created = await createToken(client.body.id);
+
+    expect(created.body.enrollmentToken.revealable).toBe(true);
+
+    const revealed = await reveal(client.body.id, created.body.enrollmentToken.id);
+
+    expect(revealed.status).toBe(200);
+    expect(revealed.headers["cache-control"]).toBe("no-store");
+    expect(revealed.body.token).toBe(created.body.token);
+
+    // O valor guardado no banco é cifrado, não o token.
+    const stored = await prisma.enrollmentToken.findUnique({
+      where: { id: created.body.enrollmentToken.id },
+    });
+
+    expect(stored?.encryptedToken).toMatch(/^v1\./);
+    expect(stored?.encryptedToken).not.toContain(created.body.token);
+  });
+
+  it("stops showing the token after it is revoked", async () => {
+    const client = await createClient();
+    const created = await createToken(client.body.id);
+    const tokenId = created.body.enrollmentToken.id;
+
+    await request(app)
+      .post(`/api/v1/clients/${client.body.id}/enrollment-tokens/${tokenId}/revoke`)
+      .set("Cookie", cookie);
+
+    expect((await reveal(client.body.id, tokenId)).status).toBe(409);
+
+    const stored = await prisma.enrollmentToken.findUnique({ where: { id: tokenId } });
+
+    expect(stored?.encryptedToken).toBeNull();
+
+    const list = await request(app)
+      .get(`/api/v1/clients/${client.body.id}/enrollment-tokens`)
+      .set("Cookie", cookie);
+
+    expect(list.body.data[0].revealable).toBe(false);
+    expect(list.body.data[0]).not.toHaveProperty("encryptedToken");
+  });
+
+  it("requires login and the same origin", async () => {
+    const client = await createClient();
+    const created = await createToken(client.body.id);
+    const path = `/api/v1/clients/${client.body.id}/enrollment-tokens/${created.body.enrollmentToken.id}/reveal`;
+
+    expect((await request(app).post(path)).status).toBe(401);
+    expect(
+      (
+        await request(app)
+          .post(path)
+          .set("Cookie", cookie)
+          .set("Origin", "https://site-malicioso.example")
+      ).status,
+    ).toBe(403);
+    expect((await reveal(client.body.id, 999999)).status).toBe(404);
+  });
+});
+
 describe("agent enrollment and revocation", () => {
   async function enrolledAgent() {
     const client = await createClient();
