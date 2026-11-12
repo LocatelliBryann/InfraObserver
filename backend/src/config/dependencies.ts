@@ -35,6 +35,14 @@ import { AgentUpdateController } from "../controllers/agent-update.controller";
 import { GitHubAgentReleaseSource } from "../services/agent-release.source";
 import { AgentUpdateService } from "../services/agent-update.service";
 import { getAgentUpdateConfig } from "./agent-update";
+import { AgentEnrollmentController } from "../controllers/agent-enrollment.controller";
+import { ClientController } from "../controllers/client.controller";
+import { createAuthenticateAgent } from "../middlewares/agent-auth.middleware";
+import { createEnrollmentRateLimit } from "../middlewares/enrollment-rate-limit.middleware";
+import { PrismaClientRepository } from "../repositories/client.repository";
+import { PrismaEnrollmentTokenRepository } from "../repositories/enrollment-token.repository";
+import { AgentCredentialService } from "../services/agent-credential.service";
+import { ClientService } from "../services/client.service";
 import { logger } from "./logger";
 
 const userRepository = new PrismaUserRepository();
@@ -47,6 +55,26 @@ const endpointRepository = new PrismaEndpointRepository();
 const endpointService = new EndpointService(endpointRepository);
 
 export const endpointController = new EndpointController(endpointService);
+
+// Clientes, tokens de instalação e credenciais dos agentes.
+const enrollmentTokenRepository = new PrismaEnrollmentTokenRepository();
+const clientService = new ClientService(
+  new PrismaClientRepository(),
+  enrollmentTokenRepository,
+);
+
+export const clientController = new ClientController(clientService);
+
+const agentCredentialService = new AgentCredentialService(
+  endpointRepository,
+  enrollmentTokenRepository,
+);
+
+export const authenticateAgent = createAuthenticateAgent(agentCredentialService);
+export const agentEnrollmentController = new AgentEnrollmentController(
+  agentCredentialService,
+);
+export const enrollmentRateLimit = createEnrollmentRateLimit();
 
 const alertRepository = new PrismaAlertRepository();
 const alertService = new AlertService(alertRepository);

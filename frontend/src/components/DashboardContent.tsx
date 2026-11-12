@@ -64,6 +64,9 @@ interface DashboardContentProps {
   fileEventsError: string | null;
   fileEventFilters?: FileEventFilters;
   onFileEventFiltersChange?: (filters: FileEventFilters) => void;
+  onRevokeEndpoint?: (endpointId: number) => Promise<void>;
+  // Seções extras no fim da página (ex.: Clientes).
+  children?: React.ReactNode;
 }
 
 const NO_FILE_EVENT_FILTERS: FileEventFilters = { eventTypes: [], search: "" };
@@ -99,6 +102,8 @@ export function DashboardContent({
   fileEventsError,
   fileEventFilters = NO_FILE_EVENT_FILTERS,
   onFileEventFiltersChange = ignoreFilterChange,
+  onRevokeEndpoint,
+  children,
 }: DashboardContentProps) {
   const monitoredEndpointsValue = loading
     ? "—"
@@ -364,10 +369,13 @@ export function DashboardContent({
                   osName: selectedEndpoint.osName,
                   osVersion: selectedEndpoint.osVersion,
                   agentVersion: selectedEndpoint.agentVersion,
+                  clientName: selectedEndpoint.client?.name,
+                  revokedAt: selectedEndpoint.credentialRevokedAt,
                 }
               : null
           }
           metric={latestMetric}
+          onRevoke={onRevokeEndpoint}
         />
       </section>
 
@@ -379,6 +387,8 @@ export function DashboardContent({
         filters={fileEventFilters}
         onFiltersChange={onFileEventFiltersChange}
       />
+
+      {children}
     </div>
   );
 }

@@ -10,6 +10,8 @@ import { useActiveSection } from "../hooks/useActiveSection";
 interface SidebarNavigationProps {
   collapsed: boolean;
   onToggle: () => void;
+  // Itens do menu; o padrão é o menu do dashboard.
+  items?: NavigationItem[];
 }
 
 const itemLayout = "group flex items-center rounded-xl px-3 py-3 transition-all duration-300";
@@ -17,6 +19,7 @@ const itemLayout = "group flex items-center rounded-xl px-3 py-3 transition-all 
 export function SidebarNavigation({
   collapsed,
   onToggle,
+  items = NAVIGATION_ITEMS,
 }: SidebarNavigationProps) {
   const { activeSection, setActiveSection } = useActiveSection(
     NAVIGATION_SECTION_IDS,
@@ -55,7 +58,7 @@ export function SidebarNavigation({
 
       <nav aria-label="Navegação principal">
         <ul className="space-y-2">
-          {NAVIGATION_ITEMS.map((item) => (
+          {items.map((item) => (
             <li key={item.label}>
               {item.sectionId ? (
                 <SectionLink

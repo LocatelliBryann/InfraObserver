@@ -1,89 +1,69 @@
 import { prisma } from "../database/prisma";
 
+// Endpoint como sai do banco. O hash da credencial fica de fora (omit no
+// PrismaClient) e só é usado nas buscas por credencial.
+export interface EndpointRecord {
+  id: number;
+  agentId: string;
+  hostname: string;
+  ipAddress: string;
+  osName: string | null;
+  osVersion: string | null;
+  agentVersion: string | null;
+  status: string;
+  lastSeenAt: Date | null;
+  clientId: number | null;
+  credentialIssuedAt: Date | null;
+  credentialRevokedAt: Date | null;
+}
+
+// Na lista do dashboard, o endpoint vem com o nome do cliente.
+export interface EndpointWithClient extends EndpointRecord {
+  client: { id: number; name: string } | null;
+}
+
+export interface EndpointCreateData {
+  agentId: string;
+  hostname: string;
+  ipAddress: string;
+  osName?: string;
+  osVersion?: string;
+  agentVersion?: string;
+  status: string;
+  lastSeenAt: Date;
+  clientId?: number;
+  credentialHash?: string;
+  credentialIssuedAt?: Date;
+}
+
+export interface EndpointUpdateData {
+  hostname?: string;
+  ipAddress?: string;
+  osName?: string;
+  osVersion?: string;
+  agentVersion?: string;
+  status?: string;
+  lastSeenAt?: Date;
+  clientId?: number;
+  credentialHash?: string;
+  credentialIssuedAt?: Date;
+  credentialRevokedAt?: Date | null;
+}
+
 export interface EndpointRepository {
-  findAll(): Promise<
-    Array<{
-      id: number;
-      agentId: string;
-      hostname: string;
-      ipAddress: string;
-      osName: string | null;
-      osVersion: string | null;
-      agentVersion: string | null;
-      status: string;
-      lastSeenAt: Date | null;
-    }>
-  >;
+  findAll(): Promise<EndpointWithClient[]>;
 
-  findByAgentId(agentId: string): Promise<{
-    id: number;
-    agentId: string;
-    hostname: string;
-    ipAddress: string;
-    osName: string | null;
-    osVersion: string | null;
-    agentVersion: string | null;
-    status: string;
-    lastSeenAt: Date | null;
-  } | null>;
+  findById(id: number): Promise<EndpointRecord | null>;
 
-  create(data: {
-    agentId: string;
-    hostname: string;
-    ipAddress: string;
-    osName?: string;
-    osVersion?: string;
-    agentVersion?: string;
-    status: string;
-    lastSeenAt: Date;
-  }): Promise<{
-    id: number;
-    agentId: string;
-    hostname: string;
-    ipAddress: string;
-    osName: string | null;
-    osVersion: string | null;
-    agentVersion: string | null;
-    status: string;
-    lastSeenAt: Date | null;
-  }>;
+  findByAgentId(agentId: string): Promise<EndpointRecord | null>;
 
-  update(
-    id: number,
-    data: {
-      hostname?: string;
-      ipAddress?: string;
-      osName?: string;
-      osVersion?: string;
-      agentVersion?: string;
-      status?: string;
-      lastSeenAt?: Date;
-    },
-  ): Promise<{
-    id: number;
-    agentId: string;
-    hostname: string;
-    ipAddress: string;
-    osName: string | null;
-    osVersion: string | null;
-    agentVersion: string | null;
-    status: string;
-    lastSeenAt: Date | null;
-  }>;
+  findByCredentialHash(credentialHash: string): Promise<EndpointRecord | null>;
 
-  findOnlineNotSeenSince(cutoff: Date): Promise<
-    Array<{
-      id: number;
-      agentId: string;
-      hostname: string;
-      ipAddress: string;
-      osName: string | null;
-      osVersion: string | null;
-      agentVersion: string | null;
-      status: string;
-      lastSeenAt: Date | null;
-    }>
-  >;
+  create(data: EndpointCreateData): Promise<EndpointRecord>;
+
+  update(id: number, data: EndpointUpdateData): Promise<EndpointRecord>;
+
+  findOnlineNotSeenSince(cutoff: Date): Promise<EndpointRecord[]>;
 }
 
 export class PrismaEndpointRepository
@@ -91,8 +71,24 @@ export class PrismaEndpointRepository
 {
   async findAll() {
     return prisma.endpoint.findMany({
+      include: {
+        client: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
       orderBy: {
         hostname: "asc",
+      },
+    });
+  }
+
+  async findById(id: number) {
+    return prisma.endpoint.findUnique({
+      where: {
+        id,
       },
     });
   }
@@ -105,33 +101,21 @@ export class PrismaEndpointRepository
     });
   }
 
-  async create(data: {
-    agentId: string;
-    hostname: string;
-    ipAddress: string;
-    osName?: string;
-    osVersion?: string;
-    agentVersion?: string;
-    status: string;
-    lastSeenAt: Date;
-  }) {
+  async findByCredentialHash(credentialHash: string) {
+    return prisma.endpoint.findUnique({
+      where: {
+        credentialHash,
+      },
+    });
+  }
+
+  async create(data: EndpointCreateData) {
     return prisma.endpoint.create({
       data,
     });
   }
 
-  async update(
-    id: number,
-    data: {
-      hostname?: string;
-      ipAddress?: string;
-      osName?: string;
-      osVersion?: string;
-      agentVersion?: string;
-      status?: string;
-      lastSeenAt?: Date;
-    },
-  ) {
+  async update(id: number, data: EndpointUpdateData) {
     return prisma.endpoint.update({
       where: {
         id,

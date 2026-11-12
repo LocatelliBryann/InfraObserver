@@ -243,9 +243,11 @@ Métricas, painéis e alertas da aplicação ficam no Grafana, em `https://infra
 
 **Conectar um computador real ao servidor**
 
-1. Gere um token novo (`openssl rand -hex 32`) e acrescente-o em `AGENT_TOKENS` no `.env` da VM.
-2. Aplique a mudança: `docker compose -f docker-compose.prod.yml up -d backend`. A versão vem do `IMAGE_TAG` do `.env`, que o CD atualiza a cada deploy.
-3. No computador monitorado (Windows), rode o instalador da release e informe `https://<domínio>` e o token novo ([docs/agent-windows.md](agent-windows.md)). Pelo código-fonte, configure o `agent/.env` com os mesmos valores.
+1. No dashboard, em **Clientes**, cadastre o cliente (uma vez) e clique em **Gerar token**. Copie o token de instalação (`ioe_...`): ele aparece uma única vez.
+2. No computador monitorado (Windows), rode o instalador da release e informe `https://<domínio>` e o token de instalação ([docs/agent-windows.md](agent-windows.md)). O mesmo token serve para todos os PCs desse cliente.
+3. Na primeira conexão, o agente troca o token por uma credencial só dele. Para cortar um PC depois, use **Revogar acesso** na saúde do endpoint.
+
+Não é preciso mexer no `.env` da VM. A lista `AGENT_TOKENS` continua existindo para o agente demo e para os PCs instalados antes da versão 1.7.0.
 
 **Backup do banco**
 

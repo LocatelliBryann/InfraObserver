@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 
 import { UserMenu } from "./auth/UserMenu";
 import { BrandMark } from "./components/BrandMark";
+import { ClientsSection } from "./components/ClientsSection";
 import { DashboardContent } from "./components/DashboardContent";
 import { DashboardHeader } from "./components/DashboardHeader";
 import { PlatformStatus } from "./components/PlatformStatus";
@@ -9,10 +10,12 @@ import { SidebarNavigation } from "./components/SidebarNavigation";
 import type { MetricPeriodKey } from "./config/metricPeriods";
 import { useAlertHistory } from "./hooks/useAlertHistory";
 import { useAlerts } from "./hooks/useAlerts";
+import { useClients } from "./hooks/useClients";
 import { useEndpointHealth } from "./hooks/useEndpointHealth";
 import { useEndpoints } from "./hooks/useEndpoints";
 import { useFileEvents } from "./hooks/useFileEvents";
 import { useMetrics } from "./hooks/useMetrics";
+import { endpointsService } from "./services/endpointsService";
 import {
   EMPTY_FILE_EVENT_FILTERS,
   type FileEventFilters,
@@ -49,6 +52,14 @@ function App() {
     error: alertHistoryError,
     refresh: refreshAlertHistory,
   } = useAlertHistory();
+
+  const {
+    clients,
+    loading: clientsLoading,
+    error: clientsError,
+    refresh: refreshClients,
+    createClient,
+  } = useClients();
 
   const [selectedEndpointId, setSelectedEndpointId] =
     useState<number | null>(null);
@@ -113,6 +124,7 @@ function App() {
       refreshAlertHistory(),
       refreshFileEvents(),
       refreshMetrics(),
+      refreshClients(),
     ]);
   }, [
     refreshEndpoints,
@@ -120,7 +132,16 @@ function App() {
     refreshAlertHistory,
     refreshFileEvents,
     refreshMetrics,
+    refreshClients,
   ]);
+
+  const revokeEndpoint = useCallback(
+    async (endpointId: number) => {
+      await endpointsService.revokeEndpoint(endpointId);
+      await refreshEndpoints();
+    },
+    [refreshEndpoints],
+  );
 
   const platformStatus = isLoading
     ? "Carregando dados..."
@@ -224,7 +245,16 @@ function App() {
             fileEventsError={fileEventsError}
             fileEventFilters={fileEventFilters}
             onFileEventFiltersChange={setFileEventFilters}
-          />
+            onRevokeEndpoint={revokeEndpoint}
+          >
+            <ClientsSection
+              clients={clients}
+              loading={clientsLoading}
+              error={clientsError}
+              onCreateClient={createClient}
+              onChanged={refreshClients}
+            />
+          </DashboardContent>
         </main>
       </div>
     </div>

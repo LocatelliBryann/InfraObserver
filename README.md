@@ -183,7 +183,7 @@ python -m src.main
 | Variável | Descrição | Padrão |
 |---|---|---|
 | `DATABASE_URL` | Conexão com o PostgreSQL | — |
-| `AGENT_TOKENS` | Tokens aceitos dos agentes, separados por vírgula | — |
+| `AGENT_TOKENS` | Tokens compartilhados aceitos dos agentes, separados por vírgula (agente demo e PCs instalados antes da 1.7.0). Os PCs novos entram com o token de instalação do cliente, gerado no dashboard | — |
 | `AGENT_COLLECTION_INTERVAL_SECONDS` | Intervalo de coleta dos agentes | `60` |
 | `OFFLINE_CHECK_INTERVAL_SECONDS` | Frequência da verificação de endpoints inativos | `60` |
 | `PORT` | Porta da API | `3000` |
@@ -199,7 +199,7 @@ python -m src.main
 | Variável | Descrição | Padrão |
 |---|---|---|
 | `INFRAOBSERVER_SERVER_URL` | Endereço do servidor central | — |
-| `INFRAOBSERVER_AGENT_TOKEN` | Token do agente (deve estar em `AGENT_TOKENS`) | — |
+| `INFRAOBSERVER_AGENT_TOKEN` | Token de instalação do cliente (`ioe_...`, trocado pela credencial do PC na primeira conexão) ou um token da lista `AGENT_TOKENS` | — |
 | `INFRAOBSERVER_AGENT_ID` | UUID único do endpoint. Sem ele, o agente gera um e salva em `agent-id` ao lado do `agent.env` (no instalador do Windows é sempre assim) | — |
 | `INFRAOBSERVER_COLLECTION_INTERVAL` | Intervalo de coleta, em segundos | `60` |
 | `INFRAOBSERVER_MONITORED_DIRECTORIES` | Diretórios monitorados, separados por vírgula. Pastas de rede pelo caminho UNC (`\\servidor\pasta`) | Área de Trabalho, Documentos, Downloads e Imagens de cada usuário |
@@ -220,6 +220,7 @@ No agente instalado pelo `setup.exe`, essas variáveis ficam em `C:\ProgramData\
 | `POST` | `/api/v1/metrics` | Envia uma coleta de métricas | Token do agente |
 | `POST` | `/api/v1/file-events` | Envia um evento de sistema de arquivos | Token do agente |
 | `GET` | `/api/v1/agent/update` | Versão que o agente deve instalar (URL do instalador e SHA-256); `204` se não houver | Token do agente |
+| `POST` | `/api/v1/agents/enroll` | Troca o token de instalação do cliente pela credencial do PC e registra o endpoint | Token de instalação |
 | `POST` | `/api/v1/auth/login` | Login do administrador (grava o cookie de sessão) | — |
 | `POST` | `/api/v1/auth/logout` | Encerra a sessão | — |
 | `GET` | `/api/v1/auth/me` | Usuário da sessão atual | Sessão |
@@ -228,6 +229,12 @@ No agente instalado pelo `setup.exe`, essas variáveis ficam em `C:\ProgramData\
 | `GET` | `/api/v1/metrics` | Histórico de métricas · `endpointId`, `from`, `to`, `limit` | Sessão |
 | `GET` | `/api/v1/file-events` | Eventos de arquivos · `endpointId`, `eventType` (ex.: `DELETE,MOVE`), `search`, `from`, `to`, `limit` | Sessão |
 | `GET` | `/api/v1/alerts` | Alertas · `status=active\|resolved\|all`, `endpointId`, `limit` | Sessão |
+| `POST` | `/api/v1/endpoints/:id/revoke` | Revoga o acesso do agente de um PC | Sessão |
+| `GET` | `/api/v1/clients` | Clientes, com o número de PCs e de tokens ativos | Sessão |
+| `POST` | `/api/v1/clients` | Cadastra um cliente (`name`) | Sessão |
+| `GET` | `/api/v1/clients/:id/enrollment-tokens` | Tokens de instalação do cliente (só o começo de cada um) | Sessão |
+| `POST` | `/api/v1/clients/:id/enrollment-tokens` | Gera um token de instalação (`expiresInDays` opcional); o valor completo vem só nesta resposta | Sessão |
+| `POST` | `/api/v1/clients/:id/enrollment-tokens/:tokenId/revoke` | Revoga um token de instalação | Sessão |
 | `GET` | `/health` | Verificação de saúde da API | — |
 
 ## Observabilidade

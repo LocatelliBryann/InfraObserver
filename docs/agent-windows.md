@@ -7,13 +7,13 @@ O agente é distribuído como um instalador (`InfraObserverAgentSetup-<versão>.
 - Windows 10, Windows 11 ou Windows Server 2016 ou mais novo, 64 bits
 - Permissão de administrador para instalar
 - Acesso de rede ao servidor InfraObserver (HTTPS de saída; o computador não precisa abrir nenhuma porta)
-- Um token de agente aceito pelo servidor (variável `AGENT_TOKENS` do backend)
+- Um token de instalação do cliente, gerado no dashboard em **Clientes → Gerar token** (começa com `ioe_`)
 
 ## Instalação
 
 1. Baixe o instalador na [última release](https://github.com/LocatelliBryann/InfraObserver/releases/latest).
 2. Rode o arquivo. O Windows pode mostrar "O Windows protegeu o computador", porque o instalador não tem assinatura digital paga (veja [Assinatura](#assinatura)). Clique em **Mais informações** e depois em **Executar assim mesmo**.
-3. Informe o endereço do servidor (ex.: `https://infraobserver.com.br`) e o token do agente.
+3. Informe o endereço do servidor (ex.: `https://infraobserver.com.br`) e o token de instalação.
 4. Conclua. Em até um minuto o computador aparece no dashboard.
 
 Para conferir o arquivo baixado, compare o SHA-256 com o `.sha256` publicado na mesma release:
@@ -33,7 +33,7 @@ Para instalar em vários computadores (script, GPO ou ferramenta de gestão), se
 | Parâmetro | Obrigatório | Descrição |
 |---|---|---|
 | `/SERVER=` | Na primeira instalação | Endereço do servidor, com `http://` ou `https://` |
-| `/TOKEN=` | Na primeira instalação | Token do agente |
+| `/TOKEN=` | Na primeira instalação | Token de instalação do cliente (`ioe_...`). O mesmo token serve para todos os PCs do cliente |
 | `/DIRS=` | Não | Pastas monitoradas, separadas por vírgula (ex.: `/DIRS="D:\Compartilhado,\\servidor\financeiro"`) |
 | `/LOG=` | Não | Grava o log do instalador no caminho informado |
 
@@ -50,6 +50,15 @@ Numa atualização silenciosa sem `/SERVER` e `/TOKEN`, a configuração atual �
 | Fila de envios | `C:\ProgramData\InfraObserver\outbox.db` (eventos e métricas esperando o servidor) |
 
 A pasta `C:\ProgramData\InfraObserver` só pode ser lida por administradores e pelo sistema, porque o `agent.env` guarda o token.
+
+## Token de instalação e credencial
+
+Na primeira conexão, o agente envia o token de instalação para o servidor e recebe uma **credencial só deste computador** (começa com `ioa_`). Ele grava a credencial no `agent.env`, no lugar do token de instalação, e a usa daí em diante. No log aparece `Agent enrolled; credential saved to the configuration`.
+
+- Revogar o token de instalação no dashboard impede novas instalações com ele, mas não derruba os PCs que já entraram.
+- Para cortar só este computador, use **Revogar acesso** na saúde do endpoint. O agente passa a receber 401 e tenta de novo a cada coleta, sem enviar nada; o log mostra `401 Client Error`.
+- Para voltar a ligar um PC revogado, reinstale com um token de instalação válido: ele recebe uma credencial nova.
+- PCs instalados antes da versão 1.7.0 continuam com o token antigo da lista `AGENT_TOKENS`. Para passar um deles para um cliente, reinstale com o token de instalação do cliente.
 
 O `agent.env` aceita todas as variáveis do agente (ver o [README](../README.md#4-agente)), por exemplo `INFRAOBSERVER_MONITORED_DIRECTORIES` e `INFRAOBSERVER_IGNORED_PATTERNS`. Depois de editar, reinicie o serviço.
 
