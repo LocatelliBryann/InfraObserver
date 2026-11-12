@@ -220,3 +220,45 @@ def test_the_result_file_is_removed_after_reading(tmp_path):
 def test_script_does_not_touch_the_console_encoding():
     assert "Console" not in SACL_SCRIPT
     assert "INFRAOBSERVER_AUDIT_RESULT" in SACL_SCRIPT
+
+
+def test_ignores_results_that_are_not_one_of_the_requested_folders(tmp_path):
+    windows = FakeWindows()
+
+    def odd_powershell(args, **kwargs):
+        if Path(args[0]).name.lower() != "powershell.exe":
+            return windows(args, **kwargs)
+        Path(kwargs["env"]["INFRAOBSERVER_AUDIT_RESULT"]).write_text(
+            json.dumps([
+                {"path": {"value": ["C:\\pasta"], "Count": 1}, "status": "changed"},
+                {"path": "C:\\outra", "status": "changed"},
+                {"path": "C:\\pasta", "status": "changed"},
+            ]),
+            encoding="utf-8",
+        )
+        return subprocess.CompletedProcess(args, 0, b"", b"")
+
+    configurator = WindowsAuditConfigurator(tmp_path, run=odd_powershell)
+
+    assert configurator.enable(["C:\\pasta"]) == ["C:\\pasta"]
+    assert configurator.load_state()["directories"] == ["C:\\pasta"]
+
+
+def test_load_state_drops_values_that_are_not_text(tmp_path):
+    (tmp_path / "audit-state.json").write_text(
+        json.dumps({
+            "enabledSubcategories": [FILE_SYSTEM, 3],
+            "directories": [{"value": ["C:\\pasta"], "Count": 1}, "C:\\pasta"],
+        }),
+        encoding="utf-8",
+    )
+
+    assert WindowsAuditConfigurator(tmp_path).load_state() == {
+        "enabledSubcategories": [FILE_SYSTEM],
+        "directories": ["C:\\pasta"],
+    }
+
+
+def test_script_does_not_wrap_the_folder_list_again():
+    assert "@(ConvertFrom-Json" not in SACL_SCRIPT
+    assert "[string]$item" in SACL_SCRIPT

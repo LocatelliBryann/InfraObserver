@@ -31,14 +31,17 @@ COMMAND_TIMEOUT_SECONDS = 60
 # As pastas vêm por variável de ambiente (JSON), nunca montadas no comando.
 SACL_SCRIPT = r"""
 $ErrorActionPreference = 'Stop'
-$paths = @(ConvertFrom-Json $env:INFRAOBSERVER_AUDIT_PATHS)
+# Sem @(): no PowerShell 5.1 o ConvertFrom-Json já devolve a lista, e o @()
+# criaria uma lista dentro de outra (o caminho virava um objeto).
+$paths = ConvertFrom-Json $env:INFRAOBSERVER_AUDIT_PATHS
 $action = $env:INFRAOBSERVER_AUDIT_ACTION
 $sid = New-Object System.Security.Principal.SecurityIdentifier('S-1-1-0')
 $rights = [System.Security.AccessControl.FileSystemRights]'WriteData, AppendData, Delete, DeleteSubdirectoriesAndFiles'
 $inherit = [System.Security.AccessControl.InheritanceFlags]'ContainerInherit, ObjectInherit'
 $rule = New-Object System.Security.AccessControl.FileSystemAuditRule($sid, $rights, $inherit, 'None', 'Success')
 $results = @()
-foreach ($path in $paths) {
+foreach ($item in $paths) {
+  $path = [string]$item
   try {
     $dir = New-Object System.IO.DirectoryInfo($path)
     $security = $dir.GetAccessControl('Audit')
@@ -115,9 +118,14 @@ class WindowsAuditConfigurator:
         except (OSError, ValueError):
             return {"enabledSubcategories": [], "directories": []}
 
+        # Só textos: um valor estranho no arquivo não pode virar um caminho.
         return {
-            "enabledSubcategories": list(state.get("enabledSubcategories", [])),
-            "directories": list(state.get("directories", [])),
+            "enabledSubcategories": [
+                item for item in state.get("enabledSubcategories", []) if isinstance(item, str)
+            ],
+            "directories": [
+                item for item in state.get("directories", []) if isinstance(item, str)
+            ],
         }
 
     def save_state(self, state: dict) -> None:
@@ -201,7 +209,17 @@ class WindowsAuditConfigurator:
         result_file.unlink()
         results = json.loads(output) if output else []
 
-        return results if isinstance(results, list) else [results]
+        if not isinstance(results, list):
+            results = [results]
+
+        # Vale só o resultado de uma pasta pedida, com o caminho como texto.
+        return [
+            item
+            for item in results
+            if isinstance(item, dict)
+            and isinstance(item.get("path"), str)
+            and item["path"] in directories
+        ]
 
     # ---------- ligar / desfazer ----------
 
