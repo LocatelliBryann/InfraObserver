@@ -1,10 +1,16 @@
 import logging
 import os
+import re
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
 AGENT_TOKEN_VARIABLE = "INFRAOBSERVER_AGENT_TOKEN"
+
+# Formato da credencial gerada pelo servidor: "ioa_" + base64url.
+# Só esse formato é gravado: nada que venha da rede entra no arquivo sem
+# passar por aqui (nem quebra de linha, nem aspas, nem outra variável).
+AGENT_CREDENTIAL_PATTERN = re.compile(r"ioa_[A-Za-z0-9_-]{8,256}")
 
 # Únicos arquivos que o agente aceita reescrever: o agent.env do instalador e
 # o .env de quem roda do código-fonte.
@@ -46,8 +52,8 @@ def save_agent_token(config_path: Path, token: str) -> None:
     para não sobrar um agent.env pela metade se o computador desligar no meio.
     Fica em UTF-8 com BOM, igual ao que o instalador grava.
     """
-    if any(character in token for character in '"\r\n'):
-        raise ValueError("Agent token cannot contain quotes or line breaks")
+    if not AGENT_CREDENTIAL_PATTERN.fullmatch(token):
+        raise ValueError("Agent credential has an unexpected format")
 
     config_path = _safe_config_path(config_path)
 
