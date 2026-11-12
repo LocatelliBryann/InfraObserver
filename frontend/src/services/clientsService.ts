@@ -18,6 +18,8 @@ export interface EnrollmentToken {
   revokedAt: string | null;
   lastUsedAt: string | null;
   usageCount: number;
+  // Se o token pode ser copiado de novo (ativo e gerado a partir da v1.8.0).
+  revealable: boolean;
 }
 
 export interface CreatedEnrollmentToken {
@@ -74,6 +76,15 @@ export const clientsService = {
       `/api/v1/clients/${clientId}/enrollment-tokens`,
       expiresInDays === undefined ? {} : { expiresInDays },
     );
+  },
+
+  // Token completo de novo, para instalar mais PCs do cliente.
+  async revealEnrollmentToken(clientId: number, tokenId: number): Promise<string> {
+    const response = await apiClient.post<{ token: string }>(
+      `/api/v1/clients/${clientId}/enrollment-tokens/${tokenId}/reveal`,
+    );
+
+    return response.token;
   },
 
   async revokeEnrollmentToken(

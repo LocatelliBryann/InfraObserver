@@ -39,7 +39,7 @@ describe("useAlertHistory", () => {
       expect(result.current.history).toEqual([resolvedAlert]);
     });
 
-    expect(mockedGetAlertHistory).toHaveBeenCalledWith(50);
+    expect(mockedGetAlertHistory).toHaveBeenCalledWith(50, undefined);
     expect(result.current.error).toBeNull();
   });
 

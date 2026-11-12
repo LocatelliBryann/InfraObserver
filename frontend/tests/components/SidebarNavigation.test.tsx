@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 
 import { Users } from "lucide-react";
+import { MemoryRouter } from "react-router";
 
 import { SidebarNavigation } from "../../src/components/SidebarNavigation";
 import { NAVIGATION_ITEMS, type NavigationItem } from "../../src/config/navigation";
@@ -18,11 +19,17 @@ const WITH_COMING_SOON: NavigationItem[] = [
   },
 ];
 
-function renderSidebar(collapsed = false, items?: NavigationItem[]) {
+function renderSidebar(
+  collapsed = false,
+  items?: NavigationItem[],
+  path = "/",
+) {
   const onToggle = vi.fn();
 
   render(
-    <SidebarNavigation collapsed={collapsed} onToggle={onToggle} items={items} />,
+    <MemoryRouter initialEntries={[path]}>
+      <SidebarNavigation collapsed={collapsed} onToggle={onToggle} items={items} />
+    </MemoryRouter>,
   );
 
   return {
@@ -45,7 +52,7 @@ describe("SidebarNavigation", () => {
       Métricas: "#metricas",
       Endpoints: "#endpoints",
       Eventos: "#eventos",
-      Clientes: "#clientes",
+      Clientes: "/clientes",
     };
 
     for (const [label, href] of Object.entries(expected)) {
@@ -53,6 +60,30 @@ describe("SidebarNavigation", () => {
         within(nav).getByRole("link", { name: label }),
       ).toHaveAttribute("href", href);
     }
+  });
+
+  it("should link the sections back to the dashboard from another page", () => {
+    const { nav } = renderSidebar(false, undefined, "/clientes");
+
+    expect(within(nav).getByRole("link", { name: "Alertas" })).toHaveAttribute(
+      "href",
+      "/#alertas",
+    );
+
+    const clients = within(nav).getByRole("link", { name: "Clientes" });
+
+    expect(clients).toHaveAttribute("aria-current", "page");
+    expect(within(nav).getByRole("link", { name: "Dashboard" })).not.toHaveAttribute(
+      "aria-current",
+    );
+  });
+
+  it("should not mark Clientes on the dashboard", () => {
+    const { nav } = renderSidebar();
+
+    expect(within(nav).getByRole("link", { name: "Clientes" })).not.toHaveAttribute(
+      "aria-current",
+    );
   });
 
   it("should show an item without section as disabled and coming soon", () => {

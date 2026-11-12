@@ -243,7 +243,7 @@ Métricas, painéis e alertas da aplicação ficam no Grafana, em `https://infra
 
 **Conectar um computador real ao servidor**
 
-1. No dashboard, em **Clientes**, cadastre o cliente (uma vez) e clique em **Gerar token**. Copie o token de instalação (`ioe_...`): ele aparece uma única vez.
+1. No dashboard, em **Clientes**, cadastre o cliente (uma vez) e clique em **Gerar token**. Copie o token de instalação (`ioe_...`). Enquanto ele estiver ativo, dá para copiar de novo pelo botão **Copiar token** (ou **Copiar comando**, que já traz a instalação silenciosa) na lista de tokens.
 2. No computador monitorado (Windows), rode o instalador da release e informe `https://<domínio>` e o token de instalação ([docs/agent-windows.md](agent-windows.md)). O mesmo token serve para todos os PCs desse cliente.
 3. Na primeira conexão, o agente troca o token por uma credencial só dele. Para cortar um PC depois, use **Revogar acesso** na saúde do endpoint.
 

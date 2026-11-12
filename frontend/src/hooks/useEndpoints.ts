@@ -6,6 +6,7 @@ import {
   endpointsService,
   type Endpoint,
 } from "../services/endpointsService";
+import type { ClientFilter } from "../services/clientFilter";
 
 interface UseEndpointsResult {
   endpoints: Endpoint[];
@@ -14,7 +15,8 @@ interface UseEndpointsResult {
   refresh: () => Promise<void>;
 }
 
-export function useEndpoints(): UseEndpointsResult {
+// Sem filtro, todos os endpoints; com filtro, só os do cliente.
+export function useEndpoints(clientFilter?: ClientFilter): UseEndpointsResult {
   const [endpoints, setEndpoints] = useState<Endpoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -24,14 +26,14 @@ export function useEndpoints(): UseEndpointsResult {
       setLoading(true);
       setError(null);
 
-      const data = await endpointsService.getEndpoints();
+      const data = await endpointsService.getEndpoints(clientFilter);
       setEndpoints(data);
     } catch {
       setError("Não foi possível carregar os endpoints.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [clientFilter]);
 
   useEffect(() => {
     void refresh();

@@ -1,6 +1,6 @@
 import { prisma } from "../database/prisma";
 
-// Token de instalação sem o hash: é o que a API devolve.
+// Token de instalação sem o hash e sem o valor cifrado: é o que a API devolve.
 export interface EnrollmentTokenRecord {
   id: number;
   clientId: number;
@@ -10,6 +10,8 @@ export interface EnrollmentTokenRecord {
   revokedAt: Date | null;
   lastUsedAt: Date | null;
   usageCount: number;
+  // Se o token pode ser copiado de novo no dashboard.
+  revealable: boolean;
 }
 
 export interface EnrollmentTokenRepository {
@@ -17,6 +19,7 @@ export interface EnrollmentTokenRepository {
     clientId: number;
     tokenHash: string;
     prefix: string;
+    encryptedToken?: string;
     expiresAt?: Date;
   }): Promise<EnrollmentTokenRecord>;
 
@@ -26,12 +29,15 @@ export interface EnrollmentTokenRepository {
 
   findByClientId(clientId: number): Promise<EnrollmentTokenRecord[]>;
 
+  // Valor cifrado, só para copiar de novo; nunca vai na listagem.
+  findEncryptedToken(id: number): Promise<string | null>;
+
   revoke(id: number, revokedAt: Date): Promise<EnrollmentTokenRecord>;
 
   registerUse(id: number, usedAt: Date): Promise<void>;
 }
 
-const PUBLIC_FIELDS = {
+const SELECTED_FIELDS = {
   id: true,
   clientId: true,
   prefix: true,
@@ -40,7 +46,23 @@ const PUBLIC_FIELDS = {
   revokedAt: true,
   lastUsedAt: true,
   usageCount: true,
+  encryptedToken: true,
 } as const;
+
+type SelectedToken = Omit<EnrollmentTokenRecord, "revealable"> & {
+  encryptedToken: string | null;
+};
+
+function toRecord({
+  encryptedToken,
+  ...token
+}: SelectedToken): EnrollmentTokenRecord {
+  return { ...token, revealable: encryptedToken !== null };
+}
+
+function toRecordOrNull(token: SelectedToken | null) {
+  return token ? toRecord(token) : null;
+}
 
 export class PrismaEnrollmentTokenRepository
   implements EnrollmentTokenRepository
@@ -49,42 +71,63 @@ export class PrismaEnrollmentTokenRepository
     clientId: number;
     tokenHash: string;
     prefix: string;
+    encryptedToken?: string;
     expiresAt?: Date;
   }) {
-    return prisma.enrollmentToken.create({
-      data,
-      select: PUBLIC_FIELDS,
-    });
+    return toRecord(
+      await prisma.enrollmentToken.create({
+        data,
+        select: SELECTED_FIELDS,
+      }),
+    );
   }
 
   async findByHash(tokenHash: string) {
-    return prisma.enrollmentToken.findUnique({
-      where: { tokenHash },
-      select: PUBLIC_FIELDS,
-    });
+    return toRecordOrNull(
+      await prisma.enrollmentToken.findUnique({
+        where: { tokenHash },
+        select: SELECTED_FIELDS,
+      }),
+    );
   }
 
   async findById(id: number) {
-    return prisma.enrollmentToken.findUnique({
-      where: { id },
-      select: PUBLIC_FIELDS,
-    });
+    return toRecordOrNull(
+      await prisma.enrollmentToken.findUnique({
+        where: { id },
+        select: SELECTED_FIELDS,
+      }),
+    );
   }
 
   async findByClientId(clientId: number) {
-    return prisma.enrollmentToken.findMany({
+    const tokens = await prisma.enrollmentToken.findMany({
       where: { clientId },
-      select: PUBLIC_FIELDS,
+      select: SELECTED_FIELDS,
       orderBy: { createdAt: "desc" },
     });
+
+    return tokens.map(toRecord);
   }
 
-  async revoke(id: number, revokedAt: Date) {
-    return prisma.enrollmentToken.update({
+  async findEncryptedToken(id: number) {
+    const token = await prisma.enrollmentToken.findUnique({
       where: { id },
-      data: { revokedAt },
-      select: PUBLIC_FIELDS,
+      select: { encryptedToken: true },
     });
+
+    return token?.encryptedToken ?? null;
+  }
+
+  // Revogado, o token não precisa mais ser copiado: o valor cifrado é apagado.
+  async revoke(id: number, revokedAt: Date) {
+    return toRecord(
+      await prisma.enrollmentToken.update({
+        where: { id },
+        data: { revokedAt, encryptedToken: null },
+        select: SELECTED_FIELDS,
+      }),
+    );
   }
 
   async registerUse(id: number, usedAt: Date) {

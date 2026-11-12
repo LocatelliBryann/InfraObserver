@@ -7,6 +7,9 @@ interface EndpointStatusListProps {
   health: EndpointHealth[];
   activeEndpointId: number | null;
   onSelect: (endpointId: number) => void;
+  // Nome do cliente de cada endpoint, mostrado embaixo do hostname quando o
+  // dashboard mostra todos os clientes juntos.
+  clientNames?: ReadonlyMap<number, string>;
 }
 
 const STATUS_STYLES: Record<
@@ -35,6 +38,7 @@ export function EndpointStatusList({
   health,
   activeEndpointId,
   onSelect,
+  clientNames,
 }: EndpointStatusListProps) {
   if (health.length === 0) {
     return null;
@@ -66,8 +70,16 @@ export function EndpointStatusList({
                   aria-hidden="true"
                   className={`h-2 w-2 shrink-0 rounded-full ${style.dot}`}
                 />
-                <span className="truncate text-sm font-medium text-slate-100">
-                  {item.hostname}
+                <span className="min-w-0">
+                  <span className="block truncate text-sm font-medium text-slate-100">
+                    {item.hostname}
+                  </span>
+
+                  {clientNames?.has(item.endpointId) && (
+                    <span className="block truncate text-xs text-slate-500">
+                      {clientNames.get(item.endpointId)}
+                    </span>
+                  )}
                 </span>
               </span>
 

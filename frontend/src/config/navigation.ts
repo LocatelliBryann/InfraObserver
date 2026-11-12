@@ -16,7 +16,12 @@ export const DASHBOARD_SECTIONS = {
   metrics: "metricas",
   endpoints: "endpoints",
   events: "eventos",
-  clients: "clientes",
+} as const;
+
+// Páginas do app (rotas). O dashboard fica em "/".
+export const ROUTES = {
+  dashboard: "/",
+  clients: "/clientes",
 } as const;
 
 export type DashboardSectionId =
@@ -25,8 +30,10 @@ export type DashboardSectionId =
 export interface NavigationItem {
   label: string;
   icon: LucideIcon;
-  // Sem seção = funcionalidade ainda não disponível ("Em breve").
+  // Seção do dashboard (âncora) ou página própria (rota).
+  // Sem nenhum dos dois = funcionalidade ainda não disponível ("Em breve").
   sectionId?: DashboardSectionId;
+  path?: string;
   comingSoonDescription?: string;
 }
 
@@ -60,7 +67,7 @@ export const NAVIGATION_ITEMS: NavigationItem[] = [
   {
     label: "Clientes",
     icon: Users,
-    sectionId: DASHBOARD_SECTIONS.clients,
+    path: ROUTES.clients,
   },
 ];
 

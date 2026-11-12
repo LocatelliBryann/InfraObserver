@@ -3,6 +3,7 @@ import type { AlertService } from "./alert.service";
 import type { EndpointService } from "./endpoint.service";
 import { OFFLINE_ALERT } from "./endpoint-status.service";
 import type { MetricService } from "./metric.service";
+import type { ClientFilter } from "../utils/validation/query.schema";
 
 // RF06: status exibido no dashboard para cada endpoint.
 export type EndpointHealthStatus = "ONLINE" | "OFFLINE" | "ALERT";
@@ -33,8 +34,8 @@ export class EndpointHealthService {
     private readonly offlineThresholdMs: () => number = getOfflineThresholdMs,
   ) {}
 
-  async findAll(): Promise<EndpointHealth[]> {
-    const endpoints = await this.endpointService.findAll();
+  async findAll(clientId?: ClientFilter): Promise<EndpointHealth[]> {
+    const endpoints = await this.endpointService.findAll(clientId);
     const activeAlertsByEndpoint = await this.countActiveAlerts();
 
     return Promise.all(

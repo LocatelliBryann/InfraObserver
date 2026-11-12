@@ -9,7 +9,7 @@ export class AlertController {
   ) {}
 
   /**
-   * GET /api/v1/alerts?status=active|resolved|all&endpointId=1&limit=50
+   * GET /api/v1/alerts?status=active|resolved|all&endpointId=1&clientId=3&limit=50
    * Sem parâmetros, mantém o comportamento anterior: só alertas ativos.
    */
   async findAll(req: Request, res: Response): Promise<void> {

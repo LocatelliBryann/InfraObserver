@@ -1,4 +1,5 @@
 import { apiClient } from "./apiClient";
+import { withClientFilter, type ClientFilter } from "./clientFilter";
 
 export interface Endpoint {
   id: string;
@@ -10,6 +11,7 @@ export interface Endpoint {
   // Versão do agente instalado; agentes antigos não informam.
   agentVersion?: string | null;
   status: string;
+  lastSeenAt?: string | null;
   // Cliente dono do PC; nulo nos agentes que usam o token compartilhado.
   client?: { id: number; name: string } | null;
   // Quando o PC recebeu a credencial própria e quando o acesso foi revogado.
@@ -22,9 +24,9 @@ interface EndpointsResponse {
 }
 
 export const endpointsService = {
-  async getEndpoints(): Promise<Endpoint[]> {
+  async getEndpoints(clientFilter?: ClientFilter): Promise<Endpoint[]> {
     const response = await apiClient.get<EndpointsResponse>(
-      "/api/v1/endpoints",
+      withClientFilter("/api/v1/endpoints", clientFilter),
     );
 
     return response.data;

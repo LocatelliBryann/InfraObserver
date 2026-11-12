@@ -1,9 +1,14 @@
 import { prisma } from "../database/prisma";
-import type { AlertStatusFilter } from "../utils/validation/query.schema";
+import {
+  clientIdCondition,
+  type AlertStatusFilter,
+  type ClientFilter,
+} from "../utils/validation/query.schema";
 
 export interface AlertFilters {
   status: AlertStatusFilter;
   endpointId?: number;
+  clientId?: ClientFilter;
   limit: number;
 }
 
@@ -88,10 +93,13 @@ export interface AlertRepository {
 }
 
 export class PrismaAlertRepository implements AlertRepository {
-  async findMany({ status, endpointId, limit }: AlertFilters) {
+  async findMany({ status, endpointId, clientId, limit }: AlertFilters) {
     return prisma.alert.findMany({
       where: {
         ...(endpointId ? { endpointId } : {}),
+        ...(clientId === undefined
+          ? {}
+          : { endpoint: clientIdCondition(clientId) }),
         ...(status === "active" ? { resolvedAt: null } : {}),
         ...(status === "resolved" ? { resolvedAt: { not: null } } : {}),
       },

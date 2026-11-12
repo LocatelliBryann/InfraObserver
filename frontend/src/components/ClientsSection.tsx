@@ -1,12 +1,23 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 
-import { Building2, Check, Copy, KeyRound, Plus } from "lucide-react";
+import { Building2, Check, Copy, KeyRound, Monitor, Plus } from "lucide-react";
+import { Link } from "react-router";
 
 import { EmptyState } from "./EmptyState";
+import { RevokeAccessButton } from "./EndpointHealthSection";
 
-import { DASHBOARD_SECTIONS } from "../config/navigation";
+import { ROUTES } from "../config/navigation";
 import { describeClientError } from "../hooks/useClients";
 import { getServerUrl } from "../services/apiClient";
+import {
+  CLIENT_FILTER_PARAM,
+  clientFilterToUrlValue,
+} from "../services/clientFilter";
+import type {
+  EndpointHealth,
+  EndpointStatus,
+} from "../services/endpointHealthService";
+import type { Endpoint } from "../services/endpointsService";
 import {
   clientsService,
   enrollmentTokenStatus,
@@ -67,6 +78,35 @@ interface ClientsSectionProps {
   error: string | null;
   onCreateClient: (name: string) => Promise<Client>;
   onChanged: () => Promise<void> | void;
+  // PCs de todos os clientes; a página mostra os do cliente selecionado.
+  endpoints?: Endpoint[];
+  health?: EndpointHealth[];
+  onRevokeEndpoint?: (endpointId: number) => Promise<void>;
+}
+
+const NO_ENDPOINTS: Endpoint[] = [];
+const NO_HEALTH: EndpointHealth[] = [];
+
+const ENDPOINT_STATUS_BADGES: Record<EndpointStatus, { label: string; className: string }> = {
+  ONLINE: { label: "Online", className: "bg-emerald-500/10 text-emerald-400" },
+  ALERT: { label: "Alerta", className: "bg-amber-500/10 text-amber-400" },
+  OFFLINE: { label: "Offline", className: "bg-rose-500/10 text-rose-400" },
+};
+
+export function dashboardLinkForClient(clientId: number): string {
+  return `${ROUTES.dashboard}?${CLIENT_FILTER_PARAM}=${clientFilterToUrlValue(clientId)}`;
+}
+
+function describeEndpoint(endpoint: Endpoint): string {
+  return [
+    endpoint.ipAddress,
+    endpoint.agentVersion ? `Agente ${endpoint.agentVersion}` : undefined,
+    endpoint.lastSeenAt
+      ? `Visto em ${new Date(endpoint.lastSeenAt).toLocaleString("pt-BR")}`
+      : undefined,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 }
 
 export function ClientsSection({
@@ -75,6 +115,9 @@ export function ClientsSection({
   error,
   onCreateClient,
   onChanged,
+  endpoints = NO_ENDPOINTS,
+  health = NO_HEALTH,
+  onRevokeEndpoint,
 }: ClientsSectionProps) {
   const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
   const [name, setName] = useState("");
@@ -112,22 +155,7 @@ export function ClientsSection({
   }
 
   return (
-    <section
-      id={DASHBOARD_SECTIONS.clients}
-      aria-labelledby="clients-heading"
-      className="min-w-0 scroll-mt-6"
-    >
-      <div className="mb-4">
-        <h3 id="clients-heading" className="text-lg font-semibold text-slate-100">
-          Clientes
-        </h3>
-
-        <p className="mt-1 text-xs text-slate-500">
-          Cada cliente tem tokens de instalação. Um PC instalado com o token
-          recebe uma credencial só dele, que pode ser revogada sem afetar os
-          outros.
-        </p>
-      </div>
+    <section aria-label="Clientes" className="min-w-0">
 
       <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)]">
         <div className="min-w-0 rounded-2xl border border-slate-800 bg-slate-900 p-5">
@@ -204,11 +232,22 @@ export function ClientsSection({
         </div>
 
         {selectedClient ? (
-          <EnrollmentTokensPanel
-            key={selectedClient.id}
-            client={selectedClient}
-            onChanged={onChanged}
-          />
+          <div className="min-w-0 space-y-4">
+            <ClientEndpointsPanel
+              client={selectedClient}
+              endpoints={endpoints.filter(
+                (endpoint) => endpoint.client?.id === selectedClient.id,
+              )}
+              health={health}
+              onRevokeEndpoint={onRevokeEndpoint}
+            />
+
+            <EnrollmentTokensPanel
+              key={selectedClient.id}
+              client={selectedClient}
+              onChanged={onChanged}
+            />
+          </div>
         ) : (
           <div className="min-w-0 rounded-2xl border border-slate-800 bg-slate-900 p-5">
             <EmptyState
@@ -219,6 +258,101 @@ export function ClientsSection({
         )}
       </div>
     </section>
+  );
+}
+
+interface ClientEndpointsPanelProps {
+  client: Client;
+  endpoints: Endpoint[];
+  health: EndpointHealth[];
+  onRevokeEndpoint?: (endpointId: number) => Promise<void>;
+}
+
+// PCs do cliente selecionado, com status e revogação de acesso.
+function ClientEndpointsPanel({
+  client,
+  endpoints,
+  health,
+  onRevokeEndpoint,
+}: ClientEndpointsPanelProps) {
+  return (
+    <div className="min-w-0 rounded-2xl border border-slate-800 bg-slate-900 p-5">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <h4 className="min-w-0 truncate text-sm font-semibold text-slate-200">
+          PCs · {client.name}
+        </h4>
+
+        {endpoints.length > 0 && (
+          <Link
+            to={dashboardLinkForClient(client.id)}
+            className="text-xs font-medium text-cyan-400 hover:text-cyan-300"
+          >
+            Ver no painel
+          </Link>
+        )}
+      </div>
+
+      {endpoints.length === 0 ? (
+        <div className="mt-4">
+          <EmptyState
+            title="Nenhum PC instalado"
+            description="Gere um token de instalação e use no instalador dos PCs deste cliente."
+          />
+        </div>
+      ) : (
+        <ul
+          className="mt-3 divide-y divide-slate-800"
+          aria-label={`PCs do cliente ${client.name}`}
+        >
+          {endpoints.map((endpoint) => {
+            const id = Number(endpoint.id);
+            const status = health.find((item) => item.endpointId === id)?.status ?? "OFFLINE";
+            const badge = ENDPOINT_STATUS_BADGES[status];
+
+            return (
+              <li
+                key={endpoint.id}
+                className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="flex min-w-0 items-start gap-3">
+                  <Monitor size={18} className="mt-0.5 shrink-0 text-slate-500" aria-hidden="true" />
+
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="truncate text-sm font-medium text-slate-100">
+                        {endpoint.hostname}
+                      </span>
+
+                      <span className={`rounded-full px-2 py-0.5 text-xs ${badge.className}`}>
+                        {badge.label}
+                      </span>
+                    </div>
+
+                    <p className="mt-0.5 text-xs text-slate-500">
+                      {describeEndpoint(endpoint)}
+                    </p>
+                  </div>
+                </div>
+
+                {endpoint.credentialRevokedAt ? (
+                  <span className="w-fit shrink-0 rounded-full bg-rose-500/10 px-3 py-1 text-xs font-medium text-rose-400">
+                    Acesso revogado em{" "}
+                    {new Date(endpoint.credentialRevokedAt).toLocaleDateString("pt-BR")}
+                  </span>
+                ) : (
+                  onRevokeEndpoint && (
+                    <RevokeAccessButton
+                      hostname={endpoint.hostname}
+                      onConfirm={() => onRevokeEndpoint(id)}
+                    />
+                  )
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
   );
 }
 
@@ -391,14 +525,44 @@ function EnrollmentTokensPanel({ client, onChanged }: EnrollmentTokensPanelProps
                         </button>
                       </div>
                     ) : (
-                      <button
-                        type="button"
-                        aria-label={`Revogar o token ${token.prefix}`}
-                        onClick={() => setConfirmingTokenId(token.id)}
-                        className="shrink-0 rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:border-rose-500/60 hover:text-rose-400"
-                      >
-                        Revogar
-                      </button>
+                      <div className="flex shrink-0 flex-wrap items-center gap-2">
+                        {token.revealable ? (
+                          <>
+                            <RevealCopyButton
+                              label="Copiar token"
+                              ariaLabel={`Copiar o token ${token.prefix}`}
+                              reveal={() => clientsService.revealEnrollmentToken(client.id, token.id)}
+                            />
+
+                            <RevealCopyButton
+                              label="Copiar comando"
+                              ariaLabel={`Copiar o comando de instalação do token ${token.prefix}`}
+                              reveal={async () =>
+                                silentInstallCommand(
+                                  getServerUrl(),
+                                  await clientsService.revealEnrollmentToken(client.id, token.id),
+                                )
+                              }
+                            />
+                          </>
+                        ) : (
+                          <span
+                            className="text-xs text-slate-500"
+                            title="Tokens gerados antes da v1.8.0 não podem ser copiados de novo. Gere um token novo para continuar instalando."
+                          >
+                            Não pode ser copiado
+                          </span>
+                        )}
+
+                        <button
+                          type="button"
+                          aria-label={`Revogar o token ${token.prefix}`}
+                          onClick={() => setConfirmingTokenId(token.id)}
+                          className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:border-rose-500/60 hover:text-rose-400"
+                        >
+                          Revogar
+                        </button>
+                      </div>
                     ))}
                 </li>
               );
@@ -410,7 +574,7 @@ function EnrollmentTokensPanel({ client, onChanged }: EnrollmentTokensPanelProps
       <p className="mt-4 text-xs text-slate-500">
         Revogar um token impede novas instalações com ele. Os PCs que já
         entraram continuam enviando dados; para cortar um PC, use “Revogar
-        acesso” na saúde do endpoint.
+        acesso” na lista de PCs acima.
       </p>
     </div>
   );
@@ -425,12 +589,50 @@ function CreatedTokenNotice({ created }: { created: CreatedEnrollmentToken }) {
       className="mt-4 space-y-3 rounded-xl border border-amber-500/40 bg-amber-500/5 p-4"
     >
       <p className="text-xs font-medium text-amber-300">
-        Copie agora: este token não será mostrado de novo.
+        Token gerado. Ele serve para todos os PCs deste cliente e pode ser
+        copiado de novo pela lista enquanto estiver ativo.
       </p>
 
       <CopyField label="Token de instalação" value={created.token} />
       <CopyField label="Instalação silenciosa (como administrador; ajuste o nome do arquivo baixado)" value={command} />
     </div>
+  );
+}
+
+const COPIED_FEEDBACK_MS = 2000;
+
+interface RevealCopyButtonProps {
+  label: string;
+  ariaLabel: string;
+  reveal: () => Promise<string>;
+}
+
+// Busca o token no servidor só no clique e copia; o valor não fica na tela.
+function RevealCopyButton({ label, ariaLabel, reveal }: RevealCopyButtonProps) {
+  const [state, setState] = useState<"idle" | "busy" | "copied" | "error">("idle");
+
+  async function handleClick() {
+    try {
+      setState("busy");
+      await navigator.clipboard.writeText(await reveal());
+      setState("copied");
+      globalThis.setTimeout(() => setState("idle"), COPIED_FEEDBACK_MS);
+    } catch {
+      setState("error");
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      aria-label={ariaLabel}
+      disabled={state === "busy"}
+      onClick={() => void handleClick()}
+      className="inline-flex items-center gap-1 rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:border-cyan-500/60 hover:text-cyan-400 disabled:opacity-50"
+    >
+      {state === "copied" ? <Check size={14} aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
+      {state === "copied" ? "Copiado" : state === "error" ? "Falhou, tente de novo" : label}
+    </button>
   );
 }
 

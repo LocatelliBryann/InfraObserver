@@ -5,6 +5,7 @@ import {
   getAlertHistory,
   type Alert,
 } from "../services/alertsService";
+import type { ClientFilter } from "../services/clientFilter";
 
 interface UseAlertHistoryResult {
   history: Alert[];
@@ -14,7 +15,10 @@ interface UseAlertHistoryResult {
 }
 
 // RF12: histórico de alertas resolvidos.
-export function useAlertHistory(limit = 50): UseAlertHistoryResult {
+export function useAlertHistory(
+  limit = 50,
+  clientFilter?: ClientFilter,
+): UseAlertHistoryResult {
   const [history, setHistory] = useState<Alert[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -24,7 +28,7 @@ export function useAlertHistory(limit = 50): UseAlertHistoryResult {
     setError(null);
 
     try {
-      const result = await getAlertHistory(limit);
+      const result = await getAlertHistory(limit, clientFilter);
       setHistory(result);
     } catch {
       setError("Não foi possível carregar o histórico de alertas.");
@@ -32,7 +36,7 @@ export function useAlertHistory(limit = 50): UseAlertHistoryResult {
     } finally {
       setLoading(false);
     }
-  }, [limit]);
+  }, [limit, clientFilter]);
 
   useEffect(() => {
     void refresh();

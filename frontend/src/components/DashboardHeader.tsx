@@ -9,12 +9,16 @@ interface DashboardHeaderProps {
   hasApiError: boolean;
   isLoading: boolean;
   onRefresh: () => Promise<void>;
+  title?: string;
+  description?: string;
 }
 
 export function DashboardHeader({
   hasApiError,
   isLoading,
   onRefresh,
+  title = "Visão geral",
+  description = "Acompanhe a saúde e o desempenho dos seus endpoints.",
 }: DashboardHeaderProps) {
   const statusLabel = hasApiError
     ? "Conexão instável"
@@ -43,11 +47,11 @@ export function DashboardHeader({
           </p>
 
           <h2 className="mt-2 text-3xl font-bold tracking-tight text-slate-100 md:text-4xl">
-            Visão geral
+            {title}
           </h2>
 
           <p className="mt-3 text-sm text-slate-400 md:text-base">
-            Acompanhe a saúde e o desempenho dos seus endpoints.
+            {description}
           </p>
         </div>
 

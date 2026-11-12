@@ -53,13 +53,16 @@ model Client {
 
 // Token de instalação: serve para vários PCs do mesmo cliente e é trocado,
 // na primeira conexão, por uma credencial própria de cada agente.
-// Só o hash fica no banco; o token aparece uma única vez no dashboard.
+// O hash confere o token na instalação; o valor cifrado permite copiar de novo.
 model EnrollmentToken {
   id         Int       @id @default(autoincrement())
   clientId   Int
   tokenHash  String    @unique
   // Começo do token (ex.: ioe_AbC1), para reconhecer na lista sem revelar o resto.
   prefix     String
+  // Token cifrado (AES-256-GCM) para o administrador poder copiar de novo.
+  // Apagado quando o token é revogado. Nulo nos tokens antigos.
+  encryptedToken String?
   createdAt  DateTime  @default(now())
   expiresAt  DateTime?
   revokedAt  DateTime?

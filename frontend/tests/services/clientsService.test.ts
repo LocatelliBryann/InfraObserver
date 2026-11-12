@@ -50,6 +50,12 @@ describe("clientsService", () => {
       { expiresInDays: 30 },
     );
 
+    vi.mocked(apiClient.post).mockResolvedValueOnce({ token: "ioe_x" });
+    expect(await clientsService.revealEnrollmentToken(3, 9)).toBe("ioe_x");
+    expect(apiClient.post).toHaveBeenLastCalledWith(
+      "/api/v1/clients/3/enrollment-tokens/9/reveal",
+    );
+
     await clientsService.revokeEnrollmentToken(3, 9);
     expect(apiClient.post).toHaveBeenLastCalledWith(
       "/api/v1/clients/3/enrollment-tokens/9/revoke",
@@ -80,5 +86,31 @@ describe("enrollmentTokenStatus", () => {
         now,
       ),
     ).toBe("revoked");
+  });
+});
+
+describe("filtro por cliente nas consultas", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("passa o clientId para endpoints, saúde e alertas", async () => {
+    const { getEndpointHealth } = await import("../../src/services/endpointHealthService");
+    const { getActiveAlerts, getAlertHistory } = await import("../../src/services/alertsService");
+    vi.mocked(apiClient.get).mockResolvedValue({ data: [] });
+
+    await endpointsService.getEndpoints(3);
+    expect(apiClient.get).toHaveBeenLastCalledWith("/api/v1/endpoints?clientId=3");
+
+    await getEndpointHealth("none");
+    expect(apiClient.get).toHaveBeenLastCalledWith("/api/v1/endpoints/health?clientId=none");
+
+    await getActiveAlerts(3);
+    expect(apiClient.get).toHaveBeenLastCalledWith("/api/v1/alerts?clientId=3");
+
+    await getAlertHistory(20, 3);
+    expect(apiClient.get).toHaveBeenLastCalledWith(
+      "/api/v1/alerts?status=resolved&limit=20&clientId=3",
+    );
   });
 });
