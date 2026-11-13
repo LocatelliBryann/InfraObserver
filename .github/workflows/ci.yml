@@ -140,6 +140,106 @@ jobs:
           name: agent-coverage
           path: agent/coverage.xml
 
+  e2e:
+    name: E2E - Dashboard no navegador
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: infraobserver
+          POSTGRES_USER: infraobserver
+          POSTGRES_PASSWORD: infraobserver_dev
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U infraobserver -d infraobserver"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://infraobserver:infraobserver_dev@localhost:5432/infraobserver
+      E2E_ADMIN_EMAIL: e2e@infraobserver.local
+      E2E_API_URL: http://localhost:3000
+      E2E_BASE_URL: http://localhost:4173
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Build da API
+        working-directory: backend
+        run: |
+          npm ci
+          npx prisma generate
+          npx prisma migrate deploy
+          npm run build
+
+      # Senha gerada nesta execução; nunca aparece no log.
+      - name: Administrador do teste
+        working-directory: backend
+        run: |
+          E2E_ADMIN_PASSWORD="$(openssl rand -hex 24)"
+          echo "::add-mask::$E2E_ADMIN_PASSWORD"
+          echo "E2E_ADMIN_PASSWORD=$E2E_ADMIN_PASSWORD" >> "$GITHUB_ENV"
+          printf '%s\n%s\n' "$E2E_ADMIN_PASSWORD" "$E2E_ADMIN_PASSWORD" | npm run -s create-admin -- --email "$E2E_ADMIN_EMAIL" --name "E2E"
+
+      # Fora de produção o cookie de sessão não exige HTTPS. O dashboard
+      # (porta 4173) chama a API (porta 3000), então a origem é liberada.
+      - name: Subir a API
+        working-directory: backend
+        run: |
+          export CORS_ORIGINS="$E2E_BASE_URL"
+          nohup npm start > api.log 2>&1 &
+          for attempt in $(seq 1 30); do
+            if curl -sf "$E2E_API_URL/health" > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat api.log
+          exit 1
+
+      - name: Build e preview do dashboard
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+          nohup npx vite preview --port 4173 --strictPort > preview.log 2>&1 &
+          for attempt in $(seq 1 30); do
+            if curl -sf "$E2E_BASE_URL" > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat preview.log
+          exit 1
+
+      - name: Instalar Playwright
+        working-directory: e2e
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Testes E2E
+        working-directory: e2e
+        run: npx playwright test
+
+      - name: Relatório do Playwright
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-report
+          path: |
+            e2e/playwright-report
+            e2e/test-results
+            backend/api.log
+          if-no-files-found: ignore
+
   sonarqube:
     name: SonarQube Cloud
     runs-on: ubuntu-latest
