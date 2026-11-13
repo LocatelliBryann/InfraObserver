@@ -1,0 +1,126 @@
+name: Load Test
+
+# Teste de carga da RFC v1.1 (seção 7.1): 50 PCs enviando métricas a cada
+# 60 s e administradores com o dashboard aberto. Roda sob demanda, numa API
+# montada aqui com um banco limpo, para não encher a produção de PCs falsos.
+# O runner do GitHub (2 vCPU) tem porte parecido com o da VM de produção.
+
+on:
+  workflow_dispatch:
+    inputs:
+      agents:
+        description: "PCs simulados"
+        default: "50"
+      interval_seconds:
+        description: "Intervalo de envio de cada PC (s)"
+        default: "60"
+      duration:
+        description: "Duração (ex.: 10m)"
+        default: "10m"
+
+permissions:
+  contents: read
+
+jobs:
+  k6:
+    name: k6 - API sob carga
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: infraobserver
+          POSTGRES_USER: infraobserver
+          POSTGRES_PASSWORD: infraobserver_dev
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U infraobserver -d infraobserver"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://infraobserver:infraobserver_dev@localhost:5432/infraobserver
+      ADMIN_EMAIL: carga@infraobserver.local
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Build da API
+        working-directory: backend
+        run: |
+          npm ci
+          npx prisma generate
+          npx prisma migrate deploy
+          npm run build
+
+      # Senha gerada nesta execução; nunca aparece no log.
+      - name: Administrador do teste
+        working-directory: backend
+        run: |
+          ADMIN_PASSWORD="$(openssl rand -hex 24)"
+          echo "::add-mask::$ADMIN_PASSWORD"
+          echo "ADMIN_PASSWORD=$ADMIN_PASSWORD" >> "$GITHUB_ENV"
+          printf '%s\n%s\n' "$ADMIN_PASSWORD" "$ADMIN_PASSWORD" | npm run -s create-admin -- --email "$ADMIN_EMAIL" --name "Teste de carga"
+
+      - name: Subir a API (modo produção)
+        working-directory: backend
+        run: |
+          export NODE_ENV=production
+          export JWT_SECRET="$(openssl rand -hex 32)"
+          export AGENT_TOKENS="$(openssl rand -hex 32)"
+          nohup npm start > api.log 2>&1 &
+          for attempt in $(seq 1 30); do
+            if curl -sf http://localhost:3000/health > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat api.log
+          exit 1
+
+      - name: Setup k6
+        uses: grafana/setup-k6-action@v1
+
+      # Entradas por variável de ambiente, nunca direto no comando.
+      - name: Rodar o teste de carga
+        env:
+          AGENTS: ${{ inputs.agents }}
+          INTERVAL_SECONDS: ${{ inputs.interval_seconds }}
+          DURATION: ${{ inputs.duration }}
+        run: >-
+          k6 run
+          -e BASE_URL=http://localhost:3000
+          -e ADMIN_EMAIL="$ADMIN_EMAIL"
+          -e ADMIN_PASSWORD="$ADMIN_PASSWORD"
+          -e AGENTS="$AGENTS"
+          -e INTERVAL_SECONDS="$INTERVAL_SECONDS"
+          -e DURATION="$DURATION"
+          validation/load/infraobserver.js
+
+      - name: Resumo na página da execução
+        if: always()
+        run: |
+          if [ -f validation/load/results/summary.md ]; then
+            cat validation/load/results/summary.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Guardar resultados
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: load-test-results
+          path: |
+            validation/load/results/summary.md
+            validation/load/results/summary.json
+            backend/api.log
+          if-no-files-found: ignore

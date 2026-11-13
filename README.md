@@ -257,15 +257,18 @@ Todo push e pull request passa pelo pipeline de CI: testes dos três módulos co
 
 | Módulo | Testes | Cobertura de linhas |
 |---|---|---|
-| Backend | 109 (unitários, de rota e de integração com PostgreSQL) | ~90% |
-| Frontend | 61 (componentes, hooks e serviços) | ~85% |
-| Agente | 59 | ~97% |
+| Backend | 309 (unitários, de rota e de integração com PostgreSQL) | ~92% |
+| Frontend | 173 (componentes, hooks e serviços) | ~95% |
+| Agente | 243 | ~99% |
+| E2E | 5 (Playwright: login, dashboard e clientes no navegador, com API e banco de verdade) | - |
 
 ```bash
 cd backend  && npm run test:coverage
 cd frontend && npm run test:coverage
 cd agent    && python -m pytest --cov=src
 ```
+
+Além dos testes do CI, a validação da RFC (seção 7.1) tem teste de carga com k6 (workflow **Load Test**, sob demanda), medição de CPU do agente e teste de usabilidade (SUS). Scripts em [`validation/`](validation) e resultados em [docs/validacao.md](docs/validacao.md).
 
 ## Estrutura do repositório
 
@@ -276,6 +279,8 @@ InfraObserver/
 │   ├── prisma/            # Schema e migrations
 │   └── src/               # routes, controllers, services, repositories, jobs
 ├── frontend/              # Dashboard (React + Vite)
+├── e2e/                   # Testes ponta a ponta do dashboard (Playwright)
+├── validation/            # Teste de carga (k6), CPU do agente e roteiro do SUS
 ├── infrastructure/        # Docker Compose (dev e produção), Prometheus/Grafana, cloud-init da Azure e Terraform
 ├── docs/                  # RFC, documento do projeto e imagens
 └── .github/workflows/     # Pipelines de CI e de CD
@@ -305,6 +310,7 @@ InfraObserver/
 - [Agente no Windows](docs/agent-windows.md): instalador, serviço, instalação silenciosa, logs e build do instalador
 - [Guia de deploy em produção (Azure)](docs/deploy.md): arquitetura de produção, CD, rollback e operação
 - [Observabilidade](docs/observability.md): métricas, logs, alertas e acesso ao Grafana
+- [Validação](docs/validacao.md): teste de carga, consumo do agente, usabilidade (SUS), E2E e piloto
 - [Segurança](docs/security.md): login do administrador, sessão, proteção contra força bruta, CSRF e XSS
 - [Documento do projeto](docs/Project.md)
 - [Identidade visual](docs/brand/README.md): logo, cores, tipografia e regras de uso
