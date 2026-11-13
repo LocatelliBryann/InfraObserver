@@ -16,11 +16,13 @@ DEFAULT_DELAY_SECONDS = 3.0
 
 
 def find_actor(index: AuditIndex, event: FileEvent) -> AuditActor | None:
-    occurred_at = event.occurred_at
+    """Procura a auditoria no próprio arquivo e, se não houver, na pasta pai.
 
-    if event.event_type == FileEventType.CREATE:
-        # Arquivo novo: o Windows audita a permissão de criar na pasta pai.
-        return index.lookup(event.file_path, occurred_at, include_parent=True)
+    O registro no arquivo tem prioridade. A pasta pai cobre o que o Windows
+    audita nela: criar arquivo, apagar pelo Explorer (Lixeira) e salvar por
+    arquivo temporário, como faz o Bloco de Notas (grava ao lado e troca).
+    """
+    occurred_at = event.occurred_at
 
     if event.event_type in (FileEventType.RENAME, FileEventType.MOVE):
         # Renomear e mover exigem apagar o nome antigo: a auditoria fica nele.
@@ -29,7 +31,7 @@ def find_actor(index: AuditIndex, event: FileEvent) -> AuditActor | None:
             or index.lookup(event.file_path, occurred_at, include_parent=True)
         )
 
-    return index.lookup(event.file_path, occurred_at)
+    return index.lookup(event.file_path, occurred_at, include_parent=True)
 
 
 def enrich(index: AuditIndex, event: FileEvent) -> FileEvent:
