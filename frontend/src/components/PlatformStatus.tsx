@@ -1,5 +1,3 @@
-import { Wifi } from "lucide-react";
-
 interface PlatformStatusProps {
   status: string;
   description: string;
@@ -10,11 +8,11 @@ export function PlatformStatus({
   description,
 }: PlatformStatusProps) {
   return (
-    <div className="mt-10 rounded-xl border border-slate-800 bg-slate-950/60 p-4">
-      <div className="mb-2 flex items-center gap-2 text-emerald-400">
-        <Wifi size={16} />
+    <div className="mt-10 rounded-xl border border-slate-800 bg-slate-950/50 p-4 backdrop-blur">
+      <div className="mb-2 flex items-center gap-2.5 text-emerald-400">
+        <span aria-hidden="true" className="io-live" />
 
-        <span className="text-xs font-semibold uppercase tracking-wide">
+        <span className="text-xs font-semibold">
           Status da plataforma
         </span>
       </div>

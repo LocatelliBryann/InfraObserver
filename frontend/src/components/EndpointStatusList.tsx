@@ -18,12 +18,12 @@ const STATUS_STYLES: Record<
 > = {
   ONLINE: {
     label: "Online",
-    dot: "bg-emerald-400",
+    dot: "io-live text-emerald-400",
     badge: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400",
   },
   ALERT: {
     label: "Alerta",
-    dot: "bg-amber-400",
+    dot: "io-live text-amber-400",
     badge: "border-amber-500/30 bg-amber-500/10 text-amber-400",
   },
   OFFLINE: {
@@ -61,8 +61,8 @@ export function EndpointStatusList({
               aria-pressed={isActive}
               className={`flex w-full min-w-0 items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left transition-colors ${
                 isActive
-                  ? "border-cyan-500/60 bg-cyan-500/5"
-                  : "border-slate-800 bg-slate-900 hover:border-slate-700"
+                  ? "border-cyan-500/60 bg-cyan-500/10 shadow-[0_0_24px_-8px_var(--color-cyan-500)]"
+                  : "border-slate-800 bg-slate-900/60 hover:border-slate-700 hover:bg-slate-800/60"
               }`}
             >
               <span className="flex min-w-0 items-center gap-2">

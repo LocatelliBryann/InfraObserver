@@ -5,7 +5,7 @@ import {
   Monitor,
 } from "lucide-react";
 
-import { useEffect } from "react";
+import { useEffect, type CSSProperties } from "react";
 
 import { AlertsSection } from "./AlertsSection";
 import { ClientFilterSelect } from "./ClientFilterSelect";
@@ -78,6 +78,11 @@ interface DashboardContentProps {
 
 const NO_CLIENTS: Client[] = [];
 const NO_CLIENT_LABEL = "Sem cliente";
+
+// Ordem de entrada de cada bloco na animação de abertura da página.
+function revealOrder(index: number): CSSProperties {
+  return { "--i": index } as CSSProperties;
+}
 
 // Vindo de outra página (/#alertas), rola até a seção depois de montar.
 function useScrollToHash() {
@@ -170,7 +175,8 @@ export function DashboardContent({
       <section
         id={DASHBOARD_SECTIONS.overview}
         aria-labelledby="overview-heading"
-        className="min-w-0 scroll-mt-6"
+        className="io-reveal min-w-0 scroll-mt-6"
+        style={revealOrder(0)}
       >
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h3
@@ -209,6 +215,7 @@ export function DashboardContent({
             }
             icon={<Monitor size={21} />}
             accent="cyan"
+            order={0}
           />
 
           <MetricCard
@@ -225,6 +232,7 @@ export function DashboardContent({
             }
             icon={<CheckCircle2 size={21} />}
             accent="emerald"
+            order={1}
           />
 
           <MetricCard
@@ -241,6 +249,7 @@ export function DashboardContent({
             }
             icon={<AlertTriangle size={21} />}
             accent="amber"
+            order={2}
           />
 
           <MetricCard
@@ -255,10 +264,12 @@ export function DashboardContent({
             }
             icon={<Activity size={21} />}
             accent="violet"
+            order={3}
           />
         </div>
       </section>
 
+      <div className="io-reveal" style={revealOrder(1)}>
       <AlertsSection
         alerts={alerts}
         loading={alertsLoading}
@@ -268,11 +279,13 @@ export function DashboardContent({
         historyLoading={alertHistoryLoading}
         historyError={alertHistoryError}
       />
+      </div>
 
       <section
         id={DASHBOARD_SECTIONS.metrics}
         aria-labelledby="metrics-heading"
-        className="min-w-0 scroll-mt-6"
+        className="io-reveal min-w-0 scroll-mt-6"
+        style={revealOrder(2)}
       >
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h3
@@ -380,7 +393,8 @@ export function DashboardContent({
       <section
         id={DASHBOARD_SECTIONS.endpoints}
         aria-labelledby="health-heading"
-        className="min-w-0 scroll-mt-6"
+        className="io-reveal min-w-0 scroll-mt-6"
+        style={revealOrder(3)}
       >
         <div className="mb-4 flex items-center justify-between">
           <h3
@@ -424,6 +438,7 @@ export function DashboardContent({
         />
       </section>
 
+      <div className="io-reveal" style={revealOrder(4)}>
       <FileEventsSection
         events={fileEvents}
         loading={fileEventsLoading}
@@ -432,6 +447,7 @@ export function DashboardContent({
         filters={fileEventFilters}
         onFiltersChange={onFileEventFiltersChange}
       />
+      </div>
     </div>
   );
 }
@@ -447,7 +463,7 @@ function StatusMessage({
 }: StatusMessageProps) {
   return (
     <div
-      className={`flex min-h-64 min-w-0 items-center justify-center rounded-2xl border bg-slate-900 p-6 text-sm ${
+      className={`io-card flex min-h-64 min-w-0 items-center justify-center rounded-2xl border bg-slate-900 p-6 text-sm ${
         error
           ? "border-red-900/50 text-red-400"
           : "border-slate-800 text-slate-400"
@@ -464,6 +480,8 @@ type MetricCardProps = {
   description: string;
   icon: React.ReactNode;
   accent: "cyan" | "emerald" | "amber" | "violet";
+  // Posição do cartão, para a faixa de luz passar em sequência.
+  order?: number;
 };
 
 function MetricCard({
@@ -472,6 +490,7 @@ function MetricCard({
   description,
   icon,
   accent,
+  order = 0,
 }: MetricCardProps) {
   const accentClasses = {
     cyan: "bg-cyan-500/10 text-cyan-400",
@@ -481,10 +500,12 @@ function MetricCard({
   };
 
   return (
-    <article className="min-w-0 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 p-5 transition-colors hover:border-slate-700">
+    <article className="min-w-0 io-card rounded-2xl border border-slate-800 bg-slate-900 p-5">
+      <span className="io-shine" style={revealOrder(order)} aria-hidden="true" />
+
       <div className="mb-5 flex items-center justify-between">
         <div
-          className={`shrink-0 rounded-xl p-3 ${accentClasses[accent]}`}
+          className={`io-stat-icon shrink-0 rounded-xl p-3 ${accentClasses[accent]}`}
           aria-hidden="true"
         >
           {icon}
@@ -499,7 +520,7 @@ function MetricCard({
         {title}
       </p>
 
-      <p className="mt-2 break-words text-3xl font-bold tracking-tight text-slate-100">
+      <p className="io-stat-value mt-2 break-words text-4xl font-semibold text-slate-100">
         {value}
       </p>
 

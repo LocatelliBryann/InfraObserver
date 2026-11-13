@@ -158,7 +158,7 @@ export function ClientsSection({
     <section aria-label="Clientes" className="min-w-0">
 
       <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)]">
-        <div className="min-w-0 rounded-2xl border border-slate-800 bg-slate-900 p-5">
+        <div className="min-w-0 io-card rounded-2xl border border-slate-800 bg-slate-900 p-5">
           <form onSubmit={handleSubmit} className="flex gap-2" noValidate>
             <label htmlFor="new-client-name" className="sr-only">
               Nome do cliente
@@ -249,7 +249,7 @@ export function ClientsSection({
             />
           </div>
         ) : (
-          <div className="min-w-0 rounded-2xl border border-slate-800 bg-slate-900 p-5">
+          <div className="min-w-0 io-card rounded-2xl border border-slate-800 bg-slate-900 p-5">
             <EmptyState
               title="Nenhum cliente selecionado"
               description="Os tokens de instalação aparecem aqui."
@@ -276,7 +276,7 @@ function ClientEndpointsPanel({
   onRevokeEndpoint,
 }: ClientEndpointsPanelProps) {
   return (
-    <div className="min-w-0 rounded-2xl border border-slate-800 bg-slate-900 p-5">
+    <div className="min-w-0 io-card rounded-2xl border border-slate-800 bg-slate-900 p-5">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <h4 className="min-w-0 truncate text-sm font-semibold text-slate-200">
           PCs · {client.name}
@@ -425,7 +425,7 @@ function EnrollmentTokensPanel({ client, onChanged }: EnrollmentTokensPanelProps
   }
 
   return (
-    <div className="min-w-0 rounded-2xl border border-slate-800 bg-slate-900 p-5">
+    <div className="min-w-0 io-card rounded-2xl border border-slate-800 bg-slate-900 p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h4 className="min-w-0 truncate text-sm font-semibold text-slate-200">
           Tokens de instalação · {client.name}

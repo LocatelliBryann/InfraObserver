@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 
 import { Eye, EyeOff, LockKeyhole } from "lucide-react";
 
+import { Backdrop } from "../components/Backdrop";
 import { BrandMark } from "../components/BrandMark";
 import { loginErrorMessage } from "../services/authService";
 
@@ -38,12 +39,14 @@ export function LoginPage({ onLogin }: LoginPageProps) {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-950 px-4 py-10 text-slate-100">
-      <div className="w-full max-w-sm">
-        <div className="mb-8 flex flex-col items-center text-center">
-          <BrandMark size={48} className="mb-4 text-slate-100" />
+    <main className="relative flex min-h-screen items-center justify-center bg-slate-950 px-4 py-10 text-slate-100">
+      <Backdrop />
 
-          <h1 className="text-2xl font-bold tracking-tight">InfraObserver</h1>
+      <div className="io-reveal relative z-10 w-full max-w-sm">
+        <div className="mb-8 flex flex-col items-center text-center">
+          <BrandMark size={56} className="mb-5 text-slate-100" />
+
+          <h1 className="io-title text-3xl font-semibold">InfraObserver</h1>
 
           <p className="mt-1 text-sm text-slate-400">
             Acesso restrito ao administrador
@@ -54,7 +57,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
           onSubmit={handleSubmit}
           noValidate
           aria-label="Entrar no InfraObserver"
-          className="space-y-5 rounded-2xl border border-slate-800 bg-slate-900 p-6"
+          className="space-y-5 io-card rounded-2xl border border-slate-800 bg-slate-900 p-6"
         >
           <div>
             <label
@@ -72,7 +75,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               disabled={submitting}
-              className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-slate-100 outline-none transition-colors placeholder:text-slate-600 focus:border-cyan-500 disabled:opacity-60"
+              className="w-full rounded-lg border border-slate-700 bg-slate-950/70 px-3 py-2.5 text-sm text-slate-100 outline-none transition-colors placeholder:text-slate-600 focus:border-cyan-500 disabled:opacity-60"
               placeholder="admin@empresa.com.br"
             />
           </div>
@@ -93,7 +96,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 disabled={submitting}
-                className="w-full rounded-lg border border-slate-700 bg-slate-950 py-2.5 pl-3 pr-11 text-sm text-slate-100 outline-none transition-colors focus:border-cyan-500 disabled:opacity-60"
+                className="w-full rounded-lg border border-slate-700 bg-slate-950/70 py-2.5 pl-3 pr-11 text-sm text-slate-100 outline-none transition-colors focus:border-cyan-500 disabled:opacity-60"
               />
 
               <button
@@ -119,7 +122,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
           <button
             type="submit"
             disabled={submitting}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-cyan-500 px-4 py-2.5 text-sm font-semibold text-slate-950 transition-colors hover:bg-cyan-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 disabled:cursor-wait disabled:opacity-70"
+            className="io-glow-button flex w-full items-center justify-center gap-2 rounded-lg bg-cyan-500 px-4 py-2.5 text-sm font-semibold text-slate-950 transition-colors hover:bg-cyan-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 disabled:cursor-wait disabled:opacity-70"
           >
             <LockKeyhole size={16} aria-hidden="true" />
             {submitting ? "Entrando..." : "Entrar"}
