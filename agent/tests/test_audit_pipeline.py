@@ -84,6 +84,16 @@ def test_enrich_delete_prefers_the_audit_of_the_file_itself():
     assert event.username == "maria"
 
 
+def test_enrich_modify_saved_through_a_temporary_file_uses_the_parent_folder():
+    # O Bloco de Notas grava um temporário na pasta e troca pelo original.
+    index = index_with(access_4663(path=r"C:\Users\maria\Desktop", mask="0x2", process=r"C:\Windows\System32\notepad.exe"))
+
+    event = enrich(index, file_event(FileEventType.MODIFY, r"C:\Users\maria\Desktop\teste.txt"))
+
+    assert event.username == "maria"
+    assert event.process_name == "notepad.exe"
+
+
 def test_enrich_rename_and_move_use_the_old_path():
     index = index_with(access_4663())
 
