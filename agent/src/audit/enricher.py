@@ -22,6 +22,11 @@ def find_actor(index: AuditIndex, event: FileEvent) -> AuditActor | None:
         # Arquivo novo: o Windows audita a permissão de criar na pasta pai.
         return index.lookup(event.file_path, occurred_at, include_parent=True)
 
+    if event.event_type == FileEventType.DELETE:
+        # Apagar pelo Explorer (e a Lixeira) pode usar a permissão "excluir
+        # subpastas e arquivos" da pasta pai: o 4663 sai na pasta, não no arquivo.
+        return index.lookup(event.file_path, occurred_at, include_parent=True)
+
     if event.event_type in (FileEventType.RENAME, FileEventType.MOVE):
         # Renomear e mover exigem apagar o nome antigo: a auditoria fica nele.
         return (
