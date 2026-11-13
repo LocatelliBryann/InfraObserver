@@ -105,3 +105,15 @@ export function registerDomainMetrics(
 
   return { endpoints, activeAlerts };
 }
+
+// Quantos registros a política de retenção já apagou, por tabela (RF23).
+export function createRetentionMetrics(registry: Registry): Counter<"table"> {
+  return new Counter({
+    name: "infraobserver_retention_deleted_total",
+    help: "Registros apagados pela política de retenção, por tabela",
+    labelNames: ["table"],
+    registers: [registry],
+  });
+}
+
+export const retentionDeletedCounter = createRetentionMetrics(metricsRegistry);

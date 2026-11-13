@@ -66,7 +66,7 @@ export function EndpointHealthSection({
 }: EndpointHealthSectionProps) {
   if (!endpoint) {
     return (
-      <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6">
+      <section className="io-card rounded-2xl border border-slate-800 bg-slate-900/60 p-6">
         <h2 className="text-lg font-semibold text-white">
           Saúde do endpoint
         </h2>
@@ -86,7 +86,7 @@ export function EndpointHealthSection({
       : "";
 
   return (
-    <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6">
+    <section className="io-card rounded-2xl border border-slate-800 bg-slate-900/60 p-6">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
         <div>
           <p className="text-xs font-medium uppercase tracking-wider text-slate-500">

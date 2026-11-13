@@ -118,6 +118,7 @@ model FileEvent {
 
   @@index([endpointId])
   @@index([occurredAt])
+  @@index([receivedAt])
   @@index([eventType])
   @@map("file_event")
 }

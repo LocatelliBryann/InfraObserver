@@ -8,6 +8,7 @@ import {
 } from "react-router";
 
 import { UserMenu } from "./auth/UserMenu";
+import { Backdrop } from "./components/Backdrop";
 import { BrandMark } from "./components/BrandMark";
 import { ClientsSection } from "./components/ClientsSection";
 import { DashboardContent } from "./components/DashboardContent";
@@ -215,10 +216,12 @@ function App() {
               : "Monitoramento operacional";
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
-      <div className="flex min-h-screen flex-col md:flex-row">
+    <div className="relative min-h-screen bg-slate-950 text-slate-100">
+      <Backdrop />
+
+      <div className="relative z-10 flex min-h-screen flex-col md:flex-row">
         <aside
-          className={`relative w-full border-b border-slate-800 bg-slate-900 p-6 transition-all duration-300 md:sticky md:top-0 md:h-screen md:shrink-0 md:overflow-y-auto md:border-b-0 md:border-r ${
+          className={`relative w-full border-b border-slate-800/80 bg-slate-900/55 p-6 backdrop-blur-xl transition-all duration-300 md:sticky md:top-0 md:h-screen md:shrink-0 md:overflow-y-auto md:border-b-0 md:border-r md:border-slate-800/80 ${
             sidebarCollapsed ? "md:w-20" : "md:w-64"
           }`}
         >
@@ -231,7 +234,7 @@ function App() {
 
             {!sidebarCollapsed && (
               <div className="overflow-hidden whitespace-nowrap">
-                <h1 className="text-lg font-bold tracking-tight">
+                <h1 className="text-lg font-semibold">
                   InfraObserver
                 </h1>
 
@@ -314,7 +317,7 @@ function App() {
             <Route
               path={ROUTES.clients}
               element={
-                <div className="mx-auto w-full max-w-7xl min-w-0 p-6 md:p-10">
+                <div className="io-reveal mx-auto w-full max-w-7xl min-w-0 p-6 md:p-10">
                   <ClientsSection
                     clients={clients}
                     loading={clientsLoading}

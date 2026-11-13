@@ -86,6 +86,20 @@ O agente instalado (serviço, conta LocalSystem) liga a auditoria de arquivos do
 | Leitura do log | Pela API do Windows (pywin32), só eventos 4663, 4660 e 5145 depois do último lido; contas de computador (`PC$`) são ignoradas | `agent/src/audit/event_log.py`, `events.py` |
 | Privacidade | Só eventos das pastas monitoradas (onde está a regra); leituras não são auditadas. O agente envia usuário, programa e IP do evento, nada mais do log | `setup.py`, `enricher.py` |
 
+## Retenção dos dados
+
+Os dados de monitoramento não ficam para sempre: a RFC (RF23, RN06) define 60 dias.
+
+| Item | Como funciona | Onde está |
+|---|---|---|
+| Prazo | `DATA_RETENTION_DAYS`, padrão `60`. `0` desliga a limpeza | `config/retention.ts` |
+| Quando roda | Na partida da API e depois a cada 24 horas; duas limpezas nunca rodam ao mesmo tempo | `jobs/retention.job.ts` |
+| O que sai | Métricas pela data da coleta; eventos de arquivo pela data em que o servidor recebeu (o relógio do PC pode estar errado); alertas resolvidos pela data em que dispararam | `repositories/retention.repository.ts` |
+| O que fica | Alertas ainda abertos, mesmo antigos (descrevem o estado atual do PC), endpoints, clientes, tokens e usuários | `repositories/retention.repository.ts` |
+| Registro | O log mostra quantos registros saíram de cada tabela e o Prometheus soma em `infraobserver_retention_deleted_total` | `jobs/retention.job.ts` |
+
+No agente, a fila de envios guardada enquanto o servidor está fora do ar também tem limite: 7 dias ou 50 mil itens.
+
 ## Ataques considerados
 
 | Ataque | Proteção |

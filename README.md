@@ -59,6 +59,7 @@ O **InfraObserver** é uma alternativa leve e sem custo: um **agente** instalado
 | 🔑 **Login de administrador** | Dashboard e consultas da API protegidos por login, com sessão em cookie `httpOnly`, bloqueio após 5 tentativas erradas e proteção contra CSRF |
 | 🔐 **Autenticação dos agentes** | Token de instalação por cliente, trocado por uma credencial própria de cada PC; o acesso de um PC pode ser revogado pelo dashboard |
 | 🏢 **Clientes** | Página de clientes com os PCs, os tokens de instalação e a revogação de cada um; no dashboard, filtro por cliente que vale para indicadores, alertas e PCs |
+| 🗑️ **Retenção de dados** | Métricas, eventos de arquivo e alertas ficam 60 dias no banco (configurável) e uma limpeza diária remove o que é mais antigo; alertas ainda abertos são mantidos |
 | 🔁 **Agente resiliente** | Sem conexão com o servidor, guarda eventos e métricas numa fila em disco e envia tudo, na ordem e com o horário original, quando a conexão volta |
 
 <details>
@@ -188,6 +189,7 @@ python -m src.main
 | `AGENT_TOKENS` | Tokens compartilhados aceitos dos agentes, separados por vírgula (agente demo e PCs instalados antes da 1.7.0). Os PCs novos entram com o token de instalação do cliente, gerado no dashboard | — |
 | `AGENT_COLLECTION_INTERVAL_SECONDS` | Intervalo de coleta dos agentes | `60` |
 | `OFFLINE_CHECK_INTERVAL_SECONDS` | Frequência da verificação de endpoints inativos | `60` |
+| `DATA_RETENTION_DAYS` | Dias que métricas, eventos de arquivo e alertas ficam no banco; a limpeza roda na partida e uma vez por dia (`0` desliga) | `60` |
 | `PORT` | Porta da API | `3000` |
 | `JWT_SECRET` | Segredo que assina a sessão do login (obrigatório em produção, mínimo 32 caracteres) | segredo de desenvolvimento |
 | `SESSION_HOURS` | Duração da sessão do administrador, em horas | `8` |
@@ -292,6 +294,7 @@ InfraObserver/
 - [x] Instalador do agente para Windows, rodando como serviço
 - [x] Atualização automática dos agentes, com a versão de cada um no dashboard
 - [x] Clientes com token de instalação, credencial por PC e filtro por cliente no dashboard
+- [x] Retenção de 60 dias com limpeza automática diária
 - [ ] Telas de gerenciamento de endpoints e configurações
 
 ## Documentação

@@ -38,6 +38,8 @@ services:
       AGENT_TOKENS: ${AGENT_TOKENS:?defina AGENT_TOKENS no .env}
       AGENT_COLLECTION_INTERVAL_SECONDS: ${AGENT_COLLECTION_INTERVAL_SECONDS:-60}
       OFFLINE_CHECK_INTERVAL_SECONDS: ${OFFLINE_CHECK_INTERVAL_SECONDS:-60}
+      # Retenção (RF23): dias que métricas, eventos e alertas ficam no banco; 0 desliga.
+      DATA_RETENTION_DAYS: ${DATA_RETENTION_DAYS:-60}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       # Login do dashboard: assina o cookie de sessão (mínimo de 32 caracteres).
       JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET no .env}
