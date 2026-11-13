@@ -105,7 +105,7 @@ No agente, a fila de envios guardada enquanto o servidor está fora do ar també
 | Ataque | Proteção |
 |---|---|
 | Força bruta na senha | 5 tentativas erradas por IP a cada 15 minutos; depois, resposta 429. Logins certos não contam (`middlewares/login-rate-limit.middleware.ts`) |
-| Adivinhar um token de instalação | 256 bits aleatórios, e 20 tentativas erradas por IP a cada 15 minutos (`middlewares/enrollment-rate-limit.middleware.ts`). Instalações certas não contam, para vários PCs do mesmo escritório entrarem juntos |
+| Adivinhar um token de instalação | 256 bits aleatórios, e 20 tentativas erradas por IP a cada 15 minutos (`middlewares/enrollment-rate-limit.middleware.ts`). Instalações certas não contam, para vários PCs do mesmo escritório entrarem juntos: o erro só é contado depois que a resposta sai, então registros simultâneos não se bloqueiam (achado do teste de carga, ver [validacao.md](validacao.md)) |
 | Token de instalação vazado | Revogar o token no dashboard; os PCs já instalados continuam com a credencial deles |
 | PC roubado ou desligado da empresa | "Revogar acesso" no endpoint corta só aquele PC |
 | Um agente se passar por outro | A credencial só vale para o próprio `agentId` (403 para os outros) |
