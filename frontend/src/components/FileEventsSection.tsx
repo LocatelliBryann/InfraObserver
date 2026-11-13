@@ -126,7 +126,7 @@ export function FileEventsSection({
     <section
       id={DASHBOARD_SECTIONS.events}
       aria-labelledby="activity-heading"
-      className="min-w-0 scroll-mt-6 rounded-2xl border border-slate-800 bg-slate-900 p-6"
+      className="min-w-0 scroll-mt-6 io-card rounded-2xl border border-slate-800 bg-slate-900 p-6"
     >
       <div className="mb-4 flex items-center gap-3">
         <div className="shrink-0 rounded-xl bg-violet-500/10 p-3 text-violet-400">

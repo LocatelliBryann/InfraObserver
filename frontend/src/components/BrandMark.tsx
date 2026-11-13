@@ -26,6 +26,7 @@ export function BrandMark({ size = 32, title, className }: BrandMarkProps) {
       focusable="false"
     >
       <path
+        className="io-brand-ring"
         d="M 50.79 25.16 A 20 20 0 1 1 35.47 12.30"
         fill="none"
         stroke="currentColor"

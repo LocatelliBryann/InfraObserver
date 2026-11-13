@@ -19,6 +19,10 @@ import { EndpointStatusService } from "../services/endpoint-status.service";
 
 import { OfflineDetectionJob } from "../jobs/offline-detection.job";
 import { getOfflineCheckIntervalMs } from "./monitoring";
+import { RetentionJob } from "../jobs/retention.job";
+import { PrismaRetentionRepository } from "../repositories/retention.repository";
+import { RetentionService } from "../services/retention.service";
+import { getRetentionDays, RETENTION_RUN_INTERVAL_MS } from "./retention";
 
 import { PrometheusController } from "../controllers/prometheus.controller";
 
@@ -30,6 +34,7 @@ import { AuthService } from "../services/auth.service";
 import {
   metricsRegistry,
   registerDomainMetrics,
+  retentionDeletedCounter,
 } from "../observability/metrics";
 import { AgentUpdateController } from "../controllers/agent-update.controller";
 import { GitHubAgentReleaseSource } from "../services/agent-release.source";
@@ -89,6 +94,13 @@ const endpointStatusService = new EndpointStatusService(
 export const offlineDetectionJob = new OfflineDetectionJob(
   endpointStatusService,
   getOfflineCheckIntervalMs(),
+);
+
+// RF23: limpeza diária do que passou do período de retenção (60 dias).
+export const retentionJob = new RetentionJob(
+  new RetentionService(new PrismaRetentionRepository(), getRetentionDays()),
+  RETENTION_RUN_INTERVAL_MS,
+  retentionDeletedCounter,
 );
 
 const metricRepository = new PrismaMetricRepository();

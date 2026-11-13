@@ -5,7 +5,10 @@ import { BrowserRouter } from "react-router";
 import App from "./App";
 import { AuthGate } from "./auth/AuthGate";
 import { AuthProvider } from "./auth/AuthContext";
+import { installSpotlight } from "./effects/spotlight";
 import "./index.css";
+
+installSpotlight();
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

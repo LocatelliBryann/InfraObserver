@@ -52,6 +52,7 @@ Expostas pelo backend em `GET /metrics` com a biblioteca [prom-client](https://g
 | `http_request_duration_seconds{method, route, status_code}` | histogram | Tempo de resposta (usado para o p95) |
 | `infraobserver_endpoints{status}` | gauge | Endpoints monitorados por status: `ONLINE`, `ALERT`, `OFFLINE` |
 | `infraobserver_alerts_active{metric_type, severity}` | gauge | Alertas abertos no InfraObserver |
+| `infraobserver_retention_deleted_total{table}` | counter | Registros apagados pela retenção, por tabela (`metric`, `file_event`, `alert`) |
 | `process_*`, `nodejs_*` | vários | Memória, CPU, event loop e garbage collector do Node.js |
 
 O rótulo `route` usa o padrão da rota (`/api/v1/alerts/:id`), nunca a URL real, para não criar uma série nova a cada id. Rotas que não existem ficam agrupadas como `unmatched`.
@@ -72,7 +73,7 @@ O backend escreve logs em JSON com [pino](https://getpino.io). Cada requisição
 
 | Nível | Quando |
 |---|---|
-| `info` (30) | Requisição com sucesso, API iniciada |
+| `info` (30) | Requisição com sucesso, API iniciada, limpeza da retenção (com quantos registros saíram de cada tabela) |
 | `warn` (40) | Resposta 4xx, endpoint marcado como offline |
 | `error` (50) | Resposta 5xx ou falha interna, com o stack do erro |
 
