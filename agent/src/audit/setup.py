@@ -259,6 +259,41 @@ class WindowsAuditConfigurator:
 
         return audited
 
+    def release(self, directories: list[str]) -> list[str]:
+        """Tira a regra de auditoria de pastas que deixaram de ser monitoradas.
+
+        Só mexe nas pastas em que o próprio agente colocou a regra (as do
+        audit-state.json). Devolve as pastas de onde a regra saiu.
+        """
+        state = self.load_state()
+        own = {path.lower(): path for path in state["directories"]}
+        targets = [own[path.lower()] for path in directories if path.lower() in own]
+
+        if not targets:
+            return []
+
+        released = []
+
+        for item in self.apply_sacl(targets, "remove"):
+            path = item.get("path")
+
+            if item.get("status") in ("changed", "absent"):
+                released.append(path)
+            else:
+                logger.warning(
+                    "Could not remove file auditing from %s: %s",
+                    path,
+                    item.get("message"),
+                )
+
+        if released:
+            state["directories"] = [
+                path for path in state["directories"] if path not in released
+            ]
+            self.save_state(state)
+
+        return released
+
     def disable(self) -> bool:
         """Desfaz o que o agente ligou (usado na desinstalação).
 

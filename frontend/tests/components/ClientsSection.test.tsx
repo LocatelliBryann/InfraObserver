@@ -12,6 +12,25 @@ import {
 import { ApiError } from "../../src/services/apiClient";
 import { clientsService } from "../../src/services/clientsService";
 
+vi.mock("../../src/services/monitoredDirectoriesService", async (importOriginal) => {
+  const original =
+    await importOriginal<typeof import("../../src/services/monitoredDirectoriesService")>();
+
+  return {
+    ...original,
+    monitoredDirectoriesService: {
+      getClient: vi.fn().mockResolvedValue({
+        clientId: 1,
+        mode: "installation",
+        directories: [],
+        configuredAt: null,
+        customEndpointCount: 0,
+      }),
+      saveClient: vi.fn(),
+    },
+  };
+});
+
 vi.mock("../../src/services/clientsService", async (importOriginal) => {
   const original =
     await importOriginal<typeof import("../../src/services/clientsService")>();

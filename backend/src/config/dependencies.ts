@@ -17,6 +17,9 @@ import { EndpointHealthController } from "../controllers/endpoint-health.control
 import { EndpointHealthService } from "../services/endpoint-health.service";
 import { EndpointStatusService } from "../services/endpoint-status.service";
 
+import { MonitoredDirectoriesController } from "../controllers/monitored-directories.controller";
+import { PrismaMonitoredDirectoriesRepository } from "../repositories/monitored-directories.repository";
+import { MonitoredDirectoriesService } from "../services/monitored-directories.service";
 import { OfflineDetectionJob } from "../jobs/offline-detection.job";
 import { getOfflineCheckIntervalMs } from "./monitoring";
 import { RetentionJob } from "../jobs/retention.job";
@@ -60,6 +63,11 @@ const endpointRepository = new PrismaEndpointRepository();
 const endpointService = new EndpointService(endpointRepository);
 
 export const endpointController = new EndpointController(endpointService);
+
+// RF10: pastas monitoradas definidas pelo dashboard e aplicadas pelo agente.
+export const monitoredDirectoriesController = new MonitoredDirectoriesController(
+  new MonitoredDirectoriesService(new PrismaMonitoredDirectoriesRepository()),
+);
 
 // Clientes, tokens de instalação e credenciais dos agentes.
 const enrollmentTokenRepository = new PrismaEnrollmentTokenRepository();

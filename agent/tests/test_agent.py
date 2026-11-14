@@ -312,3 +312,35 @@ def test_agent_starts_the_audit_first_and_stops_it_after_the_folders():
         agent.start()
 
     assert calls == ["audit", "watch", "stop watch", "stop audit"]
+
+
+def test_agent_checks_the_dashboard_folders_after_sending_metrics(caplog):
+    directory_sync = Mock()
+    directory_sync.check.side_effect = [RuntimeError("falhou"), True]
+    agent = Agent(
+        registration_service=Mock(),
+        metrics_service=Mock(),
+        settings=Mock(),
+        directory_sync=directory_sync,
+    )
+
+    # Uma falha na configuração das pastas não derruba o ciclo.
+    assert agent.run_cycle() is True
+    assert "Failed to sync monitored directories" in caplog.text
+    assert agent.run_cycle() is True
+    assert directory_sync.check.call_count == 2
+
+
+def test_agent_skips_the_folder_check_when_metrics_fail():
+    metrics_service = Mock()
+    metrics_service.collect_and_send.side_effect = RuntimeError("offline")
+    directory_sync = Mock()
+    agent = Agent(
+        registration_service=Mock(),
+        metrics_service=metrics_service,
+        settings=Mock(),
+        directory_sync=directory_sync,
+    )
+
+    assert agent.run_cycle() is False
+    directory_sync.check.assert_not_called()

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Building2, Check, Copy, KeyRound, Monitor, Plus } from "lucide-react";
 import { Link } from "react-router";
 
+import { ClientDirectoriesPanel } from "./ClientDirectoriesPanel";
 import { EmptyState } from "./EmptyState";
 import { RevokeAccessButton } from "./EndpointHealthSection";
 
@@ -240,6 +241,11 @@ export function ClientsSection({
               )}
               health={health}
               onRevokeEndpoint={onRevokeEndpoint}
+            />
+
+            <ClientDirectoriesPanel
+              key={`directories-${selectedClient.id}`}
+              client={selectedClient}
             />
 
             <EnrollmentTokensPanel

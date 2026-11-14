@@ -29,12 +29,18 @@ class WindowsAuditService:
         self.enricher = enricher
         self.directories = directories
         self._setup_thread: threading.Thread | None = None
+        # Uma configuração de cada vez (a da partida e as do dashboard).
+        self._setup_lock = threading.Lock()
 
     @property
     def handle(self) -> Callable[[FileEvent], None]:
         return self.enricher.handle
 
     def _setup(self) -> None:
+        with self._setup_lock:
+            self._enable()
+
+    def _enable(self) -> None:
         logger.info(
             "Enabling Windows file auditing on %s folder(s)",
             len(self.directories),
@@ -63,6 +69,32 @@ class WindowsAuditService:
         self._setup_thread = threading.Thread(
             target=self._setup,
             name="audit-setup",
+            daemon=True,
+        )
+        self._setup_thread.start()
+
+    def update_directories(self, directories: list[str]) -> None:
+        """RF10: pastas mudaram pelo dashboard. Tira a regra de auditoria das
+        pastas que saíram (só das que o próprio agente ligou) e coloca nas
+        novas, em segundo plano."""
+        previous = self.directories
+        self.directories = list(directories)
+        wanted = {path.lower() for path in self.directories}
+        removed = [path for path in previous if path.lower() not in wanted]
+
+        def run() -> None:
+            with self._setup_lock:
+                if removed:
+                    try:
+                        self.configurator.release(removed)
+                    except Exception:
+                        logger.exception("Could not remove file auditing from old folders")
+
+                self._enable()
+
+        self._setup_thread = threading.Thread(
+            target=run,
+            name="audit-update",
             daemon=True,
         )
         self._setup_thread.start()

@@ -14,6 +14,7 @@ import { EndpointHealthSection } from "./EndpointHealthSection";
 import { EndpointStatusList } from "./EndpointStatusList";
 import { FileEventsSection } from "./FileEventsSection";
 import { MetricsChart } from "./MetricsChart";
+import { MonitoredDirectoriesPanel } from "./MonitoredDirectoriesPanel";
 
 import { DASHBOARD_SECTIONS } from "../config/navigation";
 import {
@@ -34,6 +35,10 @@ import type {
   FileEventFilters,
 } from "../services/fileEventsService";
 import type { Metric } from "../services/metricsService";
+import type {
+  EndpointDirectoriesInput,
+  MonitoredDirectories,
+} from "../services/monitoredDirectoriesService";
 
 interface DashboardContentProps {
   endpoints: Endpoint[];
@@ -70,6 +75,12 @@ interface DashboardContentProps {
   fileEventFilters?: FileEventFilters;
   onFileEventFiltersChange?: (filters: FileEventFilters) => void;
   onRevokeEndpoint?: (endpointId: number) => Promise<void>;
+  // RF10: pastas monitoradas do PC selecionado. Sem onSaveDirectories, o
+  // painel não aparece.
+  monitoredDirectories?: MonitoredDirectories | null;
+  monitoredDirectoriesLoading?: boolean;
+  monitoredDirectoriesError?: string | null;
+  onSaveDirectories?: (input: EndpointDirectoriesInput) => Promise<void>;
   // Filtro por cliente no topo; sem onClientFilterChange, o seletor não aparece.
   clients?: Client[];
   clientFilter?: ClientFilter;
@@ -129,6 +140,10 @@ export function DashboardContent({
   fileEventFilters = NO_FILE_EVENT_FILTERS,
   onFileEventFiltersChange = ignoreFilterChange,
   onRevokeEndpoint,
+  monitoredDirectories = null,
+  monitoredDirectoriesLoading = false,
+  monitoredDirectoriesError = null,
+  onSaveDirectories,
   clients = NO_CLIENTS,
   clientFilter,
   onClientFilterChange,
@@ -436,6 +451,17 @@ export function DashboardContent({
           metric={latestMetric}
           onRevoke={onRevokeEndpoint}
         />
+
+        {selectedEndpoint && onSaveDirectories && (
+          <MonitoredDirectoriesPanel
+            key={selectedEndpoint.id}
+            hostname={selectedEndpoint.hostname}
+            directories={monitoredDirectories}
+            loading={monitoredDirectoriesLoading}
+            error={monitoredDirectoriesError}
+            onSave={onSaveDirectories}
+          />
+        )}
       </section>
 
       <div className="io-reveal" style={revealOrder(4)}>

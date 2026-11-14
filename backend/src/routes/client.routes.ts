@@ -1,6 +1,10 @@
 import { Router } from "express";
 
-import { clientController, requireAuth } from "../config/dependencies";
+import {
+  clientController,
+  monitoredDirectoriesController,
+  requireAuth,
+} from "../config/dependencies";
 import { requireSameOrigin } from "../middlewares/same-origin.middleware";
 
 // Cadastro de clientes e tokens de instalação (só administradores).
@@ -37,6 +41,19 @@ clientRouter.post(
   requireSameOrigin,
   (req, res) => {
     void clientController.revokeEnrollmentToken(req, res);
+  },
+);
+
+// RF10: pastas monitoradas de todos os PCs do cliente sem lista própria.
+clientRouter.get("/:clientId/monitored-directories", (req, res) => {
+  void monitoredDirectoriesController.getClient(req, res);
+});
+
+clientRouter.put(
+  "/:clientId/monitored-directories",
+  requireSameOrigin,
+  (req, res) => {
+    void monitoredDirectoriesController.configureClient(req, res);
   },
 );
 
