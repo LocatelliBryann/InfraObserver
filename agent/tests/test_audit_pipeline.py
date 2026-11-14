@@ -282,3 +282,29 @@ def test_service_logs_how_many_folders_are_audited(caplog):
 
     assert "enabled on 2 folder(s)" in caplog.text
     assert "Could not read the Windows Security log" in caplog.text
+
+
+def test_service_update_moves_the_audit_to_the_new_folders():
+    configurator = Mock()
+    configurator.enable.return_value = ["C:\\nova"]
+    service = WindowsAuditService(configurator, Mock(), Mock(), ["C:\\velha", "C:\\fica"])
+
+    service.update_directories(["C:\\FICA", "C:\\nova"])
+    service._setup_thread.join(2)
+
+    configurator.release.assert_called_once_with(["C:\\velha"])
+    configurator.enable.assert_called_once_with(["C:\\FICA", "C:\\nova"])
+    assert service.directories == ["C:\\FICA", "C:\\nova"]
+
+
+def test_service_update_still_enables_when_the_release_fails(caplog):
+    configurator = Mock()
+    configurator.release.side_effect = RuntimeError("acesso negado")
+    configurator.enable.return_value = []
+    service = WindowsAuditService(configurator, Mock(), Mock(), ["C:\\velha"])
+
+    service.update_directories(["C:\\nova"])
+    service._setup_thread.join(2)
+
+    configurator.enable.assert_called_once_with(["C:\\nova"])
+    assert "Could not remove file auditing from old folders" in caplog.text

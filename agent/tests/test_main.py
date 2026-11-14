@@ -396,3 +396,87 @@ def test_main_fails_when_the_audit_is_only_partly_removed(tmp_path):
 
     assert exit_info.value.code == 1
     assert "only partly removed" in (tmp_path / "audit-removal.log").read_text(encoding="utf-8")
+
+
+def test_manager_replaces_the_folders_and_moves_the_audit(tmp_path):
+    from src.main import MonitoredDirectoriesManager
+
+    existing = tmp_path / "existe"
+    existing.mkdir()
+    missing = tmp_path / "nao-existe"
+    group = Mock()
+    audit_service = Mock()
+    create_observers = Mock(return_value=["observador"])
+    manager = MonitoredDirectoriesManager(group, create_observers, audit_service)
+
+    result = manager.apply([str(existing), str(missing)])
+
+    assert result == ([str(existing)], [str(missing)])
+    create_observers.assert_called_once_with([str(existing)])
+    group.replace.assert_called_once_with(["observador"])
+    audit_service.update_directories.assert_called_once_with([str(existing)])
+
+
+def test_manager_without_audit_only_replaces_the_folders(tmp_path):
+    from src.main import MonitoredDirectoriesManager
+
+    group = Mock()
+    manager = MonitoredDirectoriesManager(group, Mock(return_value=[]))
+
+    assert manager.apply([]) == ([], [])
+    group.replace.assert_called_once_with([])
+
+
+def test_create_agent_starts_with_the_folders_saved_from_the_dashboard(tmp_path):
+    import json
+
+    dashboard_folder = tmp_path / "dados"
+    dashboard_folder.mkdir()
+    (tmp_path / "remote-directories.json").write_text(
+        json.dumps(
+            {"source": "endpoint", "directories": [str(dashboard_folder)], "updatedAt": "t1"}
+        ),
+        encoding="utf-8",
+    )
+    settings = Mock()
+    settings.server_url = "http://localhost:3000"
+    settings.agent_token = "token"
+    settings.agent_id = "550e8400-e29b-41d4-a716-446655440031"
+    settings.monitored_directories = [str(tmp_path / "local")]
+    settings.ignored_patterns = []
+
+    with (
+        patch("src.main.AgentSettings.from_environment", return_value=settings),
+        patch("src.main.HttpClient"),
+        patch("src.main.Outbox"),
+        patch("src.main.create_audit_service", return_value=None),
+        patch("src.main.create_file_observers") as mock_create_observers,
+    ):
+        agent = create_agent(tmp_path)
+
+    assert mock_create_observers.call_args.kwargs["directories"] == [str(dashboard_folder)]
+    sync = agent.directory_sync
+    assert sync.current == [str(dashboard_folder)]
+    assert sync.current_updated_at == "t1"
+    assert sync.local_directories == [str(tmp_path / "local")]
+
+
+def test_create_agent_reports_missing_installation_folders(tmp_path):
+    settings = Mock()
+    settings.server_url = "http://localhost:3000"
+    settings.agent_token = "token"
+    settings.agent_id = "550e8400-e29b-41d4-a716-446655440032"
+    settings.monitored_directories = [str(tmp_path), str(tmp_path / "sumiu")]
+    settings.ignored_patterns = []
+
+    with (
+        patch("src.main.AgentSettings.from_environment", return_value=settings),
+        patch("src.main.HttpClient"),
+        patch("src.main.Outbox"),
+        patch("src.main.create_audit_service", return_value=None),
+        patch("src.main.create_file_observers"),
+    ):
+        agent = create_agent(tmp_path)
+
+    assert agent.directory_sync.monitored == [str(tmp_path)]
+    assert agent.directory_sync.missing == [str(tmp_path / "sumiu")]

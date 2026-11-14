@@ -262,3 +262,41 @@ def test_load_state_drops_values_that_are_not_text(tmp_path):
 def test_script_does_not_wrap_the_folder_list_again():
     assert "@(ConvertFrom-Json" not in SACL_SCRIPT
     assert "[string]$item" in SACL_SCRIPT
+
+
+def test_release_removes_the_rule_only_from_folders_the_agent_changed(tmp_path):
+    windows = FakeWindows(sacl_status="changed")
+    configurator = WindowsAuditConfigurator(tmp_path, run=windows)
+    configurator.save_state(
+        {"enabledSubcategories": [FILE_SYSTEM], "directories": [r"C:\Dados", r"C:\Outra"]}
+    )
+
+    released = configurator.release([r"c:\dados", r"C:\DoAdministrador"])
+
+    assert released == [r"C:\Dados"]
+    [command] = windows.commands("powershell.exe")
+    env = windows.calls[-1][1]["env"]
+    assert json.loads(env["INFRAOBSERVER_AUDIT_PATHS"]) == [r"C:\Dados"]
+    assert env["INFRAOBSERVER_AUDIT_ACTION"] == "remove"
+    assert configurator.load_state() == {
+        "enabledSubcategories": [FILE_SYSTEM],
+        "directories": [r"C:\Outra"],
+    }
+
+
+def test_release_without_own_folders_runs_nothing(tmp_path):
+    windows = FakeWindows()
+    configurator = WindowsAuditConfigurator(tmp_path, run=windows)
+
+    assert configurator.release([r"C:\Dados"]) == []
+    assert windows.calls == []
+
+
+def test_release_keeps_folders_that_failed_in_the_state(tmp_path, caplog):
+    windows = FakeWindows(sacl_status="error")
+    configurator = WindowsAuditConfigurator(tmp_path, run=windows)
+    configurator.save_state({"enabledSubcategories": [], "directories": [r"C:\Dados"]})
+
+    assert configurator.release([r"C:\Dados"]) == []
+    assert configurator.load_state()["directories"] == [r"C:\Dados"]
+    assert "Could not remove file auditing from" in caplog.text
