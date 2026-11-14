@@ -48,6 +48,7 @@ Numa atualização silenciosa sem `/SERVER` e `/TOKEN`, a configuração atual �
 | Identificador do computador | `C:\ProgramData\InfraObserver\agent-id` |
 | Logs | `C:\ProgramData\InfraObserver\logs` (o agente escreve em `InfraObserverAgent.err.log`; até 5 arquivos de 10 MB) |
 | Fila de envios | `C:\ProgramData\InfraObserver\outbox.db` (eventos e métricas esperando o servidor) |
+| Pastas escolhidas no dashboard | `C:\ProgramData\InfraObserver\remote-directories.json` (a última lista recebida, usada também depois de reiniciar sem servidor) |
 
 A pasta `C:\ProgramData\InfraObserver` só pode ser lida por administradores e pelo sistema, porque o `agent.env` guarda o token.
 
@@ -97,6 +98,38 @@ O serviço é executado pelo [WinSW](https://github.com/winsw/winsw) 2.12: o `In
 ### Pastas de rede
 
 O serviço roda como LocalSystem, que não enxerga as unidades mapeadas dos usuários (`Z:` etc.). Para monitorar uma pasta de rede, use o caminho UNC (`\\servidor\pasta`); o acesso é feito pela conta do computador (`DOMINIO\COMPUTADOR$`), que precisa de permissão de leitura no compartilhamento. Para auditar um servidor de arquivos, o melhor é instalar o agente no próprio servidor e monitorar as pastas locais dele.
+
+## Pastas escolhidas pelo dashboard
+
+Desde a versão 1.11.0, as pastas monitoradas podem ser escolhidas no dashboard (RF10), sem editar o `agent.env` nem reinstalar, em dois níveis:
+
+- **Cliente** (página Clientes, painel **Pastas monitoradas dos PCs**): "Pastas da instalação de cada PC" ou "Mesma lista para todos os PCs". Vale também para os PCs instalados depois. Uma lista vazia quer dizer que os PCs só enviam métricas.
+- **PC** (painel **Pastas monitoradas** do endpoint selecionado): "Seguir o cliente" ou "Lista própria deste PC". É o caso do servidor de arquivos.
+
+1. A cada ciclo (60 s), o agente pergunta ao servidor quais pastas monitorar (`GET /api/v1/agents/:agentId/config`).
+2. Se a lista mudou, ele troca os observadores de arquivos. No agente instalado, também tira a regra de auditoria das pastas que saíram (só das que ele mesmo ligou) e coloca nas novas.
+3. Depois, informa ao servidor quais pastas está monitorando e quais não existem no PC (`POST .../config/status`). O dashboard mostra "Aguardando o agente aplicar a mudança" até essa confirmação chegar.
+
+Ordem de prioridade:
+
+1. **Lista própria do PC**, quando existe (mesmo vazia: nenhuma pasta).
+2. **Lista do cliente**, quando o cliente usa "Mesma lista para todos os PCs" (mesmo vazia).
+3. **Pastas da instalação:** as do `agent.env` (`INFRAOBSERVER_MONITORED_DIRECTORIES` ou `/DIRS` do instalador) ou, sem elas, as pastas padrão do usuário.
+
+### Compartilhamentos de rede (R:, S:, U:...)
+
+Para saber quem criou, alterou, apagou ou moveu arquivos nas unidades mapeadas, instale o agente **no servidor de arquivos** (Windows) e dê a ele uma lista própria com as pastas locais compartilhadas (por exemplo, `D:\Compartilhado`). Com a auditoria do Windows, cada evento chega com o usuário do domínio e o IP da estação que fez a ação (eventos 4663 e 5145). As estações podem ficar com a lista do cliente vazia, só enviando métricas.
+
+Não vale a pena apontar as estações para o compartilhamento (`\\servidor\pasta`): cada PC veria as mudanças de todos, os eventos se repetiriam e o usuário seria a conta do computador, não a pessoa. Ferramentas que monitoram a rede a partir das estações usam um driver de kernel (minifiltro), fora do escopo deste trabalho.
+
+Para isso funcionar, confira no servidor:
+
+- a GPO do domínio não pode desligar "Auditoria do sistema de arquivos" e "Compartilhamento de arquivos detalhado" (`auditpol /get /category:"Acesso a Objetos"` mostra o que vale);
+- o log de Segurança precisa ter tamanho suficiente para o volume de acessos (o agente lê os eventos a cada poucos segundos).
+
+A última lista recebida fica em `remote-directories.json`. Se o PC reiniciar sem conseguir falar com o servidor, o agente continua com ela.
+
+A credencial de um PC só lê e informa as pastas do próprio PC: com o identificador de outro PC na URL, a resposta é `403`. Agentes anteriores à 1.11.0 continuam com as pastas da instalação, e o painel avisa que eles não recebem a configuração.
 
 ## Quem fez a ação (auditoria do Windows)
 

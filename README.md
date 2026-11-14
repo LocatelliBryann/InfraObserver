@@ -51,6 +51,7 @@ O **InfraObserver** é uma alternativa leve e sem custo: um **agente** instalado
 |---|---|
 | 📊 **Métricas de desempenho** | CPU, memória, disco e rede de cada endpoint, coletadas em intervalo configurável |
 | 📁 **Eventos de arquivos** | Criação, modificação, exclusão, renomeação e movimentação de arquivos e pastas, com caminho anterior, usuário e filtros por tipo e busca no dashboard. Temporários do Office e do Windows são ignorados |
+| 🗂️ **Pastas pelo dashboard** | O administrador escolhe no dashboard as pastas monitoradas de todos os PCs de um cliente de uma vez, e dá lista própria a um PC (como o servidor de arquivos). O agente aplica em até 1 minuto, liga a auditoria nas pastas novas e informa quais não existem no PC |
 | 🕵️ **Quem fez a ação** | No Windows, o agente liga a auditoria nas pastas monitoradas e lê o log de Segurança (eventos 4663, 4660 e 5145): cada evento traz o usuário que fez a ação, o programa e, pela rede, o IP de origem |
 | 🚨 **Alertas automáticos** | CPU ou memória acima de 80% e disco acima de 90%; o alerta é resolvido após duas coletas normais seguidas |
 | 📴 **Detecção de indisponibilidade** | Endpoint sem dados por 3 ciclos de coleta vira **offline** e gera alerta; ao voltar, é reativado sozinho |
@@ -206,7 +207,7 @@ python -m src.main
 | `INFRAOBSERVER_AGENT_TOKEN` | Token de instalação do cliente (`ioe_...`, trocado pela credencial do PC na primeira conexão) ou um token da lista `AGENT_TOKENS` | — |
 | `INFRAOBSERVER_AGENT_ID` | UUID único do endpoint. Sem ele, o agente gera um e salva em `agent-id` ao lado do `agent.env` (no instalador do Windows é sempre assim) | — |
 | `INFRAOBSERVER_COLLECTION_INTERVAL` | Intervalo de coleta, em segundos | `60` |
-| `INFRAOBSERVER_MONITORED_DIRECTORIES` | Diretórios monitorados, separados por vírgula. Pastas de rede pelo caminho UNC (`\\servidor\pasta`) | Área de Trabalho, Documentos, Downloads e Imagens de cada usuário |
+| `INFRAOBSERVER_MONITORED_DIRECTORIES` | Diretórios monitorados, separados por vírgula. Pastas de rede pelo caminho UNC (`\\servidor\pasta`). As pastas escolhidas no dashboard têm prioridade | Área de Trabalho, Documentos, Downloads e Imagens de cada usuário |
 | `INFRAOBSERVER_IGNORED_PATTERNS` | Padrões extras de arquivos a ignorar (ex.: `*.bak,*.log`) | — |
 | `INFRAOBSERVER_UPDATE_INTERVAL_HOURS` | De quantas em quantas horas o agente instalado no Windows procura uma versão nova (`0` desliga) | `6` |
 | `INFRAOBSERVER_WINDOWS_AUDIT` | Auditoria do Windows: quem fez cada ação nos arquivos (usuário, programa, IP pela rede). Só no agente instalado | `true` |
@@ -224,6 +225,8 @@ No agente instalado pelo `setup.exe`, essas variáveis ficam em `C:\ProgramData\
 | `POST` | `/api/v1/endpoints/register` | Registra ou atualiza um endpoint | Token do agente |
 | `POST` | `/api/v1/metrics` | Envia uma coleta de métricas | Token do agente |
 | `POST` | `/api/v1/file-events` | Envia um evento de sistema de arquivos | Token do agente |
+| `GET` | `/api/v1/agents/:agentId/config` | Pastas que o agente deve monitorar (lista vazia = as da instalação) | Token do agente |
+| `POST` | `/api/v1/agents/:agentId/config/status` | O agente informa as pastas que está monitorando e as que não existem no PC | Token do agente |
 | `GET` | `/api/v1/agent/update` | Versão que o agente deve instalar (URL do instalador e SHA-256); `204` se não houver | Token do agente |
 | `POST` | `/api/v1/agents/enroll` | Troca o token de instalação do cliente pela credencial do PC e registra o endpoint | Token de instalação |
 | `POST` | `/api/v1/auth/login` | Login do administrador (grava o cookie de sessão) | — |
@@ -235,8 +238,12 @@ No agente instalado pelo `setup.exe`, essas variáveis ficam em `C:\ProgramData\
 | `GET` | `/api/v1/file-events` | Eventos de arquivos · `endpointId`, `eventType` (ex.: `DELETE,MOVE`), `search` (caminho, usuário, programa ou IP), `from`, `to`, `limit` | Sessão |
 | `GET` | `/api/v1/alerts` | Alertas · `status=active\|resolved\|all`, `endpointId`, `clientId`, `limit` | Sessão |
 | `POST` | `/api/v1/endpoints/:id/revoke` | Revoga o acesso do agente de um PC | Sessão |
+| `GET` | `/api/v1/endpoints/:id/monitored-directories` | Pastas do PC: de onde vêm (lista própria, cliente ou instalação), as que o agente monitora e as que não existem no PC | Sessão |
+| `PUT` | `/api/v1/endpoints/:id/monitored-directories` | `mode=inherit` (segue o cliente) ou `mode=custom` com `directories` (lista própria, até 20; vazia = nenhuma pasta) | Sessão |
 | `GET` | `/api/v1/clients` | Clientes, com o número de PCs e de tokens ativos | Sessão |
 | `POST` | `/api/v1/clients` | Cadastra um cliente (`name`) | Sessão |
+| `GET` | `/api/v1/clients/:id/monitored-directories` | Pastas que os PCs do cliente herdam e quantos têm lista própria | Sessão |
+| `PUT` | `/api/v1/clients/:id/monitored-directories` | `mode=installation` (cada PC usa as da instalação) ou `mode=custom` com `directories` (mesma lista para todos; vazia = só métricas) | Sessão |
 | `GET` | `/api/v1/clients/:id/enrollment-tokens` | Tokens de instalação do cliente (só o começo de cada um) | Sessão |
 | `POST` | `/api/v1/clients/:id/enrollment-tokens` | Gera um token de instalação (`expiresInDays` opcional) | Sessão |
 | `POST` | `/api/v1/clients/:id/enrollment-tokens/:tokenId/reveal` | Devolve de novo um token de instalação ativo, para copiar | Sessão |
@@ -295,7 +302,7 @@ InfraObserver/
 - [x] CI com testes, cobertura e análise estática (SonarQube Cloud)
 - [x] Deploy em nuvem (Microsoft Azure) com entrega contínua e domínio próprio
 - [x] Observabilidade da aplicação com Prometheus, Grafana e logs estruturados
-- [ ] Configuração remota dos agentes pelo dashboard
+- [x] Pastas monitoradas de cada PC escolhidas pelo dashboard (RF10)
 - [x] Instalador do agente para Windows, rodando como serviço
 - [x] Atualização automática dos agentes, com a versão de cada um no dashboard
 - [x] Clientes com token de instalação, credencial por PC e filtro por cliente no dashboard

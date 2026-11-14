@@ -88,3 +88,19 @@ def test_group_logs_error_when_no_directory_can_be_monitored(caplog):
 
     assert "Could not monitor unknown directory: offline" in caplog.text
     assert "No directory could be monitored" in caplog.text
+
+
+def test_group_replace_stops_the_old_folders_and_starts_the_new_ones():
+    from src.services.file_observer_service import FileObserverGroupService
+
+    old = Mock()
+    new = Mock()
+    group = FileObserverGroupService([old])
+    group.start()
+
+    group.replace([new])
+
+    old.stop.assert_called_once()
+    old.join.assert_called_once()
+    new.start.assert_called_once()
+    assert group.started == [new]

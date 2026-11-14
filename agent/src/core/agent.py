@@ -14,6 +14,7 @@ class Agent:
         update_service=None,
         outbox_sender=None,
         audit_service=None,
+        directory_sync=None,
     ):
         self.registration_service = registration_service
         self.metrics_service = metrics_service
@@ -22,6 +23,8 @@ class Agent:
         self.update_service = update_service
         self.outbox_sender = outbox_sender
         self.audit_service = audit_service
+        # RF10: pastas definidas pelo dashboard.
+        self.directory_sync = directory_sync
 
     def start(self):
         # A auditoria começa antes das pastas, para não perder os primeiros eventos.
@@ -78,6 +81,12 @@ class Agent:
         except Exception:
             logger.exception("Failed to collect or send metrics")
             return False
+
+        if self.directory_sync is not None:
+            try:
+                self.directory_sync.check()
+            except Exception:
+                logger.exception("Failed to sync monitored directories")
 
         if self.update_service is not None:
             self.update_service.check_if_due()

@@ -49,13 +49,20 @@ function safeEquals(received: string, expected: string): boolean {
 
 const agentIdSchema = z.object({ agentId: z.string().uuid() });
 
-// agentId enviado no corpo (registro, métricas e eventos). O GET de
-// atualização não tem corpo. Um agentId inválido fica para o controller,
-// que responde 400.
-function bodyAgentId(req: Request): string | undefined {
-  const result = agentIdSchema.safeParse(req.body);
+// agentId da URL (configuração do agente) ou do corpo (registro, métricas e
+// eventos). A URL vem primeiro: é ela que as rotas de configuração usam, então
+// é ela que precisa bater com a credencial. O GET de atualização não tem
+// nenhum dos dois. Um agentId inválido fica para o controller (400).
+function requestAgentId(req: Request): string | undefined {
+  if (req.params?.agentId !== undefined) {
+    const fromUrl = agentIdSchema.safeParse({ agentId: req.params.agentId });
 
-  return result.success ? result.data.agentId : undefined;
+    return fromUrl.success ? fromUrl.data.agentId : undefined;
+  }
+
+  const fromBody = agentIdSchema.safeParse(req.body);
+
+  return fromBody.success ? fromBody.data.agentId : undefined;
 }
 
 // Aceita dois tipos de token:
@@ -80,7 +87,7 @@ export function createAuthenticateAgent(
       return;
     }
 
-    const agentId = bodyAgentId(req);
+    const agentId = requestAgentId(req);
 
     try {
       if (token.startsWith(AGENT_CREDENTIAL_PREFIX)) {

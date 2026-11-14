@@ -214,4 +214,38 @@ describe("authenticateAgent middleware", () => {
 
     expect(response.status).toBe(500);
   });
+
+  describe("agentId na URL (configuração do agente)", () => {
+    function createUrlApp(credentials = createCredentials()) {
+      const app = express();
+
+      app.use(express.json());
+      app.post(
+        "/agents/:agentId/config",
+        createAuthenticateAgent(credentials, createLog()),
+        (_req, res) => {
+          res.status(200).json({ ok: true });
+        },
+      );
+
+      return app;
+    }
+
+    it("should accept the credential for its own agentId", async () => {
+      const response = await request(createUrlApp())
+        .post(`/agents/${AGENT_ID}/config`)
+        .set("Authorization", `Bearer ${CREDENTIAL}`);
+
+      expect(response.status).toBe(200);
+    });
+
+    it("should use the agentId from the URL, not from the body", async () => {
+      const response = await request(createUrlApp())
+        .post(`/agents/${OTHER_AGENT_ID}/config`)
+        .set("Authorization", `Bearer ${CREDENTIAL}`)
+        .send({ agentId: AGENT_ID });
+
+      expect(response.status).toBe(403);
+    });
+  });
 });

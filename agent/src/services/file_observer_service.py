@@ -64,3 +64,9 @@ class FileObserverGroupService:
             observer.join()
 
         self.started = []
+
+    def replace(self, observers) -> None:
+        """Troca as pastas observadas (RF10: mudança feita no dashboard)."""
+        self.stop()
+        self.observers = observers
+        self.start()

@@ -24,6 +24,11 @@ from src.services.update_service import UpdateService
 from src.watchers.file_observer_factory import create_file_observer
 from src.services.file_event_service import FileEventService
 from src.services.file_observer_service import FileObserverGroupService
+from src.services.directory_sync_service import (
+    STORE_FILE_NAME,
+    DirectorySyncService,
+    RemoteDirectoriesStore,
+)
 from src.watchers.default_directories import default_monitored_directories
 from src.watchers.file_filter import FileEventFilter
 from src.audit.actor_index import AuditIndex
@@ -37,22 +42,54 @@ from src.version import __version__
 logger = logging.getLogger(__name__)
 
 
-def resolve_monitored_directories(settings: AgentSettings) -> list[str]:
-    """Pastas configuradas ou, se nenhuma, as pastas padrão do usuário.
+def local_monitored_directories(settings: AgentSettings) -> list[str]:
+    """Pastas da instalação: as do agent.env ou, se nenhuma, as do usuário."""
+    return list(settings.monitored_directories or default_monitored_directories())
 
-    Pastas que não existem (ou unidades de rede indisponíveis) são puladas com
-    um aviso, para o agente não parar por causa de uma delas.
-    """
-    configured = settings.monitored_directories or default_monitored_directories()
-    directories = []
 
-    for directory in configured:
+def split_existing_directories(requested: list[str]) -> tuple[list[str], list[str]]:
+    """Separa as pastas que existem das que não existem (ou unidades de rede
+    fora do ar). As que faltam são puladas com um aviso, para o agente não
+    parar por causa de uma delas."""
+    existing = []
+    missing = []
+
+    for directory in requested:
         if os.path.isdir(directory):
-            directories.append(directory)
+            existing.append(directory)
         else:
             logger.warning("Monitored directory not found: %s", directory)
+            missing.append(directory)
 
-    return directories
+    return existing, missing
+
+
+def resolve_monitored_directories(settings: AgentSettings) -> list[str]:
+    """Pastas configuradas ou, se nenhuma, as pastas padrão do usuário,
+    só as que existem."""
+    existing, _missing = split_existing_directories(
+        local_monitored_directories(settings)
+    )
+
+    return existing
+
+
+class MonitoredDirectoriesManager:
+    """RF10: troca as pastas observadas quando o dashboard muda a lista."""
+
+    def __init__(self, observer_group, create_observers, audit_service=None):
+        self.observer_group = observer_group
+        self.create_observers = create_observers
+        self.audit_service = audit_service
+
+    def apply(self, requested: list[str]) -> tuple[list[str], list[str]]:
+        existing, missing = split_existing_directories(requested)
+        self.observer_group.replace(self.create_observers(existing))
+
+        if self.audit_service is not None:
+            self.audit_service.update_directories(existing)
+
+        return existing, missing
 
 
 def create_file_observers(
@@ -193,7 +230,14 @@ def create_agent(
         outbox=outbox,
     )
 
-    directories = resolve_monitored_directories(settings)
+    # RF10: a última lista do dashboard vale também depois de reiniciar,
+    # mesmo sem servidor. Sem lista do dashboard, as pastas da instalação.
+    local_directories = local_monitored_directories(settings)
+    remote_store = RemoteDirectoriesStore(data_directory / STORE_FILE_NAME)
+    saved = remote_store.load()
+    requested = saved.directories if saved.from_dashboard else local_directories
+    directories, missing_directories = split_existing_directories(requested)
+
     audit_service = create_audit_service(
         settings,
         file_event_service.send,
@@ -201,16 +245,39 @@ def create_agent(
         data_directory,
     )
 
+    event_handler = (
+        file_event_service.send if audit_service is None else audit_service.handle
+    )
+
     file_observers = create_file_observers(
         settings=settings,
-        event_handler=(
-            file_event_service.send if audit_service is None else audit_service.handle
-        ),
+        event_handler=event_handler,
         directories=directories,
     )
 
     file_observer_service = FileObserverGroupService(
         observers=file_observers,
+    )
+
+    directories_manager = MonitoredDirectoriesManager(
+        observer_group=file_observer_service,
+        create_observers=lambda paths: create_file_observers(
+            settings=settings,
+            event_handler=event_handler,
+            directories=paths,
+        ),
+        audit_service=audit_service,
+    )
+
+    directory_sync = DirectorySyncService(
+        http_client=http_client,
+        agent_id=settings.agent_id,
+        local_directories=local_directories,
+        apply=directories_manager.apply,
+        store=remote_store,
+        current=requested,
+        current_updated_at=saved.updated_at,
+        initial_result=(directories, missing_directories),
     )
 
     return Agent(
@@ -221,6 +288,7 @@ def create_agent(
         update_service=create_update_service(settings, http_client, data_directory),
         outbox_sender=OutboxSender(outbox, http_client),
         audit_service=audit_service,
+        directory_sync=directory_sync,
     )
 
 

@@ -29,6 +29,17 @@ model Endpoint {
   // Preenchido quando o acesso do PC é revogado pelo dashboard.
   credentialRevokedAt DateTime?
 
+  // Pastas monitoradas (RF10). INHERIT: usa a configuração do cliente.
+  // CUSTOM: usa a lista própria deste PC (vazia = nenhuma pasta).
+  directoriesMode         String    @default("INHERIT")
+  configuredDirectories   String[]  @default([])
+  configuredDirectoriesAt DateTime?
+  // O que o agente informou que está monitorando, e as pastas pedidas que não
+  // existem no PC.
+  monitoredDirectories    String[]  @default([])
+  missingDirectories      String[]  @default([])
+  directoriesReportedAt   DateTime?
+
   client     Client?     @relation(fields: [clientId], references: [id], onDelete: SetNull)
   metrics    Metric[]
   fileEvents FileEvent[]
@@ -44,6 +55,13 @@ model Client {
   name      String   @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  // Pastas monitoradas dos PCs do cliente (RF10), herdadas pelos PCs sem
+  // lista própria. INSTALLATION: as da instalação de cada agente.
+  // CUSTOM: a lista abaixo (vazia = nenhuma pasta, só métricas).
+  directoriesMode         String    @default("INSTALLATION")
+  configuredDirectories   String[]  @default([])
+  configuredDirectoriesAt DateTime?
 
   endpoints        Endpoint[]
   enrollmentTokens EnrollmentToken[]
