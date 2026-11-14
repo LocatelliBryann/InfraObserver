@@ -67,6 +67,15 @@ vi.mock("../src/hooks/useMetrics", () => ({
   }),
 }));
 
+vi.mock("../src/hooks/useMonitoredDirectories", () => ({
+  useMonitoredDirectories: () => ({
+    directories: null,
+    loading: false,
+    error: null,
+    save: vi.fn(),
+  }),
+}));
+
 vi.mock("../src/hooks/useClients", () => ({
   describeClientError: () => "",
   useClients: () => ({

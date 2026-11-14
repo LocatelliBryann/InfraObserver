@@ -214,4 +214,32 @@ describe("DashboardContent", () => {
       screen.getByText("Eventos de arquivos e pastas detectados em server-01."),
     ).toBeTruthy();
   });
+
+  it("mostra as pastas monitoradas do endpoint selecionado quando é possível editar", () => {
+    const { rerender } = render(<DashboardContent {...defaultProps} />);
+
+    expect(screen.queryByText("Pastas monitoradas")).toBeNull();
+
+    rerender(
+      <DashboardContent
+        {...defaultProps}
+        monitoredDirectories={{
+          endpointId: 1,
+          mode: "inherit",
+          configuredDirectories: [],
+          client: null,
+          effective: { source: "installation", directories: [] },
+          monitoredDirectories: ["C:\\Users\\ana\\Documents"],
+          missingDirectories: [],
+          reportedAt: null,
+          pending: false,
+        }}
+        onSaveDirectories={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Pastas monitoradas")).toBeTruthy();
+    expect(screen.getByText("Pastas da instalação do agente de server-01.")).toBeTruthy();
+  });
 });
+

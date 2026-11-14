@@ -24,6 +24,7 @@ import { useEndpointHealth } from "./hooks/useEndpointHealth";
 import { useEndpoints } from "./hooks/useEndpoints";
 import { useFileEvents } from "./hooks/useFileEvents";
 import { useMetrics } from "./hooks/useMetrics";
+import { useMonitoredDirectories } from "./hooks/useMonitoredDirectories";
 import {
   CLIENT_FILTER_PARAM,
   clientFilterToUrlValue,
@@ -148,6 +149,14 @@ function App() {
     error: metricsError,
     refresh: refreshMetrics,
   } = useMetrics(activeEndpointId, metricPeriod);
+
+  // RF10: pastas monitoradas do PC selecionado.
+  const {
+    directories: monitoredDirectories,
+    loading: monitoredDirectoriesLoading,
+    error: monitoredDirectoriesError,
+    save: saveMonitoredDirectories,
+  } = useMonitoredDirectories(activeEndpointId);
 
   // O card de recursos sempre mostra a coleta mais recente,
   // inclusive quando o gráfico exibe um período.
@@ -307,6 +316,10 @@ function App() {
                   fileEventFilters={fileEventFilters}
                   onFileEventFiltersChange={setFileEventFilters}
                   onRevokeEndpoint={revokeEndpoint}
+                  monitoredDirectories={monitoredDirectories}
+                  monitoredDirectoriesLoading={monitoredDirectoriesLoading}
+                  monitoredDirectoriesError={monitoredDirectoriesError}
+                  onSaveDirectories={saveMonitoredDirectories}
                   clients={clients}
                   clientFilter={clientFilter}
                   onClientFilterChange={changeClientFilter}
