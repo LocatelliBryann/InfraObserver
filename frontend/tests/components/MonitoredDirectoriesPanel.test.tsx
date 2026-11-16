@@ -121,6 +121,57 @@ describe("MonitoredDirectoriesPanel", () => {
     expect(screen.queryByRole("list", { name: "Pastas a monitorar" })).not.toBeInTheDocument();
   });
 
+  it("deve salvar o caminho digitado mesmo sem clicar em Adicionar", async () => {
+    // Caso real: o caminho ficou no campo e o Salvar enviava a lista vazia.
+    const user = userEvent.setup();
+    const { onSave } = renderPanel({
+      directories: directories({
+        mode: "custom",
+        configuredDirectories: [],
+        effective: { source: "endpoint", directories: [] },
+        monitoredDirectories: [],
+      }),
+    });
+
+    await user.click(screen.getByRole("button", { name: "Editar pastas" }));
+    await user.type(screen.getByLabelText("Caminho da pasta"), "E:\\Dados");
+    await user.click(screen.getByRole("button", { name: "Salvar pastas" }));
+
+    expect(onSave).toHaveBeenCalledWith({ mode: "custom", directories: ["E:\\Dados"] });
+  });
+
+  it("deve mostrar o erro e não salvar quando o caminho digitado é inválido", async () => {
+    const user = userEvent.setup();
+    const { onSave } = renderPanel();
+
+    await user.click(screen.getByRole("button", { name: "Editar pastas" }));
+    await user.click(screen.getByRole("radio", { name: "Lista própria deste PC" }));
+    await user.type(screen.getByLabelText("Caminho da pasta"), "Dados");
+    await user.click(screen.getByRole("button", { name: "Salvar pastas" }));
+
+    expect(screen.getByRole("alert")).toHaveTextContent("Use um caminho completo");
+    expect(onSave).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Salvar pastas" })).toBeInTheDocument();
+  });
+
+  it("deve ignorar o campo quando o PC segue o cliente", async () => {
+    const user = userEvent.setup();
+    const { onSave } = renderPanel({
+      directories: directories({
+        mode: "custom",
+        configuredDirectories: ["D:\\Escrituras"],
+        effective: { source: "endpoint", directories: ["D:\\Escrituras"] },
+      }),
+    });
+
+    await user.click(screen.getByRole("button", { name: "Editar pastas" }));
+    await user.type(screen.getByLabelText("Caminho da pasta"), "texto solto");
+    await user.click(screen.getByRole("radio", { name: "Seguir o cliente 1RIJOINVILLE" }));
+    await user.click(screen.getByRole("button", { name: "Salvar pastas" }));
+
+    expect(onSave).toHaveBeenCalledWith({ mode: "inherit", directories: [] });
+  });
+
   it("deve voltar a seguir o cliente", async () => {
     const user = userEvent.setup();
     const { onSave } = renderPanel({

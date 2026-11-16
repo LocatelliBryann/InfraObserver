@@ -6,6 +6,7 @@ import {
   monitoredDirectoriesService,
   type ClientDirectories,
 } from "../services/monitoredDirectoriesService";
+import { useDirectoryDraft } from "../hooks/useDirectoryDraft";
 import { DirectoryListEditor } from "./DirectoryListEditor";
 
 interface ClientDirectoriesPanelProps {
@@ -31,7 +32,7 @@ export function ClientDirectoriesPanel({ client }: ClientDirectoriesPanelProps) 
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [mode, setMode] = useState<"installation" | "custom">("installation");
-  const [draft, setDraft] = useState<string[]>([]);
+  const draft = useDirectoryDraft();
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -57,19 +58,26 @@ export function ClientDirectoriesPanel({ client }: ClientDirectoriesPanelProps) 
     }
 
     setMode(directories.mode);
-    setDraft(directories.directories);
+    draft.reset(directories.directories);
     setSaveError(null);
     setEditing(true);
   }
 
   async function save() {
+    // Um caminho digitado e não adicionado também é salvo.
+    const list = mode === "custom" ? draft.commit() : [];
+
+    if (list === null) {
+      return;
+    }
+
     try {
       setSaving(true);
       setSaveError(null);
       setDirectories(
         await monitoredDirectoriesService.saveClient(client.id, {
           mode,
-          directories: mode === "custom" ? draft : [],
+          directories: list,
         }),
       );
       setEditing(false);
@@ -181,8 +189,7 @@ export function ClientDirectoriesPanel({ client }: ClientDirectoriesPanelProps) 
 
           {mode === "custom" && (
             <DirectoryListEditor
-              directories={draft}
-              onChange={setDraft}
+              draft={draft}
               emptyMessage="Lista vazia: os PCs não monitoram pastas, só enviam métricas."
             />
           )}
