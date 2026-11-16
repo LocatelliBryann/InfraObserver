@@ -124,6 +124,25 @@ describe("ClientDirectoriesPanel", () => {
     });
   });
 
+  it("deve salvar o caminho digitado mesmo sem clicar em Adicionar", async () => {
+    const user = userEvent.setup();
+    vi.mocked(monitoredDirectoriesService.saveClient).mockResolvedValue(
+      clientDirectories({ mode: "custom", directories: ["R:\\Escrituras"] }),
+    );
+
+    render(<ClientDirectoriesPanel client={client} />);
+
+    await user.click(await screen.findByRole("button", { name: "Editar pastas do cliente" }));
+    await user.click(screen.getByRole("radio", { name: "Mesma lista para todos os PCs" }));
+    await user.type(screen.getByLabelText("Caminho da pasta"), "R:\\Escrituras");
+    await user.click(screen.getByRole("button", { name: "Salvar para o cliente" }));
+
+    expect(monitoredDirectoriesService.saveClient).toHaveBeenCalledWith(3, {
+      mode: "custom",
+      directories: ["R:\\Escrituras"],
+    });
+  });
+
   it("deve voltar para as pastas da instalação", async () => {
     const user = userEvent.setup();
     vi.mocked(monitoredDirectoriesService.getClient).mockResolvedValue(

@@ -5,6 +5,7 @@ import type {
   EndpointDirectoriesInput,
   MonitoredDirectories,
 } from "../services/monitoredDirectoriesService";
+import { useDirectoryDraft } from "../hooks/useDirectoryDraft";
 import { DirectoryListEditor } from "./DirectoryListEditor";
 
 interface MonitoredDirectoriesPanelProps {
@@ -51,7 +52,7 @@ export function MonitoredDirectoriesPanel({
 }: MonitoredDirectoriesPanelProps) {
   const [editing, setEditing] = useState(false);
   const [mode, setMode] = useState<"inherit" | "custom">("inherit");
-  const [draft, setDraft] = useState<string[]>([]);
+  const draft = useDirectoryDraft();
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -66,7 +67,7 @@ export function MonitoredDirectoriesPanel({
 
     setMode(directories.mode);
     // Começa da lista própria ou, sem ela, do que o agente monitora hoje.
-    setDraft(
+    draft.reset(
       directories.mode === "custom"
         ? directories.configuredDirectories
         : directories.monitoredDirectories,
@@ -76,10 +77,17 @@ export function MonitoredDirectoriesPanel({
   }
 
   async function save() {
+    // Um caminho digitado e não adicionado também é salvo.
+    const list = mode === "custom" ? draft.commit() : [];
+
+    if (list === null) {
+      return;
+    }
+
     try {
       setSaving(true);
       setSaveError(null);
-      await onSave({ mode, directories: mode === "custom" ? draft : [] });
+      await onSave({ mode, directories: list });
       setEditing(false);
     } catch {
       setSaveError("Não foi possível salvar as pastas. Confira os caminhos e tente de novo.");
@@ -163,8 +171,7 @@ export function MonitoredDirectoriesPanel({
 
           {mode === "custom" && (
             <DirectoryListEditor
-              directories={draft}
-              onChange={setDraft}
+              draft={draft}
               emptyMessage="Lista vazia: este PC não monitora pastas, só envia métricas."
             />
           )}

@@ -1,57 +1,23 @@
 import { Plus, X } from "lucide-react";
-import { useId, useState, type FormEvent } from "react";
+import { useId, type FormEvent } from "react";
 
-import {
-  MAX_DIRECTORIES,
-  validateDirectory,
-} from "../services/monitoredDirectoriesService";
+import type { DirectoryDraft } from "../hooks/useDirectoryDraft";
 
 interface DirectoryListEditorProps {
-  directories: string[];
-  onChange: (directories: string[]) => void;
+  draft: DirectoryDraft;
   // Texto quando a lista está vazia (o que acontece se salvar assim).
   emptyMessage: string;
 }
 
-function sameIgnoringCase(a: string, b: string): boolean {
-  return a.toLowerCase() === b.toLowerCase();
-}
-
 // Lista de pastas editável, com a mesma validação do backend.
-export function DirectoryListEditor({
-  directories,
-  onChange,
-  emptyMessage,
-}: DirectoryListEditorProps) {
+export function DirectoryListEditor({ draft, emptyMessage }: DirectoryListEditorProps) {
   const inputId = useId();
   const errorId = `${inputId}-error`;
-  const [newPath, setNewPath] = useState("");
-  const [inputError, setInputError] = useState<string | null>(null);
+  const { directories, input, error } = draft;
 
   function addPath(event: FormEvent) {
     event.preventDefault();
-
-    const path = newPath.trim();
-    const problem = validateDirectory(path);
-
-    if (problem) {
-      setInputError(problem);
-      return;
-    }
-
-    if (directories.some((item) => sameIgnoringCase(item, path))) {
-      setInputError("Essa pasta já está na lista.");
-      return;
-    }
-
-    if (directories.length >= MAX_DIRECTORIES) {
-      setInputError(`No máximo ${MAX_DIRECTORIES} pastas.`);
-      return;
-    }
-
-    onChange([...directories, path]);
-    setNewPath("");
-    setInputError(null);
+    draft.add();
   }
 
   return (
@@ -72,7 +38,7 @@ export function DirectoryListEditor({
               <button
                 type="button"
                 aria-label={`Remover ${path}`}
-                onClick={() => onChange(directories.filter((item) => item !== path))}
+                onClick={() => draft.remove(path)}
                 className="shrink-0 rounded p-1 text-slate-500 hover:text-rose-400"
               >
                 <X size={14} />
@@ -89,14 +55,11 @@ export function DirectoryListEditor({
 
         <input
           id={inputId}
-          value={newPath}
-          onChange={(event) => {
-            setNewPath(event.target.value);
-            setInputError(null);
-          }}
+          value={input}
+          onChange={(event) => draft.setInput(event.target.value)}
           placeholder="D:\Compartilhado\Escrituras ou \\servidor\pasta"
-          aria-invalid={inputError !== null}
-          aria-describedby={inputError ? errorId : undefined}
+          aria-invalid={error !== null}
+          aria-describedby={error ? errorId : undefined}
           className="min-w-0 flex-1 rounded-lg border border-slate-700 bg-slate-950/70 px-3 py-2 font-mono text-xs text-slate-100 placeholder:text-slate-600 focus:border-cyan-500 focus:outline-none"
         />
 
@@ -109,9 +72,9 @@ export function DirectoryListEditor({
         </button>
       </form>
 
-      {inputError && (
+      {error && (
         <p id={errorId} role="alert" className="mt-2 text-xs text-rose-400">
-          {inputError}
+          {error}
         </p>
       )}
     </div>
